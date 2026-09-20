@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks | Beacon{% endblock %}
+
+{% block heading %}Preparation Tasks{% endblock %}
+
+{% block content %}
+  <h2>All Preparation Tasks</h2>
+
+  <p class="tag">{{ explainer }}</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Plan</th>
+        <th>Skill</th>
+        <th>Week</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Due Date</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for task in tasks %}
+        <tr>
+          <td>{{ task.title }}</td>
+          <td>{{ task.plan.title }}</td>
+
+          <td>
+            {% if task.skill %}
+              {{ task.skill.name }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+
+          <td>{{ task.week_number }}</td>
+          <td>{{ task.get_priority_display }}</td>
+          <td>{{ task.get_status_display }}</td>
+          <td>{{ task.due_date|default:"—" }}</td>
+        </tr>
+
+      {% empty %}
+        <tr>
+          <td colspan="7">
+            No preparation tasks are available yet.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
