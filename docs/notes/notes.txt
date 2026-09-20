@@ -1,0 +1,217 @@
+================================================================================
+BEACON - PROGRESS NOTES
+Team Career Coaches (Group 11)
+Manavi Chaudhry | Chu-Yun Hwang | Jennie Lee | Meet Kailash Mali
+INFO 490 MG - AI Web Application Development
+================================================================================
+
+This file is the running log for the project. Newest entry at the bottom.
+It records what we did each week, decisions we made, things we are still
+unsure about, and reminders for each other.
+
+
+--------------------------------------------------------------------------------
+WEEK 1 - PROJECT IDEA
+--------------------------------------------------------------------------------
+
+Ideas considered:
+  - AI personal coach for job interviews (Meet)
+  - Personal shopper for groceries unavailable locally (Chu-Yun)
+  - Long-distance carpooling for the UIUC community (Chu-Yun)
+  - Self-reflection / learning-identity app (Jennie)
+
+Decision: AI Personal Career Coach, named "Beacon".
+
+Why: the problem is one all four of us are living through right now, the
+scope divides cleanly into four features (one per team member), and it does
+not depend on any external data source we would have to negotiate access to.
+
+Deliverable submitted: IEEE-format project idea description.
+
+
+--------------------------------------------------------------------------------
+WEEK 2 - WIREFRAMES
+--------------------------------------------------------------------------------
+
+Produced five screens, each in desktop (1440x900) and mobile (390x844):
+  Screen 1  Career Goal & Resume Setup
+  Screen 2  AI Skill Assessment
+  Screen 3  Personalized Roadmap
+  Screen 4  Progress & Practice
+  Screen 5  AI Mock Interview & Feedback
+
+Design principle we kept coming back to: the app should not show users
+everything they could do, it should tell them what to do next. That is why
+the interface is a five-stage sequence and not a dashboard.
+
+AI disclosure: low-fidelity layout concepts were drafted with ChatGPT
+(GPT-5.6 Luna). Screen selection, flow, and final structure were the team's.
+
+Wireframes live in docs/wireframes/v1/.
+
+
+--------------------------------------------------------------------------------
+WEEK 3 - DATA MODEL & ADMIN
+--------------------------------------------------------------------------------
+
+Five models, mapping one-to-one onto the four proposed features:
+
+  Skill              catalog of competencies Beacon can diagnose
+  CandidateProfile   one user's career goal and timeline
+  SkillAssessment    through-model: candidate x skill, with a score
+  PreparationPlan    a time-boxed roadmap
+  PlanTask           one action inside a plan
+
+Decisions worth recording:
+
+  - SkillAssessment is a through-model rather than a plain M2M, because the
+    link between a candidate and a skill is never bare - it always carries a
+    score and a date. That is the whole product.
+
+  - CandidateProfile is separate from django.contrib.auth.User. User answers
+    "who is logged in"; CandidateProfile answers "what are they preparing
+    for". Our product questions will change; Django's auth table should not.
+
+  - Skill uses on_delete=PROTECT from SkillAssessment so scored history can
+    never be silently destroyed. PlanTask.skill uses SET_NULL instead - if a
+    skill disappears, we want to keep the task and just forget the tag.
+
+  - readiness_percent and completion_percent are properties, not columns.
+    Derived numbers that are stored go stale; derived numbers that are
+    computed cannot.
+
+Open question: whether SkillAssessment should keep history (one row per quiz
+attempt) instead of one current row per candidate-skill pair. Right now a
+unique constraint enforces one row. Revisit when the progress tracker needs
+to draw a trend line.
+
+
+--------------------------------------------------------------------------------
+WEEK 4 - STRUCTURE, SECURITY, VIEWS, TEMPLATES (ASSIGNMENT 2)
+--------------------------------------------------------------------------------
+
+SECTION 1 - Structure and security
+
+  Split settings implemented at beacon_core/settings/:
+    base.py         shared configuration, loads .env
+    development.py  DEBUG = True,  ALLOWED_HOSTS = 127.0.0.1 / localhost
+    production.py   DEBUG = False, ALLOWED_HOSTS from DJANGO_ALLOWED_HOSTS
+
+  base.py is never run directly. manage.py defaults to the development
+  module; production is selected with DJANGO_SETTINGS_MODULE.
+
+  Secrets: SECRET_KEY and ALLOWED_HOSTS are read from .env, which is listed
+  in .gitignore and has never been committed. .env.example is committed so a
+  teammate cloning the repo knows exactly which keys to supply.
+
+  base.py has a small hand-written load_env() rather than python-dotenv, so
+  the project runs with nothing installed except Django.
+
+SECTION 2 - Views
+
+  Four views, one of each required kind. Each is marked in views.py with the
+  number below, and each has a named URL route.
+
+  View 1 | FBV, HttpResponse   | skill_catalog_manual | /skills/manual/
+         | Fetches the template with loader.get_template(), renders it to a
+         | string, wraps that string in HttpResponse. Purpose: show the skill
+         | catalog while spelling out every step render() normally hides.
+
+  View 2 | FBV, render()       | skill_catalog_render | /skills/
+         | Same template, same data, one line instead of three. Purpose: the
+         | everyday way we will write list pages for the rest of the project.
+
+  View 3 | CBV, base View      | PlanBoardView        | /plans/cbv-base/
+         | Inherits django.views.View. get() queries PreparationPlan by hand,
+         | builds the context by hand, calls render() by hand. Purpose: show
+         | all preparation plans, and show what a CBV does NOT give you for
+         | free.
+
+  View 4 | CBV, generic        | PlanTaskListView     | /tasks/
+         | ListView with model = PlanTask, template_name, context_object_name
+         | and paginate_by. Purpose: list every task across every plan - the
+         | data behind Screen 4's progress tracker.
+
+  Extra (not graded): PlanTaskDetailView, a generic DetailView at
+  /tasks/<pk>/, linked from the task list.
+
+  All routes are namespaced under app_name = "preparation" and every one has
+  a name=, so templates reverse them instead of hard-coding paths.
+
+SECTION 3 - Templates
+
+  base.html holds {% block title %}, {% block heading %} and
+  {% block content %}, plus the site navigation. Every page extends it.
+
+  skill_list.html is rendered by BOTH function-based views. That reuse is the
+  point: if the two FBVs produced visibly different pages, the difference
+  between HttpResponse and render() would look bigger than it is.
+
+  Every list template uses {% for %} with an {% empty %} branch carrying a
+  message that says what to do next, not just "no results".
+
+  Empty state: skill_list.html accepts an optional ?q= filter, so
+  /skills/?q=zzzz produces a genuinely empty queryset for a screenshot
+  without deleting any rows from the database.
+
+
+--------------------------------------------------------------------------------
+SECTION 2 BONUS - WHEN EACH KIND OF VIEW WAS ACTUALLY USEFUL
+--------------------------------------------------------------------------------
+
+HttpResponse vs render()
+
+  Writing the HttpResponse version first was what made render() make sense.
+  Three steps are visible: find the template, hand it a context and get a
+  string back, put that string inside an HTTP response. render() does exactly
+  those three things. Before writing it out, render() felt like magic; after,
+  it just felt like a shortcut.
+
+  Where the manual form would genuinely earn its place in Beacon: anywhere we
+  need to touch the response object itself rather than just its body - setting
+  a content type for a plan exported as CSV, attaching a Content-Disposition
+  header for a resume download, returning a non-200 status. render() hands
+  back a finished response and assumes we want the defaults.
+
+  For every ordinary page, render() wins. The manual version is three extra
+  lines that can only go wrong.
+
+Base CBV vs Generic CBV
+
+  The base View gave us one thing over a function: dispatch by HTTP method.
+  A GET lands in get(), a POST would land in post(), with no branching on
+  request.method. That will matter for the assessment screen, where the same
+  URL shows a question and receives an answer.
+
+  Everything else was still our job. PlanBoardView writes its own queryset,
+  its own context dictionary, its own render() call - which is essentially
+  what the function-based view did, in a class.
+
+  The generic ListView was a different experience. model = PlanTask was the
+  whole configuration; the queryset, the context and the pagination came for
+  free. We overrode get_queryset() only to add select_related(), and
+  get_context_data() only to pass the teaching label.
+
+  Our conclusion: generic CBVs when the page is a standard list or detail of
+  one model, which is most of Beacon's read-only screens. Base View when the
+  page is doing something Django has no generic for - the adaptive assessment,
+  which chooses the next question based on previous answers, is not a
+  ListView and pretending it is would cost more than writing get() ourselves.
+
+  The trap with generic CBVs is that the logic is in method overrides spread
+  across a class hierarchy you cannot see. When we found ourselves overriding
+  three methods, writing the base View was clearer.
+
+
+--------------------------------------------------------------------------------
+REMINDERS / TODO
+--------------------------------------------------------------------------------
+
+  [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
+  [ ] Capture six browser screenshots into docs/screenshots/:
+        four view outputs, plus the normal and empty list states.
+  [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
+  [ ] Wire the plan generator's API key into .env as PLAN_GENERATOR_API_KEY
+      when that feature starts. .env.example already has the line commented.
+  [ ] Templates for Screens 1, 2 and 5 are not built yet - only the data
+      behind them exists.

@@ -1,0 +1,61 @@
+/* Beacon branching strategy - Team Career Coaches (Group 11)
+ *
+ * Regenerate with:
+ *     dot -Tpng -Gdpi=140 branching_strategy.dot -o diagram.png
+ */
+digraph beacon_branching {
+    rankdir = LR;
+    bgcolor = "white";
+    nodesep = 0.45;
+    ranksep = 0.75;
+    fontname = "Helvetica";
+
+    node [shape = box, style = "filled,rounded", fontname = "Helvetica",
+          fontsize = 10, fontcolor = "white", penwidth = 0, margin = "0.16,0.10"];
+    edge [arrowsize = 0.8, penwidth = 1.6, fontname = "Helvetica", fontsize = 9,
+          fontcolor = "#555555"];
+
+    /* ------------------------- main ------------------------- */
+    subgraph cluster_main {
+        label = "main  (always runnable, always submittable)";
+        fontname = "Helvetica-Bold";
+        fontsize = 12;
+        fontcolor = "#13294B";
+        color = "#13294B";
+        penwidth = 1.2;
+        style = rounded;
+        margin = 14;
+
+        m0 [label = "Part 4\nmodels + admin", fillcolor = "#13294B"];
+        m1 [label = "docs/ folders\n+ .gitignore", fillcolor = "#13294B"];
+        m2 [label = "Assignment 2\ncomplete", fillcolor = "#13294B"];
+
+        m0 -> m1 [color = "#13294B"];
+        m1 -> m2 [color = "#13294B"];
+    }
+
+    /* -------------------- feature branch -------------------- */
+    subgraph cluster_feature {
+        label = "feature/views-and-templates";
+        fontname = "Helvetica-Bold";
+        fontsize = 12;
+        fontcolor = "#E84A27";
+        color = "#E84A27";
+        penwidth = 1.2;
+        style = rounded;
+        margin = 14;
+
+        f1 [label = "two FBVs\n+ named URLs", fillcolor = "#E84A27"];
+        f2 [label = "two CBVs\n+ named URLs", fillcolor = "#E84A27"];
+        f3 [label = "templates,\ninheritance,\nempty state", fillcolor = "#E84A27"];
+
+        f1 -> f2 [color = "#E84A27"];
+        f2 -> f3 [color = "#E84A27"];
+    }
+
+    /* ------------------- branch and merge ------------------- */
+    m1 -> f1 [color = "#E84A27", style = dashed,
+              label = "  git checkout -b  "];
+    f3 -> m2 [color = "#E84A27", style = dashed,
+              label = "  pull request -> merge  "];
+}

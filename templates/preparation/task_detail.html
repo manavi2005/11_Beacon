@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Beacon - {{ task.title }}{% endblock %}
+{% block heading %}{{ task.title }}{% endblock %}
+
+{% block content %}
+  <p class="tag">Extra - CBV, generic DetailView</p>
+
+  <table>
+    <tr><th>Plan</th><td>{{ task.plan.title }}</td></tr>
+    <tr><th>Roadmap week</th><td>{{ task.week_number }}</td></tr>
+    <tr><th>Skill</th><td>{{ task.skill.name|default:"Untagged" }}</td></tr>
+    <tr><th>Priority</th><td>{{ task.get_priority_display }}</td></tr>
+    <tr><th>Status</th><td>{{ task.get_status_display }}</td></tr>
+    <tr><th>Estimated time</th><td>{{ task.estimated_minutes }} min</td></tr>
+    <tr><th>Due</th><td>{{ task.due_date|default:"No deadline" }}</td></tr>
+  </table>
+
+  <h2>Instructions</h2>
+  <p>{{ task.instructions|default:"No instructions recorded." }}</p>
+
+  <h2>Why Beacon recommended this</h2>
+  <p>{{ task.rationale|default:"No rationale recorded." }}</p>
+
+  <p><a href="{% url 'preparation:task_list' %}">Back to all tasks</a></p>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Beacon - plan tasks{% endblock %}
+{% block heading %}Plan tasks{% endblock %}
+
+{% block content %}
+  <p class="tag">{{ view_label }}</p>
+  <p>{{ explainer }}</p>
+
+  <table>
+    <tr>
+      <th>Week</th><th>Task</th><th>Plan</th>
+      <th>Skill</th><th>Priority</th><th>Status</th>
+    </tr>
+    {% for task in tasks %}
+      <tr>
+        <td>{{ task.week_number }}</td>
+        <td><a href="{% url 'preparation:task_detail' task.pk %}">{{ task.title }}</a></td>
+        <td>{{ task.plan.title }}</td>
+        <td>{{ task.skill.name|default:"Untagged" }}</td>
+        <td>{{ task.get_priority_display }}</td>
+        <td>{{ task.get_status_display }}</td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="6">
+          No tasks scheduled. Tasks appear here once a preparation plan is
+          generated for a candidate.
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  {% if is_paginated %}
+    <p>
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+      Page {{ page_obj.number }} of {{ paginator.num_pages }}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">Next</a>
+      {% endif %}
+    </p>
+  {% endif %}
+{% endblock %}

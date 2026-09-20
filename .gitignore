@@ -1,0 +1,32 @@
+# --- Secrets (Week 2: never commit these) ---
+.env
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+info-490-venv*/
+
+# --- Django ---
+*.log
+# The DB is not shared through Git: teammates rebuild it with
+#   python manage.py migrate && python manage.py seed_demo_data
+# (The Canvas ZIP submission does include db.sqlite3, as Part 4 requires.)
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+
+# --- Editors / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

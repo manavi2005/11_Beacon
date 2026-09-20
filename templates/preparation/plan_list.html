@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Beacon - preparation plans{% endblock %}
+{% block heading %}Preparation plans{% endblock %}
+
+{% block content %}
+  <p class="tag">{{ view_label }}</p>
+  <p>{{ explainer }}</p>
+
+  <table>
+    <tr>
+      <th>Plan</th><th>Candidate</th><th>Target role</th>
+      <th>Deadline</th><th>Status</th><th>Progress</th>
+    </tr>
+    {% for plan in plans %}
+      <tr>
+        <td>{{ plan.title }}</td>
+        <td>{{ plan.candidate.user.get_full_name|default:plan.candidate.user.username }}</td>
+        <td>{{ plan.focus_role }}</td>
+        <td>{{ plan.target_date }}</td>
+        <td>{{ plan.get_status_display }}</td>
+        <td>{{ plan.completion_percent }}% (week {{ plan.current_week }} of {{ plan.total_weeks }})</td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="6">
+          No preparation plans yet. A plan is created once a candidate finishes
+          the skill assessment.
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}

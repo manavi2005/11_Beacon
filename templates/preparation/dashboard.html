@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Beacon - data model status{% endblock %}
+{% block heading %}Data model status{% endblock %}
+
+{% block content %}
+  <p>Part 4 deliverable: the models below are live in the database. Manage them
+     in the <a href="/admin/">Django Admin</a>.</p>
+
+  <table>
+    <tr><th>Model</th><th>Rows</th></tr>
+    <tr><td>Skill</td><td>{{ skill_count }}</td></tr>
+    <tr><td>CandidateProfile</td><td>{{ candidate_count }}</td></tr>
+    <tr><td>SkillAssessment</td><td>{{ assessment_count }}</td></tr>
+    <tr><td>PreparationPlan</td><td>{{ plan_count }}</td></tr>
+    <tr><td>PlanTask</td><td>{{ task_count }}</td></tr>
+  </table>
+
+  <h2>Preparation plans</h2>
+  <table>
+    <tr><th>Plan</th><th>Candidate</th><th>Target date</th><th>Status</th><th>Progress</th></tr>
+    {% for plan in plans %}
+      <tr>
+        <td>{{ plan.title }}</td>
+        <td>{{ plan.candidate.user.get_full_name }}</td>
+        <td>{{ plan.target_date }}</td>
+        <td>{{ plan.get_status_display }}</td>
+        <td>{{ plan.completion_percent }}%</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No plans yet - run <code>python manage.py seed_demo_data</code>.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}
