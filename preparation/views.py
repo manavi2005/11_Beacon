@@ -150,6 +150,7 @@ class PlanTaskListView(ListView):
         # select_related avoids one extra query per row when the template
         # prints task.plan.title and task.skill.name.
         return PlanTask.objects.select_related("plan", "skill")
+        # return PlanTask.objects.none() # for empty state testing, CYH 2026/09/20
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
