@@ -1,7 +1,7 @@
 # Beacon — An AI Personal Career Coach
 
 **INFO 490 MG · Team Career Coaches (Group 11)**
-Manavi Chaudhry · Chu-Yun Hwang · Jennie Lee · Meet Kailash Mali
+Manavi Chaudhry · Chu-Yun Hwang · Meet Kailash Mali
 
 Beacon turns a student's resume and target role into a diagnosed skill profile, a
 time-boxed preparation plan, and a progress tracker. Instead of showing users
