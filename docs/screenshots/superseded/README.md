@@ -3,8 +3,8 @@
 These are Chu-Yun's original Section 3 screenshots (captured 2026-09-20). They
 are kept for the record but are **not** the ones to grade.
 
-They were taken before the `templates/base.html` fix on branch
-`cleanup/remove-jennie-docs`. At the time, two multi-line `{# ... #}` notes in
+They were taken before the `templates/base.html` fix made on the docs-cleanup
+branch. At the time, two multi-line `{# ... #}` notes in
 `base.html` were being printed as literal page text above `<!DOCTYPE html>`,
 because Django's `{# #}` comment form is single-line only. That stray text is
 visible at the top of every page in these images.

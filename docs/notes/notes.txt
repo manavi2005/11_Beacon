@@ -227,7 +227,7 @@ REMINDERS / TODO
   [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
   [x] Capture six browser screenshots into docs/screenshots/:
         four view outputs, plus the normal and empty list states.
-        Done on branch cleanup/remove-jennie-docs. Named by section:
+        Done on the docs-cleanup branch. Named by section:
         section2-view1..4-*.png and section3-template-*.png.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
   [ ] Wire the plan generator's API key into .env as PLAN_GENERATOR_API_KEY
@@ -240,7 +240,7 @@ REMINDERS / TODO
 WEEK 4 (CONTINUED) - DOCS CLEANUP
 --------------------------------------------------------------------------------
 
-Housekeeping pass on branch cleanup/remove-jennie-docs:
+Housekeeping pass on the docs-cleanup branch:
 
   - docs/ now has a README.md index that maps each assignment section to the
     files that answer it. The three required folders (wireframes,

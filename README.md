@@ -18,7 +18,7 @@ everything they could do, it tells them what to do next.
 5. [Views](#5-views)
 6. [Templates](#6-templates)
 7. [The data model](#7-the-data-model)
-8. [Proving the constraints work](#8-proving-the-constraints-work)
+8. [Proving it works](#8-proving-it-works)
 9. [Git workflow](#9-git-workflow)
 10. [Documentation index](#10-documentation-index)
 
@@ -45,7 +45,7 @@ python manage.py migrate
 # 5. load realistic test data
 python manage.py seed_demo_data
 
-# 6. create a superuser (or use the seeded one below)
+# 6. create an admin login (required — see note below)
 python manage.py createsuperuser
 
 # 7. run
@@ -54,14 +54,14 @@ python manage.py runserver
 
 Then open <http://127.0.0.1:8000/>.
 
-**Superusers in the seeded database**
+**Step 6 is not optional.** `db.sqlite3` is git-ignored, so a fresh clone builds
+its database from scratch, and `seed_demo_data` creates only the six candidate
+accounts — no superuser. Without step 6 there is no way to log in at `/admin/`.
+Any username and password will do; earlier submissions used `tester` /
+`uiuc12345`.
 
-| Username | Password |
-|---|---|
-| `tester` | `uiuc12345` |
-| `mohitg2` | `uiuc12345` |
-
-Seeded candidate logins use `beacon12345` and are ordinary non-staff users.
+The six seeded candidates are ordinary non-staff users and share the password
+`beacon12345`.
 
 **Running the production settings**
 
@@ -188,8 +188,8 @@ value:
 ```
 DJANGO_SECRET_KEY=replace-with-a-long-random-string
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
-# Added later, when the plan generator is wired up:
-# PLAN_GENERATOR_API_KEY=
+# Dummy placeholder until the plan generator is wired up:
+PLAN_GENERATOR_API_KEY=dummy-key-not-a-real-secret
 ```
 
 `base.py` contains a small hand-written `load_env()` rather than pulling in
@@ -350,7 +350,21 @@ stale: `CandidateProfile.readiness_percent` (Screen 3's Overall Readiness),
 
 ---
 
-## 8. Proving the constraints work
+## 8. Proving it works
+
+### Smoke tests
+
+```bash
+python manage.py test preparation
+```
+
+Eight tests, no fixtures needed. They load each of the four graded views and
+assert the right template and data came back, check that `{% empty %}` fires,
+and guard against the multi-line `{# #}` comment bug that once printed template
+notes onto every page. Not an assignment requirement — they are there so a later
+change cannot quietly break the Section 2 deliverable.
+
+### Constraints
 
 ```bash
 python manage.py verify_constraints
