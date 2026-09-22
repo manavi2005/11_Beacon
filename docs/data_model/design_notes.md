@@ -2,6 +2,11 @@
 
 **Project 1, Part 4 · Team Career Coaches (Group 11)**
 
+> Written for the Part 4 data-modelling assignment and still accurate: the models,
+> relationships and constraints described here are the ones the current code runs
+> on. The views and templates built on top of them are documented in
+> [`docs/README.md`](../README.md).
+
 This file answers the "documented and justified" requirements of Part 4: why the
 project and app are named what they are, why there are five models, why each
 relationship uses the `on_delete` behaviour it does, and what each constraint
@@ -32,7 +37,7 @@ its own `models.py`, `views.py`, `urls.py` and `templates/` sub-folder:
 That way two people never edit the same file, which is the division of labour the
 assignment describes. With a three-person team and four feature areas, one area is
 currently shared rather than owned — see
-[`branching_strategy/README.md`](branching_strategy/README.md#who-owns-what).
+[`docs/branching_strategy/README.md`](../branching_strategy/README.md#who-owns-what).
 
 ---
 
@@ -114,7 +119,7 @@ recently updated.
 ## 5. Validation evidence
 
 `python manage.py verify_constraints` runs eight checks and prints PASS/FAIL for
-each; the saved output is in `docs/constraint_validation.txt`. Every check runs
+each; the saved output is in `docs/data_model/constraint_validation.txt`. Every check runs
 inside a transaction that is rolled back, so running it never mutates the
 submitted database. The checks cover both required demonstrations from the
 assignment — "attempting to insert a duplicate record should fail" and "deleting a

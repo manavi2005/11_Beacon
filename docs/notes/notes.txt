@@ -225,10 +225,37 @@ REMINDERS / TODO
       templates) now that the team is three people? Marked Unassigned in
       docs/branching_strategy/README.md until we agree.
   [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
-  [ ] Capture six browser screenshots into docs/screenshots/:
+  [x] Capture six browser screenshots into docs/screenshots/:
         four view outputs, plus the normal and empty list states.
+        Done on branch cleanup/remove-jennie-docs. Named by section:
+        section2-view1..4-*.png and section3-template-*.png.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
   [ ] Wire the plan generator's API key into .env as PLAN_GENERATOR_API_KEY
       when that feature starts. .env.example already has the line commented.
   [ ] Templates for Screens 1, 2 and 5 are not built yet - only the data
       behind them exists.
+
+
+--------------------------------------------------------------------------------
+WEEK 4 (CONTINUED) - DOCS CLEANUP
+--------------------------------------------------------------------------------
+
+Housekeeping pass on branch cleanup/remove-jennie-docs:
+
+  - docs/ now has a README.md index that maps each assignment section to the
+    files that answer it. The three required folders (wireframes,
+    branching_strategy, notes) are untouched; the loose data-layer files moved
+    into docs/data_model/ so the top level is navigable.
+
+  - Fixed a real template bug: two multi-line {# ... #} notes in base.html were
+    printing as page text on every page. Django's {# #} form is single-line
+    only. Use {% comment %} for anything spanning lines. Worth remembering,
+    because it is silent - no error, the text just shows up.
+
+  - Deleted templates/task_list.html. It was a duplicate at the wrong path;
+    PlanTaskListView points at templates/preparation/task_list.html, so the
+    stray file was unreachable.
+
+  - Regenerated docs/data_model/constraint_validation.txt (8/8 PASS).
+
+Still open: see REMINDERS / TODO above.

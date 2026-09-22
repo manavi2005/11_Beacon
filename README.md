@@ -138,15 +138,18 @@ and fires the `{% empty %}` branch, without deleting anything from the database.
 │       └── task_detail.html
 │
 └── docs/
+    ├── README.md                 # documentation index, mapped to assignment sections
     ├── wireframes/v1/            # Part 3 wireframes, PDF + per-screen PNGs
     ├── branching_strategy/       # diagram.png + written strategy
     ├── notes/notes.txt           # running progress log
-    ├── design_notes.md           # data-model design justification
-    ├── er_diagram.pdf / .png / .dot
-    ├── generate_er_diagram.py
-    ├── constraint_validation.txt
-    └── screenshots/              # browser and admin output
+    ├── data_model/               # ER diagram, design justification, constraint output
+    └── screenshots/              # browser output, named by assignment section
+        ├── admin/                # Django Admin list views
+        └── superseded/           # older captures, kept for the record
 ```
+
+**Start with [`docs/README.md`](docs/README.md)** — it maps every assignment
+requirement to the file that answers it.
 
 **Why these names**
 
@@ -302,8 +305,8 @@ was found:
 
 ## 7. The data model
 
-Five models, one app. Full reasoning in `docs/design_notes.md`; diagram in
-`docs/er_diagram.pdf`.
+Five models, one app. Full reasoning in `docs/data_model/design_notes.md`; diagram in
+`docs/data_model/er_diagram.pdf`.
 
 | Model | Represents | Key relationship |
 |---|---|---|
@@ -354,7 +357,7 @@ python manage.py verify_constraints
 ```
 
 Eight checks, each run inside a transaction that is rolled back, so the database
-is never modified. Saved output: `docs/constraint_validation.txt`.
+is never modified. Saved output: `docs/data_model/constraint_validation.txt`.
 
 1. Duplicate `(candidate, skill)` assessment → rejected
 2. Duplicate plan title for one candidate → rejected
@@ -393,11 +396,12 @@ ownership per teammate and conflict handling:
 
 | File | What it holds |
 |---|---|
+| [`docs/README.md`](docs/README.md) | **Start here** — index mapping each assignment section to the files that answer it |
 | `docs/notes/notes.txt` | Running weekly log: decisions, open questions, reminders |
 | `docs/branching_strategy/README.md` | Branch naming, workflow, file ownership, conflicts |
 | `docs/branching_strategy/diagram.png` | Visual of the branch-and-merge flow |
 | `docs/wireframes/v1/` | Part 3 wireframes — full PDF plus one PNG per screen |
-| `docs/design_notes.md` | Why five models, why each `on_delete`, what each constraint protects |
-| `docs/er_diagram.pdf` | Entity-relationship diagram |
-| `docs/constraint_validation.txt` | Saved output of `verify_constraints` |
+| `docs/data_model/design_notes.md` | Why five models, why each `on_delete`, what each constraint protects |
+| `docs/data_model/er_diagram.pdf` | Entity-relationship diagram |
+| `docs/data_model/constraint_validation.txt` | Saved output of `verify_constraints` |
 | `docs/screenshots/` | Browser output and Django Admin list views |

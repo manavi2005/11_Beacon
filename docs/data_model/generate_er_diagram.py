@@ -2,9 +2,9 @@
 
 Run from the project root:
 
-    python docs/generate_er_diagram.py          # writes docs/er_diagram.dot
-    dot -Tpdf docs/er_diagram.dot -o docs/er_diagram.pdf
-    dot -Tpng docs/er_diagram.dot -o docs/er_diagram.png
+    python docs/data_model/generate_er_diagram.py          # writes docs/data_model/er_diagram.dot
+    dot -Tpdf docs/data_model/er_diagram.dot -o docs/data_model/er_diagram.pdf
+    dot -Tpng docs/data_model/er_diagram.dot -o docs/data_model/er_diagram.png
 
 The diagram is introspected rather than hand-drawn, so it can never drift out
 of sync with models.py. Graphviz is only needed for the last two commands
@@ -15,7 +15,9 @@ import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# This file lives at <project root>/docs/data_model/generate_er_diagram.py, so
+# three .parent hops are needed to reach the root that holds manage.py.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "beacon_core.settings.development")
 
@@ -132,7 +134,7 @@ def build_dot():
 
 
 if __name__ == "__main__":
-    out = PROJECT_ROOT / "docs" / "er_diagram.dot"
+    out = PROJECT_ROOT / "docs" / "data_model" / "er_diagram.dot"
     out.write_text(build_dot())
     print(f"Wrote {out}")
-    print("Render with: dot -Tpdf docs/er_diagram.dot -o docs/er_diagram.pdf")
+    print("Render with: dot -Tpdf docs/data_model/er_diagram.dot -o docs/data_model/er_diagram.pdf")
