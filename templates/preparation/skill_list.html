@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
-{# Shared by BOTH function-based views (HttpResponse and render()). The only
-   thing that changes between them is view_label / explainer. #}
+{% comment %}
+Shared by BOTH function-based views (HttpResponse and render()). The only thing
+that changes between them is view_label / explainer.
+{% endcomment %}
 
 {% block title %}Beacon - skill catalog{% endblock %}
 {% block heading %}Skill catalog{% endblock %}

@@ -5,7 +5,7 @@ Run:  python manage.py verify_constraints
 Every check runs inside a transaction that is rolled back, so this command
 never changes your data. Output is the evidence for the Part-4 requirements
 "Uniqueness Constraint Validation" and "on_delete Behavior Validation";
-save it to docs/constraint_validation.txt before submitting.
+save it to docs/data_model/constraint_validation.txt before submitting.
 """
 
 from datetime import timedelta

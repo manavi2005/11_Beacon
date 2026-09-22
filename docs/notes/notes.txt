@@ -1,7 +1,7 @@
 ================================================================================
 BEACON - PROGRESS NOTES
 Team Career Coaches (Group 11)
-Manavi Chaudhry | Chu-Yun Hwang | Jennie Lee | Meet Kailash Mali
+Manavi Chaudhry | Chu-Yun Hwang | Meet Kailash Mali
 INFO 490 MG - AI Web Application Development
 ================================================================================
 
@@ -18,12 +18,12 @@ Ideas considered:
   - AI personal coach for job interviews (Meet)
   - Personal shopper for groceries unavailable locally (Chu-Yun)
   - Long-distance carpooling for the UIUC community (Chu-Yun)
-  - Self-reflection / learning-identity app (Jennie)
+  - Self-reflection / learning-identity app
 
 Decision: AI Personal Career Coach, named "Beacon".
 
-Why: the problem is one all four of us are living through right now, the
-scope divides cleanly into four features (one per team member), and it does
+Why: the problem is one all of us are living through right now, the scope
+divides cleanly into four feature areas we can split between us, and it does
 not depend on any external data source we would have to negotiate access to.
 
 Deliverable submitted: IEEE-format project idea description.
@@ -204,14 +204,55 @@ Base CBV vs Generic CBV
 
 
 --------------------------------------------------------------------------------
+TEAM CHANGE
+--------------------------------------------------------------------------------
+
+The team is now three people: Manavi Chaudhry, Chu-Yun Hwang, Meet Kailash Mali.
+One member left the course after Week 3. Documentation, the README and the
+branching-strategy ownership table have been updated to match.
+
+That leaves four feature areas and three of us, so we agreed to keep "Progress
+tracking" (task views, Screen 4 templates) shared rather than hand it to one
+person. It is marked Shared in docs/branching_strategy/README.md. Whoever picks
+up a piece of it notes that here first, so two of us never start the same work.
+
+
+--------------------------------------------------------------------------------
 REMINDERS / TODO
 --------------------------------------------------------------------------------
 
   [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
-  [ ] Capture six browser screenshots into docs/screenshots/:
+  [x] Capture six browser screenshots into docs/screenshots/:
         four view outputs, plus the normal and empty list states.
+        Done on the docs-cleanup branch. Named by section:
+        section2-view1..4-*.png and section3-template-*.png.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
   [ ] Wire the plan generator's API key into .env as PLAN_GENERATOR_API_KEY
       when that feature starts. .env.example already has the line commented.
   [ ] Templates for Screens 1, 2 and 5 are not built yet - only the data
       behind them exists.
+
+
+--------------------------------------------------------------------------------
+WEEK 4 (CONTINUED) - DOCS CLEANUP
+--------------------------------------------------------------------------------
+
+Housekeeping pass on the docs-cleanup branch:
+
+  - docs/ now has a README.md index that maps each assignment section to the
+    files that answer it. The three required folders (wireframes,
+    branching_strategy, notes) are untouched; the loose data-layer files moved
+    into docs/data_model/ so the top level is navigable.
+
+  - Fixed a real template bug: two multi-line {# ... #} notes in base.html were
+    printing as page text on every page. Django's {# #} form is single-line
+    only. Use {% comment %} for anything spanning lines. Worth remembering,
+    because it is silent - no error, the text just shows up.
+
+  - Deleted templates/task_list.html. It was a duplicate at the wrong path;
+    PlanTaskListView points at templates/preparation/task_list.html, so the
+    stray file was unreachable.
+
+  - Regenerated docs/data_model/constraint_validation.txt (8/8 PASS).
+
+Still open: see REMINDERS / TODO above.

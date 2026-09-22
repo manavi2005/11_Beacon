@@ -1,7 +1,11 @@
-{# Site-wide skeleton. Every page extends this file and fills in the three
-   blocks below, so navigation, styling and branding live in exactly one
-   place. #}
-<!DOCTYPE html>
+{% comment %}
+Site-wide skeleton. Every page extends this file and fills in the three blocks
+below, so navigation, styling and branding live in exactly one place.
+
+Multi-line notes must use {% comment %}, not {# ... #}. The {# #} form is
+single-line only: spread over several lines it stops being a comment and
+Django prints it as page text.
+{% endcomment %}<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -39,8 +43,10 @@
     <div class="tag">An AI Personal Career Coach &middot; Team Career Coaches (Group 11)</div>
   </header>
 
-  {# Routes are reversed by name, never hard-coded, so renaming a URL pattern
-     never breaks navigation. #}
+  {% comment %}
+  Routes are reversed by name, never hard-coded, so renaming a URL pattern
+  never breaks navigation.
+  {% endcomment %}
   <nav>
     <a href="{% url 'preparation:dashboard' %}">Dashboard</a>
     <a href="{% url 'preparation:skill_catalog_manual' %}">Skills (HttpResponse FBV)</a>
