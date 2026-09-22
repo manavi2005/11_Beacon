@@ -29,8 +29,10 @@ its own `models.py`, `views.py`, `urls.py` and `templates/` sub-folder:
 | Plan generator | `preparation` (this one) |
 | Progress tracker | `progress` |
 
-That way four people never edit the same file, which is the division of labour the
-assignment describes.
+That way two people never edit the same file, which is the division of labour the
+assignment describes. With a three-person team and four feature areas, one area is
+currently shared rather than owned — see
+[`branching_strategy/README.md`](branching_strategy/README.md#who-owns-what).
 
 ---
 

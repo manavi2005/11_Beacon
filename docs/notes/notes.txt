@@ -1,7 +1,7 @@
 ================================================================================
 BEACON - PROGRESS NOTES
 Team Career Coaches (Group 11)
-Manavi Chaudhry | Chu-Yun Hwang | Jennie Lee | Meet Kailash Mali
+Manavi Chaudhry | Chu-Yun Hwang | Meet Kailash Mali
 INFO 490 MG - AI Web Application Development
 ================================================================================
 
@@ -18,12 +18,12 @@ Ideas considered:
   - AI personal coach for job interviews (Meet)
   - Personal shopper for groceries unavailable locally (Chu-Yun)
   - Long-distance carpooling for the UIUC community (Chu-Yun)
-  - Self-reflection / learning-identity app (Jennie)
+  - Self-reflection / learning-identity app
 
 Decision: AI Personal Career Coach, named "Beacon".
 
-Why: the problem is one all four of us are living through right now, the
-scope divides cleanly into four features (one per team member), and it does
+Why: the problem is one all of us are living through right now, the scope
+divides cleanly into four feature areas we can split between us, and it does
 not depend on any external data source we would have to negotiate access to.
 
 Deliverable submitted: IEEE-format project idea description.
@@ -204,9 +204,26 @@ Base CBV vs Generic CBV
 
 
 --------------------------------------------------------------------------------
+TEAM CHANGE
+--------------------------------------------------------------------------------
+
+The team is now three people: Manavi Chaudhry, Chu-Yun Hwang, Meet Kailash Mali.
+One member left the course after Week 3. Documentation, the README and the
+branching-strategy ownership table have been updated to match.
+
+Consequence worth tracking: there are four feature areas and three people, so
+"Progress tracking" (task views, Screen 4 templates) has no owner right now.
+It is marked Unassigned in docs/branching_strategy/README.md. Needs a decision
+at the next team sync - see the TODO below.
+
+
+--------------------------------------------------------------------------------
 REMINDERS / TODO
 --------------------------------------------------------------------------------
 
+  [ ] TEAM DECISION NEEDED: who owns "Progress tracking" (task views, Screen 4
+      templates) now that the team is three people? Marked Unassigned in
+      docs/branching_strategy/README.md until we agree.
   [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
   [ ] Capture six browser screenshots into docs/screenshots/:
         four view outputs, plus the normal and empty list states.
