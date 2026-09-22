@@ -211,19 +211,16 @@ The team is now three people: Manavi Chaudhry, Chu-Yun Hwang, Meet Kailash Mali.
 One member left the course after Week 3. Documentation, the README and the
 branching-strategy ownership table have been updated to match.
 
-Consequence worth tracking: there are four feature areas and three people, so
-"Progress tracking" (task views, Screen 4 templates) has no owner right now.
-It is marked Unassigned in docs/branching_strategy/README.md. Needs a decision
-at the next team sync - see the TODO below.
+That leaves four feature areas and three of us, so we agreed to keep "Progress
+tracking" (task views, Screen 4 templates) shared rather than hand it to one
+person. It is marked Shared in docs/branching_strategy/README.md. Whoever picks
+up a piece of it notes that here first, so two of us never start the same work.
 
 
 --------------------------------------------------------------------------------
 REMINDERS / TODO
 --------------------------------------------------------------------------------
 
-  [ ] TEAM DECISION NEEDED: who owns "Progress tracking" (task views, Screen 4
-      templates) now that the team is three people? Marked Unassigned in
-      docs/branching_strategy/README.md until we agree.
   [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
   [x] Capture six browser screenshots into docs/screenshots/:
         four view outputs, plus the normal and empty list states.

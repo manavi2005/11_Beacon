@@ -1,6 +1,6 @@
 # Branching Strategy
 
-**Team Career Coaches (Group 11) · Beacon**
+**Team Career Coaches (Group 11) | Beacon**
 
 ![Branching diagram](diagram.png)
 
@@ -16,7 +16,7 @@ from `main`, and comes back through a pull request. The reason is practical
 rather than ceremonial: three people are editing one Django project, and a broken
 `main` means nobody on the team can run the app or submit it.
 
-So `main` holds one guarantee — **it runs, and it is submittable as-is.** If a
+So `main` holds one guarantee - **it runs, and it is submittable as-is.** If a
 deadline arrives while a feature is half-finished, the unfinished work sits on
 its branch and `main` is still a valid submission.
 
@@ -53,7 +53,7 @@ git push -u origin feature/views-and-templates
 
 Step 5 is deliberately done through GitHub rather than a local `git merge`. The
 pull request leaves a permanent, readable record of what the branch contained
-and when it landed — which a local merge does not.
+and when it landed - which a local merge does not.
 
 ## Commit messages
 
@@ -77,16 +77,15 @@ same file:
 | Resume and goal intake | `preparation/views.py` (intake views), Screen 1 templates | Manavi |
 | Skills diagnosis | assessment views, Screen 2 templates | Meet |
 | Plan generator | plan views, Screen 3 templates | Chu-Yun |
-| Progress tracking | task views, Screen 4 templates | **Unassigned** — see below |
+| Progress tracking | task views, Screen 4 templates | Shared |
 
-**Open ownership question.** The team is now three people across four feature
-areas, so *Progress tracking* has no owner. Until the team agrees who picks it
-up, treat it as shared: anyone touching task views or Screen 4 templates should
-say so in `docs/notes/notes.txt` before branching, so two people do not start it
-at once. This needs a decision at the next team sync.
+**Why one area is shared.** There are four feature areas and three of us, so
+Progress tracking is not owned by one person. Anyone picking up task views or
+Screen 4 templates says so in `docs/notes/notes.txt` before branching, so two
+people never start the same piece of work.
 
-Shared files — `beacon_core/settings/`, `preparation/models.py`,
-`templates/base.html` — are changed in their own small branches and merged
+Shared files - `beacon_core/settings/`, `preparation/models.py`,
+`templates/base.html` - are changed in their own small branches and merged
 quickly, so they never sit in conflict for long.
 
 ## Conflict handling

@@ -16,5 +16,5 @@ The current, correct captures are in the parent folder:
 | `../section3-template-normal-list-state.png` | `/tasks/` with rows |
 | `../section3-template-empty-state.png` | `/skills/?q=zzzz`, `{% empty %}` branch |
 
-Nothing else about these images was wrong — the content and the empty-state
+Nothing else about these images was wrong - the content and the empty-state
 message were already right.
