@@ -401,4 +401,3 @@ ownership per teammate and conflict handling:
 | `docs/er_diagram.pdf` | Entity-relationship diagram |
 | `docs/constraint_validation.txt` | Saved output of `verify_constraints` |
 | `docs/screenshots/` | Browser output and Django Admin list views |
-# 11_Beacon
