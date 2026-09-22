@@ -221,14 +221,16 @@ up a piece of it notes that here first, so two of us never start the same work.
 REMINDERS / TODO
 --------------------------------------------------------------------------------
 
-  [ ] Add instructor 27guptamohit as a collaborator on the GitHub repo.
+  [x] Add instructor 27guptamohit as a collaborator on the GitHub repo.
+        Done - he has admin access.
   [x] Capture six browser screenshots into docs/screenshots/:
         four view outputs, plus the normal and empty list states.
         Done on the docs-cleanup branch. Named by section:
         section2-view1..4-*.png and section3-template-*.png.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
-  [ ] Wire the plan generator's API key into .env as PLAN_GENERATOR_API_KEY
-      when that feature starts. .env.example already has the line commented.
+  [ ] Put a real PLAN_GENERATOR_API_KEY in .env when the plan generator
+      starts. .env.example already lists the key with a dummy value, so
+      only the local .env needs the real one.
   [ ] Templates for Screens 1, 2 and 5 are not built yet - only the data
       behind them exists.
 
