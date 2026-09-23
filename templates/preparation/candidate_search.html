@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% comment %}
+  SEARCH FORM 2 of 2: method="post".
+  Candidate records are personal. A POST keeps the search term out of the URL,
+  the browser history and the server access log.
+{% endcomment %}
+
+{% block title %}Beacon - candidate lookup{% endblock %}
+{% block heading %}Candidate lookup{% endblock %}
+
+{% block content %}
+  <p class="tag">Submitted with <strong>POST</strong>. The search term travels in
+  the request body, so it never lands in the address bar, the browser history,
+  or a link somebody might paste into a group chat.</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="text" name="term" value="{{ term }}"
+           placeholder="Name, username, email, role or company">
+    <button type="submit">Search</button>
+  </form>
+
+  {% if searched %}
+    {% if term %}
+      <p>Results for the submitted term.
+         Notice the address bar has not changed.</p>
+    {% else %}
+      <p>No search term was entered.</p>
+    {% endif %}
+
+    <table>
+      <tr>
+        <th>Candidate</th><th>Target role</th><th>Company</th>
+        <th>Skills assessed</th><th>Avg proficiency</th>
+      </tr>
+      {% for candidate in results %}
+        <tr>
+          <td><a href="{{ candidate.get_absolute_url }}">{{ candidate.user.get_full_name|default:candidate.user.username }}</a></td>
+          <td>{{ candidate.target_role }}</td>
+          <td>{{ candidate.target_company|default:"--" }}</td>
+          <td>{{ candidate.assessment_count }}</td>
+          <td>{% if candidate.average_proficiency %}{{ candidate.average_proficiency|floatformat:1 }}{% else %}--{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">No candidate matched that search. Try a partial name,
+          an email fragment, or a target role such as "Analyst".</td></tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Enter a term above to search. Because this form posts rather than gets,
+       the results cannot be reached by URL - reloading this page will not
+       repeat the search on its own.</p>
+  {% endif %}
+
+  <p class="tag">Compare with the
+    <a href="{% url 'preparation:skill_search' %}">skill catalog search</a>,
+    which uses GET for the opposite reason.</p>
+{% endblock %}

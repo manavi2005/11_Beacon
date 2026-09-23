@@ -258,3 +258,167 @@ Housekeeping pass on the docs-cleanup branch:
   - Regenerated docs/data_model/constraint_validation.txt (8/8 PASS).
 
 Still open: see REMINDERS / TODO above.
+
+
+--------------------------------------------------------------------------------
+WEEK 5 - URL LINKING, NAVIGATION & ORM QUERIES (ASSIGNMENT 3)
+--------------------------------------------------------------------------------
+
+SECTION 1 - URL linking and navigation
+
+  Home page:
+    / is wired to the dashboard view. No 404 at the root.
+
+  Navigation:
+    base.html carries nine links, every one reversed with {% url %}. Nothing
+    in the template hard-codes a path, so renaming a route in urls.py cannot
+    leave a dead link behind.
+
+  Detail pages, addressed by primary key:
+    /skills/<pk>/       one skill: who was assessed on it, which tasks target it
+    /plans/<pk>/        one plan and the tasks inside it
+    /candidates/<pk>/   one candidate: goal, scores, plans, biggest gaps
+    /tasks/<pk>/        one task in full (added in Assignment 2)
+
+    Every list row links to its own detail page.
+
+  get_absolute_url():
+    Implemented on Skill, CandidateProfile, PreparationPlan and PlanTask.
+    Each returns reverse("preparation:<name>_detail", args=[self.pk]).
+
+  End-to-end flow:
+    /insights/ is the clearest demonstration. models.py supplies all five
+    models and their relationships, urls.py maps the route, views.py runs the
+    aggregations, and insights.html renders them - with every row linking back
+    out through get_absolute_url().
+
+
+WHERE get_absolute_url() IS ACTUALLY USEFUL IN BEACON
+(required deliverable)
+
+  The honest answer is that on a page that lists one kind of object, it saves
+  very little. {% url 'preparation:skill_detail' skill.pk %} is not much worse
+  than {{ skill.get_absolute_url }}.
+
+  It starts paying off on the pages that mix object types. The insights page
+  lists tasks, and each row links to the task, the skill it targets, and the
+  candidate it belongs to - three different detail routes in one table. With
+  {% url %} the template has to know the route name for each. With
+  get_absolute_url() each object answers for itself, and the template just
+  asks.
+
+  The feature where it will matter most is the roadmap (Screen 3). That screen
+  shows a week of mixed recommended items - a practice task, a skill to review,
+  a mock interview to schedule. Those are different models today and there will
+  be more of them later. If the template loops over one combined list and calls
+  {{ item.get_absolute_url }}, adding a new kind of recommendation means adding
+  one method to one model, and the roadmap template does not change at all.
+  With {% url %} in the template, every new recommendation type means another
+  {% if %} branch in the loop.
+
+  The second reason is that the route name stops leaking into the templates.
+  Right now the skill detail route is "preparation:skill_detail". If we split
+  the app into per-feature apps as planned (profiles, diagnostics,
+  mock_interviews, progress), that namespace changes. With get_absolute_url()
+  the change is one line per model. Without it, it is a search-and-replace
+  across every template that ever linked to a skill.
+
+  Django itself already uses it: the admin's "View on site" button and the
+  redirect after a successful CreateView both call get_absolute_url() when it
+  exists. Implementing it gets that behaviour for free.
+
+
+SECTION 2 - ORM queries and data presentation
+
+  Basic query:
+    CandidateListView lists CandidateProfile, annotated per row.
+
+  Two search forms, and why each uses the method it does:
+
+    GET  - /search/skills/
+           Filters: name__icontains, category__exact, and a relationship span
+           through assessments__candidate__target_role__icontains.
+           The skill catalog is public reference data. A filtered view of it is
+           worth sharing, bookmarking and reloading, so the filter belongs in
+           the URL: /search/skills/?q=sql&category=TECH can be pasted into a
+           team chat and it reproduces exactly what the sender saw. GET is
+           right here precisely because the query is visible.
+
+    POST - /search/candidates/
+           Candidate records carry real names, email addresses, and the role
+           somebody is quietly job-hunting for. A GET search would write that
+           straight into the URL bar, the browser history, the server access
+           log, and any link or screenshot the user later shares. POST keeps
+           the term in the request body instead.
+
+           Worth being precise: POST is not encryption. Both methods travel the
+           same wire and only HTTPS protects either one in transit. What POST
+           avoids is personal data being recorded in places that outlive the
+           request.
+
+           The cost is real. A POST result cannot be bookmarked, shared, or
+           reloaded without the browser re-submitting. That is exactly the
+           behaviour we want on the candidate lookup and exactly the behaviour
+           we do not want on the catalog. The two pages link to each other so
+           the contrast is visible side by side.
+
+  Relationship spanning (Django field lookups with __):
+
+    skill_search:      assessments__candidate__target_role__icontains
+                       Skill -> SkillAssessment -> CandidateProfile, one query.
+
+    candidate_search:  user__first_name, user__last_name, user__username,
+                       user__email, all OR-ed with Q objects.
+                       CandidateProfile -> User.
+
+    insights:          plan__candidate__target_role__icontains
+                       PlanTask -> PreparationPlan -> CandidateProfile.
+
+  Aggregations:
+
+    Total (count):
+      Skill.objects.count(), PlanTask.objects.count(), and a filtered total
+      PlanTask.objects.filter(status=DONE).count().
+
+    Grouped summary (values + annotate):
+      Skill.objects.values("category").annotate(skill_count=Count("id"))
+      One row per category rather than one per skill - values() sets the
+      GROUP BY column and annotate() is the aggregate over each group.
+
+    Grouped summary with a filtered count:
+      PreparationPlan.objects.annotate(
+          task_total=Count("tasks", distinct=True),
+          task_done=Count("tasks", filter=Q(tasks__status=DONE), distinct=True))
+      Total and completed tasks per plan, in one query instead of one query
+      per plan.
+
+    Grouped average across a relationship:
+      Skill.objects.annotate(average_proficiency=Avg("assessments__proficiency_score"))
+      Sorted ascending, this is "which skills is our whole user base weakest
+      at" - the question the plan generator will eventually need answered.
+
+  Something that cost us time: distinct=True on Count.
+    Annotating two different related tables in the same queryset makes the SQL
+    join multiply rows, and the counts come back inflated. Adding distinct=True
+    to each Count fixes it. Worth remembering, because the wrong numbers look
+    perfectly plausible - nothing errors, the totals are just too big.
+
+  Templates:
+    Every table uses {% for %} with an {% empty %} branch, and every empty
+    message says what to do next rather than only reporting that nothing was
+    found.
+
+    All multi-line template comments use {% comment %}...{% endcomment %}.
+    Django's {# #} is single-line only - a multi-line one renders literally
+    onto the page, which is the bug the smoke tests now guard against.
+
+
+REMINDERS / TODO
+
+  [ ] Screenshots for Assignment 3: home, navigation, detail-via-link, plus
+      GET search, POST search, empty state and aggregations.
+  [ ] Templates for Screens 1, 2 and 5 are still not built - only the data
+      behind them exists.
+  [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
+  [ ] The plan generator still has no API key wired up; .env.example has the
+      placeholder line ready.

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% comment %}
+  Every candidate, each row annotated by the database with counts and an
+  average. This is the grouped-summary aggregation for Section 2.
+{% endcomment %}
+
+{% block title %}Beacon - candidates{% endblock %}
+{% block heading %}Candidates{% endblock %}
+
+{% block content %}
+  <p class="tag">One row per candidate. Counts and averages are computed by the
+  database with <code>annotate()</code>, not by looping in Python.</p>
+
+  <p><a href="{% url 'preparation:candidate_search' %}">Search for a specific candidate &rarr;</a></p>
+
+  <table>
+    <tr>
+      <th>Candidate</th><th>Target role</th><th>Company</th>
+      <th>Skills assessed</th><th>Avg proficiency</th><th>Plans</th><th>Readiness</th>
+    </tr>
+    {% for candidate in candidates %}
+      <tr>
+        <td><a href="{{ candidate.get_absolute_url }}">{{ candidate.user.get_full_name|default:candidate.user.username }}</a></td>
+        <td>{{ candidate.target_role }}</td>
+        <td>{{ candidate.target_company|default:"--" }}</td>
+        <td>{{ candidate.assessment_count }}</td>
+        <td>{% if candidate.average_proficiency %}{{ candidate.average_proficiency|floatformat:1 }}{% else %}--{% endif %}</td>
+        <td>{{ candidate.plan_count }}</td>
+        <td>{{ candidate.readiness_percent }}%</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7">No candidate profiles yet. Run
+        <code>python manage.py seed_demo_data</code> to load the demo accounts.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

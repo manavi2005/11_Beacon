@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% comment %}
+  Detail page for one Skill, reached by primary key: /skills/<pk>/
+  Linked from every skill list via {{ skill.get_absolute_url }}.
+{% endcomment %}
+
+{% block title %}Beacon - {{ skill.name }}{% endblock %}
+{% block heading %}{{ skill.name }}{% endblock %}
+
+{% block content %}
+  <p class="tag">{{ skill.get_category_display }} skill &middot; id {{ skill.pk }}</p>
+  <p>{{ skill.description|default:"No description recorded for this skill yet." }}</p>
+
+  <table>
+    <tr><th>Candidates assessed</th><td>{{ assessments|length }}</td></tr>
+    <tr><th>Average proficiency</th>
+        <td>{% if average_proficiency %}{{ average_proficiency|floatformat:1 }} / 100{% else %}Not yet measured{% endif %}</td></tr>
+    <tr><th>Tasks targeting it</th><td>{{ tasks|length }}</td></tr>
+  </table>
+
+  <h2>Who has been assessed on this</h2>
+  <table>
+    <tr><th>Candidate</th><th>Target role</th><th>Score</th><th>Required</th><th>Gap</th></tr>
+    {% for assessment in assessments %}
+      <tr>
+        <td><a href="{{ assessment.candidate.get_absolute_url }}">{{ assessment.candidate.user.get_full_name|default:assessment.candidate.user.username }}</a></td>
+        <td>{{ assessment.candidate.target_role }}</td>
+        <td>{{ assessment.proficiency_score }}</td>
+        <td>{{ assessment.required_level }}</td>
+        <td>{% if assessment.gap %}{{ assessment.gap }} below{% else %}met{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">Nobody has been assessed on this skill yet. It will appear here once a candidate completes an assessment covering it.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Tasks that target this skill</h2>
+  <table>
+    <tr><th>Task</th><th>Plan</th><th>Week</th><th>Status</th></tr>
+    {% for task in tasks %}
+      <tr>
+        <td><a href="{{ task.get_absolute_url }}">{{ task.title }}</a></td>
+        <td><a href="{{ task.plan.get_absolute_url }}">{{ task.plan.title }}</a></td>
+        <td>{{ task.week_number }}</td>
+        <td>{{ task.get_status_display }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No preparation tasks target this skill yet.</td></tr>
+    {% endfor %}
+  </table>
+
+  <p><a href="{% url 'preparation:skill_search' %}">Back to the skill catalog</a></p>
+{% endblock %}
