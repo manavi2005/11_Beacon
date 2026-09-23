@@ -14,7 +14,7 @@
     </tr>
     {% for plan in plans %}
       <tr>
-        <td>{{ plan.title }}</td>
+        <td><a href="{{ plan.get_absolute_url }}">{{ plan.title }}</a></td>
         <td>{{ plan.candidate.user.get_full_name|default:plan.candidate.user.username }}</td>
         <td>{{ plan.focus_role }}</td>
         <td>{{ plan.target_date }}</td>

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% comment %}
+  Detail page for one CandidateProfile, reached by primary key.
+{% endcomment %}
+
+{% block title %}Beacon - {{ candidate.user.get_full_name|default:candidate.user.username }}{% endblock %}
+{% block heading %}{{ candidate.user.get_full_name|default:candidate.user.username }}{% endblock %}
+
+{% block content %}
+  <p class="tag">{{ candidate.get_experience_level_display }} &middot; id {{ candidate.pk }}</p>
+
+  <table>
+    <tr><th>Target role</th><td>{{ candidate.target_role }}</td></tr>
+    <tr><th>Target company</th><td>{{ candidate.target_company|default:"Not specified" }}</td></tr>
+    <tr><th>Interview date</th>
+        <td>{% if candidate.target_interview_date %}{{ candidate.target_interview_date }}
+            ({{ candidate.days_until_interview }} days away){% else %}Open-ended{% endif %}</td></tr>
+    <tr><th>Preparation window</th><td>{{ candidate.preparation_timeline_weeks }} weeks</td></tr>
+    <tr><th>Main concern</th><td>{{ candidate.get_primary_concern_display|default:"Not stated" }}</td></tr>
+    <tr><th>Overall readiness</th><td>{{ candidate.readiness_percent }}%</td></tr>
+  </table>
+
+  <h2>Biggest skill gaps</h2>
+  <table>
+    <tr><th>Skill</th><th>Score</th><th>Required</th><th>Gap</th></tr>
+    {% for assessment in biggest_gaps %}
+      <tr>
+        <td><a href="{{ assessment.skill.get_absolute_url }}">{{ assessment.skill.name }}</a></td>
+        <td>{{ assessment.proficiency_score }}</td>
+        <td>{{ assessment.required_level }}</td>
+        <td>{{ assessment.gap }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No assessments recorded, so no gaps can be identified yet.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>All assessments</h2>
+  <table>
+    <tr><th>Skill</th><th>Category</th><th>Score</th><th>Assessed on</th></tr>
+    {% for assessment in assessments %}
+      <tr>
+        <td><a href="{{ assessment.skill.get_absolute_url }}">{{ assessment.skill.name }}</a></td>
+        <td>{{ assessment.skill.get_category_display }}</td>
+        <td>{{ assessment.proficiency_score }} / 100</td>
+        <td>{{ assessment.assessed_on }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">This candidate has not taken the skill assessment yet.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Preparation plans</h2>
+  <table>
+    <tr><th>Plan</th><th>Deadline</th><th>Status</th><th>Progress</th></tr>
+    {% for plan in plans %}
+      <tr>
+        <td><a href="{{ plan.get_absolute_url }}">{{ plan.title }}</a></td>
+        <td>{{ plan.target_date }}</td>
+        <td>{{ plan.get_status_display }}</td>
+        <td>{{ plan.completion_percent }}%</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No plan has been generated for this candidate yet.</td></tr>
+    {% endfor %}
+  </table>
+
+  <p><a href="{% url 'preparation:candidate_list' %}">Back to all candidates</a></p>
+{% endblock %}

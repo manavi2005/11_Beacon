@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% comment %}
+  SEARCH FORM 1 of 2: method="get".
+  The filter ends up in the URL, which is the point - a filtered catalog view
+  is worth sharing, bookmarking and reloading.
+{% endcomment %}
+
+{% block title %}Beacon - search the skill catalog{% endblock %}
+{% block heading %}Search the skill catalog{% endblock %}
+
+{% block content %}
+  <p class="tag">Submitted with <strong>GET</strong>. Your filters appear in the
+  address bar, so this page can be bookmarked, reloaded and shared as a link.</p>
+
+  <form method="get">
+    <input type="text" name="q" value="{{ query }}" placeholder="Skill name contains...">
+
+    <select name="category">
+      <option value="">Any category</option>
+      {% for code, label in categories %}
+        <option value="{{ code }}" {% if code == category %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <input type="text" name="role" value="{{ role }}" placeholder="Assessed by someone targeting...">
+    <button type="submit">Search</button>
+    <a href="{% url 'preparation:skill_search' %}">Reset</a>
+  </form>
+
+  <p>
+    Showing <strong>{{ matches }}</strong> of {{ total_in_catalog }} skills.
+    {% if filters_applied %}
+      Filtered where {% for f in filters_applied %}{{ f }}{% if not forloop.last %}, and {% endif %}{% endfor %}.
+    {% else %}
+      No filters applied.
+    {% endif %}
+  </p>
+
+  <table>
+    <tr>
+      <th>Skill</th><th>Category</th><th>Candidates assessed</th>
+      <th>Avg proficiency</th><th>Tasks targeting it</th>
+    </tr>
+    {% for skill in skills %}
+      <tr>
+        <td><a href="{{ skill.get_absolute_url }}">{{ skill.name }}</a></td>
+        <td>{{ skill.get_category_display }}</td>
+        <td>{{ skill.learner_count }}</td>
+        <td>{% if skill.average_proficiency %}{{ skill.average_proficiency|floatformat:1 }}{% else %}--{% endif %}</td>
+        <td>{{ skill.task_count }}</td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="5">
+          {% if filters_applied %}
+            No skills match those filters. Try widening the search, or
+            <a href="{% url 'preparation:skill_search' %}">reset</a> to see the whole catalog.
+          {% else %}
+            The skill catalog is empty. Run
+            <code>python manage.py seed_demo_data</code> to load the demo rows.
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <p class="tag">Compare with the
+    <a href="{% url 'preparation:candidate_search' %}">candidate lookup</a>,
+    which uses POST for the opposite reason.</p>
+{% endblock %}

@@ -15,6 +15,7 @@ Reading order: Skill -> CandidateProfile -> SkillAssessment -> PreparationPlan
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 
@@ -57,6 +58,14 @@ class Skill(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"
+
+    def get_absolute_url(self):
+        """Canonical page for this skill.
+
+        The model owns its own URL, so templates write
+        {{ skill.get_absolute_url }} instead of rebuilding the path by hand.
+        """
+        return reverse("preparation:skill_detail", args=[self.pk])
 
 
 class CandidateProfile(models.Model):
@@ -139,6 +148,10 @@ class CandidateProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} -> {self.target_role}"
+
+    def get_absolute_url(self):
+        """Canonical page for this candidate."""
+        return reverse("preparation:candidate_detail", args=[self.pk])
 
     @property
     def days_until_interview(self):
@@ -267,6 +280,10 @@ class PreparationPlan(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
 
+    def get_absolute_url(self):
+        """Canonical page for this plan."""
+        return reverse("preparation:plan_detail", args=[self.pk])
+
     @property
     def completion_percent(self):
         """Share of tasks marked done - the number the progress tracker shows."""
@@ -361,3 +378,7 @@ class PlanTask(models.Model):
 
     def __str__(self):
         return f"{self.title} [{self.get_status_display()}]"
+
+    def get_absolute_url(self):
+        """Canonical page for this task."""
+        return reverse("preparation:task_detail", args=[self.pk])

@@ -87,12 +87,30 @@ Every page is reachable from the navigation bar at the top of the site.
 | `/plans/cbv-base/` | Every preparation plan | **CBV, base `View`** |
 | `/tasks/` | Every task across every plan | **CBV, generic `ListView`** |
 | `/tasks/<pk>/` | One task in full | CBV, generic `DetailView` (extra) |
+| `/skills/<pk>/` | One skill: assessments and tasks that target it | CBV, generic `DetailView` |
+| `/plans/<pk>/` | One preparation plan and its tasks | CBV, generic `DetailView` |
+| `/candidates/` | Every candidate, annotated with counts and averages | CBV, generic `ListView` |
+| `/candidates/<pk>/` | One candidate: goal, scores, plans, biggest gaps | CBV, generic `DetailView` |
+| `/search/skills/` | Skill search form (GET) | FBV, `render()` |
+| `/search/candidates/` | Candidate lookup form (POST) | FBV, `render()` |
+| `/insights/` | Totals and grouped summaries (`count()`, `annotate()`) | FBV, `render()` |
 | `/admin/` | Django Admin for all five models | - |
 
 The four bolded rows are the four required kinds of view.
 
 **Seeing the empty state:** `/skills/?q=zzzz` filters the catalog down to nothing
 and fires the `{% empty %}` branch, without deleting anything from the database.
+
+**Assignment 3 additions.** Every model now implements `get_absolute_url()`,
+so list templates link to detail pages with `{{ object.get_absolute_url }}`
+rather than rebuilding paths by hand, and every navigation link is reversed
+with `{% url %}`. Two search forms demonstrate the GET/POST distinction:
+`/search/skills/` filters the public skill catalog with `request.GET` so the
+result stays shareable as a link, while `/search/candidates/` looks up
+personal candidate records with `request.POST` so names and emails never
+enter the URL or the browser history. `/insights/` presents database-side
+aggregations — totals, skills grouped by category, and per-plan completion
+counts.
 
 ---
 
