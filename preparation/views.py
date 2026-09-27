@@ -17,11 +17,11 @@ exercise, and it is also what Section 3 means by "template reuse".
 """
 
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template import loader
 from django.views import View
-from django.views.generic import DetailView, ListView
+from django.views.generic import CreateView, DetailView, ListView
 
 from . import charts
 from .models import (
@@ -32,6 +32,7 @@ from .models import (
     SkillAssessment,
 )
 
+from .forms import PlanTaskForm
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -297,6 +298,45 @@ class CandidateListView(ListView):
             )
             .order_by("user__username")
         )
+
+class CandidateSearchView(View):
+    template_name = "preparation/candidate_search.html"
+
+    def get(self, request):
+        # Initial page - no search submitted yet
+        return render(request, self.template_name, {
+            "searched": False,
+            "term": "",
+            "results": [],
+        })
+
+    def post(self, request):
+        term = request.POST.get("term", "").strip()
+
+        results = CandidateProfile.objects.select_related(
+            "user"
+        ).annotate(
+            assessment_count=Count("assessments", distinct=True),
+            average_proficiency=Avg(
+                "assessments__proficiency_score"
+            ),
+        )
+
+        if term:
+            results = results.filter(
+                Q(user__first_name__icontains=term)
+                | Q(user__last_name__icontains=term)
+                | Q(user__username__icontains=term)
+                | Q(user__email__icontains=term)
+                | Q(target_role__icontains=term)
+                | Q(target_company__icontains=term)
+            )
+
+        return render(request, self.template_name, {
+            "searched": True,
+            "term": term,
+            "results": results,
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -597,3 +637,42 @@ def charts_page(request):
         ).filter(learners__gt=0).count(),
     }
     return render(request, "preparation/charts.html", context)
+
+class PlanTaskCreateView(CreateView):
+    """Create a new preparation task using a POST form.
+
+    GET displays the form.
+    POST validates the submitted data and creates a PlanTask.
+    A successful submission redirects to the new task's detail page using
+    PlanTask.get_absolute_url().
+    """
+
+    model = PlanTask
+    form_class = PlanTaskForm
+    template_name = "preparation/task_form.html"
+def skill_api(request):
+
+    query = request.GET.get("q", "").strip()
+    category = request.GET.get("category", "").strip()
+
+    skills = Skill.objects.all().order_by("name")
+    if query:
+        skills = skills.filter(name__icontains=query)
+
+    if category:
+        skills = skills.filter(category=category)
+
+    data = {
+        "count": skills.count(),
+        "results": [
+            {
+                "id": skill.pk,
+                "name": skill.name,
+                "category": skill.category,
+                "category_label": skill.get_category_display(),
+            }
+            for skill in skills
+        ],
+    }
+
+    return JsonResponse(data)

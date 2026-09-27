@@ -26,6 +26,7 @@ urlpatterns = [
     path("skills/", views.skill_catalog_render, name="skill_catalog_render"),
     # --- Section 2: class-based views --------------------------------------
     path("plans/cbv-base/", views.PlanBoardView.as_view(), name="plan_board"),
+    path("tasks/create/", views.PlanTaskCreateView.as_view(), name="task_create"),
     path("tasks/", views.PlanTaskListView.as_view(), name="task_list"),
     # Extra generic CBV
     path("tasks/<int:pk>/", views.PlanTaskDetailView.as_view(), name="task_detail"),
@@ -39,7 +40,7 @@ urlpatterns = [
     path("candidates/<int:pk>/", views.CandidateDetailView.as_view(), name="candidate_detail"),
     # Section 2 - the two search forms
     path("search/skills/", views.skill_search, name="skill_search"),
-    path("search/candidates/", views.candidate_search, name="candidate_search"),
+    # path("search/candidates/", views.candidate_search, name="candidate_search"),
     # Section 2 - aggregations
     path("insights/", views.insights, name="insights"),
     # -- Section 4: Matplotlib charts ---------------------------------------
@@ -59,4 +60,8 @@ urlpatterns = [
     ),
     path("charts/skill-gap.png", views.chart_skill_gap, name="chart_skill_gap"),
     path("charts/task-status.png", views.chart_task_status, name="chart_task_status"),
+
+    path("search/candidates/", views.CandidateSearchView.as_view(),  name="candidate_search"),
+
+    path("api/skills/", views.skill_api, name="skill_api"),
 ]

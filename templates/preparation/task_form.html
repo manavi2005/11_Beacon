@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Beacon - create task{% endblock %}
+{% block heading %}Create a preparation task{% endblock %}
+
+{% block content %}
+  <p class="tag">POST form</p>
+
+  <p>
+    Create a new task for a preparation plan. The form uses POST so the
+    submitted data can create a new database record.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <button type="submit">Create task</button>
+  </form>
+
+  <p>
+    <a href="{% url 'preparation:task_list' %}">Back to tasks</a>
+  </p>
+{% endblock %}

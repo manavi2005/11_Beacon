@@ -7,7 +7,7 @@ so nothing has to be hunted for.
 
 ---
 
-## How this folder is organised
+## How this folder is organized
 
 The assignment requires `docs/` to contain three specific folders -
 `wireframes/`, `branching_strategy/` and `notes/` - so those stay exactly where
