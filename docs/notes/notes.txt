@@ -444,10 +444,145 @@ REVIEW OF ASSIGNMENT 3, SECTIONS 1 AND 2 (Meet)
   25 tests total, all passing.
 
 
+SECTION 3 - STATIC FILES AND UI STYLING (Meet)
+(required deliverable)
+
+STATIC FILE ORGANIZATION: WHY PROJECT LEVEL
+
+  Django looks for static files in two places: each app's own static/
+  folder, found by AppDirectoriesFinder, and whatever directories are
+  listed in STATICFILES_DIRS, found by FileSystemFinder. Both finders
+  stay switched on. The question was only where to put ours.
+
+  We put them at project level, in a top-level static/ next to manage.py:
+
+    static/
+      css/beacon.css        the whole site stylesheet
+      img/beacon-logo.svg   lighthouse mark, logo and favicon
+
+  The reason is ownership. beacon.css styles base.html, which every page
+  in the project extends, and the logo is the product's, not any one
+  feature's. Neither belongs to the preparation app. Putting them in
+  preparation/static/ would say they do, and the day we split the work
+  into profiles, diagnostics and progress as planned, those apps would be
+  reaching into a sibling app's folder for the site stylesheet. That is
+  the kind of dependency that is easy to create and annoying to undo.
+
+  App-level static/ is still right for anything only one app uses. If the
+  diagnostics quiz ends up needing its own JavaScript, it goes in
+  diagnostics/static/diagnostics/, namespaced under the app name so two
+  apps can both ship a file called quiz.js without colliding.
+
+  The third directory is staticfiles/, which is STATIC_ROOT. Nothing is
+  written there by hand. collectstatic gathers STATICFILES_DIRS and every
+  app's static/ into it for deployment, so it is build output and it is
+  git-ignored, the same way we do not commit .venv.
+
+  One thing worth knowing: templates never write /static/ literally.
+  {% static "css/beacon.css" %} builds the URL from STATIC_URL, which is
+  what lets production swap in the hashed filename below without a single
+  template changing.
+
+
+CACHE BUSTING
+
+  The problem. Static files want a long cache lifetime, because making a
+  browser re-download an unchanged stylesheet on every page view is pure
+  waste. But a long lifetime and a fixed filename are a bad combination.
+  Ship a fix to beacon.css and every browser that already cached the old
+  copy keeps serving it until the cache expires, which could be weeks. The
+  user sees a half-styled page and "try a hard refresh" becomes the
+  support answer. Shortening the cache lifetime fixes staleness by giving
+  up the caching, which is trading the whole benefit for the fix.
+
+  What we did. production.py sets the staticfiles backend to
+  ManifestStaticFilesStorage. collectstatic then hashes the contents of
+  each file into its name:
+
+    css/beacon.css  ->  css/beacon.a0c1fb82e482.css
+
+  and writes staticfiles.json mapping every plain name to its hashed one.
+  {% static %} reads that manifest, so the template still names the file
+  the readable way and the served URL carries the hash.
+
+  Why that solves it. The filename is now derived from the content. Change
+  one line of CSS and the hash changes, so the URL changes, and a URL the
+  browser has never seen cannot be answered from cache: it has to fetch.
+  Nothing expires early and nothing stale is served, so the cache lifetime
+  can safely be set to a year. We verified it rather than assuming:
+
+    collectstatic                -> beacon.a0c1fb82e482.css
+    append one comment to the CSS
+    collectstatic                -> beacon.f1aecec1ef47.css
+    revert the comment
+    collectstatic                -> beacon.a0c1fb82e482.css
+
+  Development deliberately does not use it. runserver serves straight out
+  of static/, an edit shows up on the next reload, and there is no
+  manifest to keep in step. Turning it on in development would mean
+  running collectstatic after every CSS change.
+
+  Gotcha for later: with this backend, {% static %} raises an error if a
+  file is missing from the manifest. So a deployment has to run
+  collectstatic before it serves anything, and a path typo becomes a loud
+  failure at deploy time rather than a silent 404 in the browser. That is
+  the behaviour we want, but it is worth knowing before the first deploy.
+
+
+WHAT THE STYLING ACTUALLY CHANGED
+
+  Before this, base.html carried a <style> block of about 25 lines and
+  every page shipped its own copy of it. Now there is one beacon.css.
+
+  The visible changes, and why each one:
+
+    Masthead. Navy band with the lighthouse mark and wordmark, so the
+    site's identity is separated from the page content under it.
+
+    Navigation. Ten items is too many for a row of underlined links, so
+    they are pills with a real hit area that wrap tidily on a phone.
+
+    Content card. White surface on a grey page, which gives the content
+    an edge instead of floating.
+
+    Tables. Most of this site is tables, so they got the most attention:
+    zebra striping, uppercase column headers, a hover row, and rounded
+    clipping. A 24-row task list is readable now.
+
+    Stat tiles. The totals on the dashboard and the insights page were
+    two-column tables, which is a lot of chrome for six numbers. They are
+    tiles now, with the number set large.
+
+    Progress meters. Plan completion shows a bar next to the percentage,
+    because a proportion is easier to compare as a length than as digits.
+
+    Status pills. Colour-coded, but the word still says Done or Active on
+    its own. Colour is a second signal, never the only one.
+
+    Colours. The university's navy and orange. Navy carries structure,
+    orange is reserved for things you can act on, which is why links and
+    the stat tile accent are orange and headings are not.
+
+    Fonts. A system font stack, so there is no network request for a web
+    font and the page renders in the typeface the reader's OS already
+    uses for its own interface.
+
+  It reflows to one column under 700px, and the wide tables scroll
+  sideways inside their own box rather than crushing six columns into a
+  phone width. There is also a print stylesheet that drops the nav and
+  the footer, since a plan or task list is a plausible thing to print.
+
+  Tests: 6 added, checking that static/ is on the search path, that the
+  finders can resolve the CSS and the logo, that base.html links the
+  stylesheet through {% static %}, that every page carries it, and that no
+  inline <style> block has crept back in. 31 total, all passing.
+
+
 REMINDERS / TODO
 
   [x] Screenshots for Assignment 3: home, navigation, detail-via-link, plus
       GET search and aggregations. Named a3-section1-* and a3-section2-*.
+  [x] Section 3 screenshots showing the CSS applied, named a3-section3-*.
   [ ] Templates for Screens 1, 2 and 5 are still not built - only the data
       behind them exists.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).

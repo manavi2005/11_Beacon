@@ -28,6 +28,7 @@
       <p>No search term was entered.</p>
     {% endif %}
 
+    <div class="table-scroll">
     <table>
       <tr>
         <th>Candidate</th><th>Target role</th><th>Company</th>
@@ -46,6 +47,7 @@
           an email fragment, or a target role such as "Analyst".</td></tr>
       {% endfor %}
     </table>
+    </div>
   {% else %}
     <p>Enter a term above to search. Because this form posts rather than gets,
        the results cannot be reached by URL - reloading this page will not

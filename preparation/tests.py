@@ -144,7 +144,10 @@ class UrlsAndNavigationTests(TestCase):
         """Nav links must come from {% url %}, so a bad route name would fail
         to render rather than silently produce a dead link."""
         body = self.client.get("/").content.decode()
-        nav = body.split("<nav>")[1].split("</nav>")[0]
+        # Match the opening tag loosely: the nav carries a class attribute
+        # since the stylesheet moved into static/, and the test should not
+        # break every time that markup is restyled.
+        nav = body.split("<nav")[1].split("</nav>")[0]
         hrefs = [h for h in nav.split('href="')[1:]]
         self.assertGreaterEqual(len(hrefs), 3)
         for expected in ("/candidates/", "/search/skills/", "/insights/"):
@@ -267,3 +270,42 @@ class OrmQueryTests(TestCase):
             with self.subTest(candidate=str(row)):
                 self.assertEqual(row.assessment_count, row.assessments.count())
                 self.assertEqual(row.plan_count, row.plans.count())
+
+
+class StaticFilesTests(TestCase):
+    """Assignment 3, Section 3: static configuration and CSS delivery."""
+
+    def test_static_dir_is_on_the_search_path(self):
+        from django.conf import settings
+        from pathlib import Path
+        self.assertIn(Path(settings.BASE_DIR) / "static", settings.STATICFILES_DIRS)
+
+    def test_stylesheet_is_findable_by_the_staticfiles_finders(self):
+        """finders.find() is what {% static %} resolves through, so this
+        proves the file is reachable, not just that it exists on disk."""
+        from django.contrib.staticfiles import finders
+        self.assertIsNotNone(finders.find("css/beacon.css"))
+        self.assertIsNotNone(finders.find("img/beacon-logo.svg"))
+
+    def test_base_template_links_the_stylesheet_via_static(self):
+        body = self.client.get("/").content.decode()
+        self.assertIn('href="/static/css/beacon.css"', body)
+        self.assertIn('rel="stylesheet"', body)
+
+    def test_no_inline_style_block_remains(self):
+        """The CSS moved to static/. An inline <style> block coming back would
+        mean a page is carrying its own copy again."""
+        for url in ("/", "/candidates/", "/insights/", "/search/skills/"):
+            with self.subTest(url=url):
+                self.assertNotIn("<style>", self.client.get(url).content.decode())
+
+    def test_logo_is_served_and_is_an_svg(self):
+        from django.contrib.staticfiles import finders
+        path = finders.find("img/beacon-logo.svg")
+        with open(path, encoding="utf-8") as fh:
+            self.assertIn("<svg", fh.read(400))
+
+    def test_every_page_carries_the_stylesheet(self):
+        for url in ("/", "/skills/", "/candidates/", "/tasks/", "/insights/"):
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), "css/beacon.css")

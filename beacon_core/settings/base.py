@@ -134,7 +134,20 @@ USE_TZ = True
 # ---------------------------------------------------------------------------
 # Static files
 # ---------------------------------------------------------------------------
+# The URL prefix templates build on. {% static "css/beacon.css" %} becomes
+# /static/css/beacon.css, so the path is never written out by hand.
 STATIC_URL = "static/"
+
+# Where our own CSS, images and fonts live in the repo. Project level rather
+# than app level: the stylesheet and the logo belong to the whole site, not to
+# the preparation app, and a second app would have to reach into a sibling
+# app's folder to reuse them. App-level static/ is still the right home for
+# anything only one app uses, and the app-directories finder keeps working
+# alongside this.
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Where collectstatic gathers everything for a real deployment. Git-ignored:
+# it is build output, assembled from STATICFILES_DIRS and each app's static/.
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # User uploads (CandidateProfile.resume_file). Kept out of Git via .gitignore.

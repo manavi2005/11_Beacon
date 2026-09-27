@@ -7,6 +7,7 @@
   <p class="tag">{{ view_label }}</p>
   <p>{{ explainer }}</p>
 
+  <div class="table-scroll">
   <table>
     <tr>
       <th>Week</th><th>Task</th><th>Plan</th>
@@ -30,6 +31,7 @@
       </tr>
     {% endfor %}
   </table>
+  </div>
 
   {% if is_paginated %}
     <p>

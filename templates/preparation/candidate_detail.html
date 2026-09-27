@@ -9,6 +9,7 @@
 {% block content %}
   <p class="tag">{{ candidate.get_experience_level_display }} &middot; id {{ candidate.pk }}</p>
 
+  <div class="table-scroll">
   <table>
     <tr><th>Target role</th><td>{{ candidate.target_role }}</td></tr>
     <tr><th>Target company</th><td>{{ candidate.target_company|default:"Not specified" }}</td></tr>
@@ -19,8 +20,10 @@
     <tr><th>Main concern</th><td>{{ candidate.get_primary_concern_display|default:"Not stated" }}</td></tr>
     <tr><th>Overall readiness</th><td>{{ candidate.readiness_percent }}%</td></tr>
   </table>
+  </div>
 
   <h2>Biggest skill gaps</h2>
+  <div class="table-scroll">
   <table>
     <tr><th>Skill</th><th>Score</th><th>Required</th><th>Gap</th></tr>
     {% for assessment in biggest_gaps %}
@@ -34,8 +37,10 @@
       <tr><td colspan="4">No assessments recorded, so no gaps can be identified yet.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <h2>All assessments</h2>
+  <div class="table-scroll">
   <table>
     <tr><th>Skill</th><th>Category</th><th>Score</th><th>Assessed on</th></tr>
     {% for assessment in assessments %}
@@ -49,8 +54,10 @@
       <tr><td colspan="4">This candidate has not taken the skill assessment yet.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <h2>Preparation plans</h2>
+  <div class="table-scroll">
   <table>
     <tr><th>Plan</th><th>Deadline</th><th>Status</th><th>Progress</th></tr>
     {% for plan in plans %}
@@ -64,6 +71,7 @@
       <tr><td colspan="4">No plan has been generated for this candidate yet.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <p><a href="{% url 'preparation:candidate_list' %}">Back to all candidates</a></p>
 {% endblock %}
