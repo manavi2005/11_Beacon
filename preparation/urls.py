@@ -29,4 +29,17 @@ urlpatterns = [
     path("tasks/", views.PlanTaskListView.as_view(), name="task_list"),
     # Extra generic CBV
     path("tasks/<int:pk>/", views.PlanTaskDetailView.as_view(), name="task_detail"),
+    # =====================================================================
+    # ASSIGNMENT 3
+    # =====================================================================
+    # Section 1 - detail pages addressed by primary key
+    path("skills/<int:pk>/", views.SkillDetailView.as_view(), name="skill_detail"),
+    path("plans/<int:pk>/", views.PlanDetailView.as_view(), name="plan_detail"),
+    path("candidates/", views.CandidateListView.as_view(), name="candidate_list"),
+    path("candidates/<int:pk>/", views.CandidateDetailView.as_view(), name="candidate_detail"),
+    # Section 2 - the two search forms
+    path("search/skills/", views.skill_search, name="skill_search"),
+    path("search/candidates/", views.candidate_search, name="candidate_search"),
+    # Section 2 - aggregations
+    path("insights/", views.insights, name="insights"),
 ]

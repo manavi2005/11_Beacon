@@ -29,9 +29,11 @@ docs/
 ├── notes/notes.txt         <- REQUIRED folder: weekly running log
 ├── data_model/             <- the data layer (ER diagram, design justification)
 └── screenshots/            <- browser output, grouped by assignment section
-    ├── section1-*.png
-    ├── section2-*.png
-    ├── section3-*.png
+    ├── section1-*.png      <- Assignment 2
+    ├── section2-*.png      <- Assignment 2
+    ├── section3-*.png      <- Assignment 2
+    ├── a3-section1-*.png   <- Assignment 3: home, navigation, detail via link
+    ├── a3-section2-*.png   <- Assignment 3: search and aggregations
     ├── admin/              <- Django Admin list views (earlier assignment)
     └── superseded/         <- older captures, kept for the record only
 ```
@@ -112,3 +114,33 @@ fires.
 | [`notes/notes.txt`](notes/notes.txt) | Weekly log: what we did, decisions, open questions, TODOs |
 | [`branching_strategy/README.md`](branching_strategy/README.md) | Branch naming, the cycle, commit-message style, file ownership, conflict handling |
 | [`branching_strategy/diagram.png`](branching_strategy/diagram.png) | Visual of the branch-and-merge flow |
+
+---
+
+## Assignment 3, Section 1 - URL linking and navigation
+
+| Requirement | Where to look |
+|---|---|
+| Home page at `/`, no 404 | `dashboard` in [views.py](../preparation/views.py), route in [urls.py](../preparation/urls.py) |
+| Navigation bar, 3+ items, `{% url %}` only | [`templates/base.html`](../templates/base.html), 10 links, every one reversed with `{% url %}` |
+| Detail pages keyed by primary key | `/skills/<pk>/`, `/plans/<pk>/`, `/candidates/<pk>/`, `/tasks/<pk>/` |
+| Each list row links to its detail page | `candidate_list.html`, `skill_list.html`, `plan_list.html`, `task_list.html` |
+| `get_absolute_url()` on the model | `Skill`, `CandidateProfile`, `PreparationPlan`, `PlanTask` in [models.py](../preparation/models.py) |
+| Used in templates instead of `{% url %}` | `{{ object.get_absolute_url }}`, 21 uses across 10 templates |
+| End-to-end flow | models.py -> urls.py -> views.py -> templates, walked through in `notes.txt` |
+| Screenshots | [home](screenshots/a3-section1-home-page.png), [navigation](screenshots/a3-section1-navigation-and-list.png), [detail via link](screenshots/a3-section1-detail-via-link.png) |
+
+## Assignment 3, Section 2 - ORM queries and data presentation
+
+| Requirement | Where to look |
+|---|---|
+| List of objects from one model | `/candidates/`, `CandidateListView` |
+| Search form using `request.GET` | `/search/skills/`, `skill_search` |
+| Search form using `request.POST` | `/search/candidates/`, `candidate_search` |
+| Why each method | GET keeps the skill filter shareable as a link; POST keeps personal candidate data out of the URL and history. Reasoned through in `notes.txt` |
+| Field lookups | `__icontains`, `__exact`, `__gt` |
+| Relationship spanning with `__` | `assessments__candidate__target_role`, `plan__candidate__target_role`, `user__first_name` |
+| Total, via `count()` | `/insights/`, the `totals` dict |
+| Grouped summary, `annotate` + `Count` | skills per category, tasks per plan, learners per skill |
+| `{% for %}` with `{% empty %}` | every list template |
+| Screenshots | [GET search](screenshots/a3-section2-search-get.png), [aggregations](screenshots/a3-section2-aggregations.png) |

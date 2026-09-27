@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% comment %}
+  Aggregation summaries: one total (count) and three grouped summaries
+  (values + annotate, filtered Count, and Avg across a relationship).
+{% endcomment %}
+
+{% block title %}Beacon - insights{% endblock %}
+{% block heading %}Insights{% endblock %}
+
+{% block content %}
+  <p class="tag">Every number on this page is computed by the database.
+  None of it is a Python loop over a queryset.</p>
+
+  <h2>Totals</h2>
+  <table>
+    <tr><th>Skills in the catalog</th><td>{{ totals.skills }}</td></tr>
+    <tr><th>Candidates</th><td>{{ totals.candidates }}</td></tr>
+    <tr><th>Assessments recorded</th><td>{{ totals.assessments }}</td></tr>
+    <tr><th>Preparation plans</th><td>{{ totals.plans }}</td></tr>
+    <tr><th>Tasks</th><td>{{ totals.tasks }}</td></tr>
+    <tr><th>Tasks completed</th><td>{{ totals.tasks_done }}</td></tr>
+  </table>
+
+  <h2>Skills by category</h2>
+  <p class="tag">Grouped with <code>values("category").annotate(Count("id"))</code>
+  &mdash; one row per category, not one per skill.</p>
+  <table>
+    <tr><th>Category</th><th>Skills</th></tr>
+    {% for row in by_category %}
+      <tr><td>{{ row.label }}</td><td>{{ row.skill_count }}</td></tr>
+    {% empty %}
+      <tr><td colspan="2">No skills in the catalog, so there is nothing to group.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Plan progress</h2>
+  <p class="tag">Each plan carries a filtered count: total tasks, and how many
+  of those tasks have status DONE.</p>
+  <table>
+    <tr><th>Plan</th><th>Candidate</th><th>Deadline</th><th>Tasks done</th><th>Total tasks</th></tr>
+    {% for plan in plans %}
+      <tr>
+        <td><a href="{{ plan.get_absolute_url }}">{{ plan.title }}</a></td>
+        <td><a href="{{ plan.candidate.get_absolute_url }}">{{ plan.candidate.user.get_full_name|default:plan.candidate.user.username }}</a></td>
+        <td>{{ plan.target_date }}</td>
+        <td>{{ plan.task_done }}</td>
+        <td>{{ plan.task_total }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No preparation plans exist yet.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Weakest skills across all candidates</h2>
+  <p class="tag">Average proficiency per skill, lowest first &mdash; the skills
+  Beacon should be generating the most practice for.</p>
+  <table>
+    <tr><th>Skill</th><th>Category</th><th>Candidates assessed</th><th>Avg proficiency</th><th>Tasks targeting it</th></tr>
+    {% for skill in skills %}
+      <tr>
+        <td><a href="{{ skill.get_absolute_url }}">{{ skill.name }}</a></td>
+        <td>{{ skill.get_category_display }}</td>
+        <td>{{ skill.learner_count }}</td>
+        <td>{{ skill.average_proficiency|floatformat:1 }}</td>
+        <td>{{ skill.task_count }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No skill has been assessed yet, so no averages can be computed.</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Tasks by target role</h2>
+  <p class="tag">Relationship spanning:
+  <code>PlanTask.objects.filter(plan__candidate__target_role__icontains=...)</code>
+  reaches across three tables in one query.</p>
+
+  <form method="get">
+    <input type="text" name="role" value="{{ role }}" placeholder="e.g. Data Analyst">
+    <button type="submit">Filter</button>
+    {% if role %}<a href="{% url 'preparation:insights' %}">Clear</a>{% endif %}
+  </form>
+
+  <p>{{ task_match_count }} task{{ task_match_count|pluralize }} match
+     {% if role %}candidates targeting "{{ role }}"{% else %}(no role filter applied){% endif %}.</p>
+
+  <table>
+    <tr><th>Task</th><th>Skill</th><th>Candidate</th><th>Target role</th><th>Status</th></tr>
+    {% for task in tasks %}
+      <tr>
+        <td><a href="{{ task.get_absolute_url }}">{{ task.title }}</a></td>
+        <td>{% if task.skill %}{{ task.skill.name }}{% else %}Untagged{% endif %}</td>
+        <td><a href="{{ task.plan.candidate.get_absolute_url }}">{{ task.plan.candidate.user.get_full_name|default:task.plan.candidate.user.username }}</a></td>
+        <td>{{ task.plan.candidate.target_role }}</td>
+        <td>{{ task.get_status_display }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No task belongs to a candidate targeting "{{ role }}".
+        Try a partial role name such as "Analyst".</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

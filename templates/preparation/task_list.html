@@ -15,7 +15,7 @@
     {% for task in tasks %}
       <tr>
         <td>{{ task.week_number }}</td>
-        <td><a href="{% url 'preparation:task_detail' task.pk %}">{{ task.title }}</a></td>
+        <td><a href="{{ task.get_absolute_url }}">{{ task.title }}</a></td>
         <td>{{ task.plan.title }}</td>
         <td>{{ task.skill.name|default:"Untagged" }}</td>
         <td>{{ task.get_priority_display }}</td>
