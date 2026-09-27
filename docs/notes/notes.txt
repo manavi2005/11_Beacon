@@ -413,10 +413,41 @@ SECTION 2 - ORM queries and data presentation
     onto the page, which is the bug the smoke tests now guard against.
 
 
+REVIEW OF ASSIGNMENT 3, SECTIONS 1 AND 2 (Meet)
+
+  Reviewed Manavi's branch before merging. Both sections are complete and
+  everything works. Three things came out of the review.
+
+  1. Crash on a hand-edited URL.
+     /search/skills/?category=BOGUS returned a 500. The category code comes
+     straight off the query string, and Skill.Category(code) raises ValueError
+     on anything that is not a real choice. Same for a lowercase code like
+     ?category=tech, since the stored codes are uppercase.
+
+     Fixed by looking the label up in dict(Skill.Category.choices) instead.
+     An unknown code now matches nothing and the page says why, rather than
+     silently showing the whole catalog as though no filter were applied.
+
+     Worth remembering generally: anything read from request.GET is user
+     input, even when our own form is the only thing that normally sets it.
+
+  2. Screenshots were missing. Captured now, see below.
+
+  3. Punctuation. A few em dashes had crept back into views.py and README.md;
+     swapped for plain ASCII to match the rest of the repo.
+
+  Tests: 17 added, covering the home page, the nav links, get_absolute_url on
+  all four models, list-to-detail navigation, both search forms, the empty
+  states, the aggregations, and a regression guard for the 500 above. The
+  annotation test compares each annotated count against a direct count, which
+  is what would catch the distinct=True problem noted earlier if it came back.
+  25 tests total, all passing.
+
+
 REMINDERS / TODO
 
-  [ ] Screenshots for Assignment 3: home, navigation, detail-via-link, plus
-      GET search, POST search, empty state and aggregations.
+  [x] Screenshots for Assignment 3: home, navigation, detail-via-link, plus
+      GET search and aggregations. Named a3-section1-* and a3-section2-*.
   [ ] Templates for Screens 1, 2 and 5 are still not built - only the data
       behind them exists.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).

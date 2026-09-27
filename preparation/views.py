@@ -190,7 +190,7 @@ def dashboard(request):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 1 — Detail pages, addressed by primary key
+# SECTION 1 - Detail pages, addressed by primary key
 #
 # Each list page links every row to its own detail page. The links are written
 # as {{ object.get_absolute_url }} rather than {% url %}, so the model decides
@@ -299,7 +299,7 @@ class CandidateListView(ListView):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2 — Search form 1: GET
+# SECTION 2 - Search form 1: GET
 #
 # The skill catalog is public reference data. A filtered view of it is worth
 # sharing, bookmarking and reloading, so the filter belongs in the URL:
@@ -317,6 +317,7 @@ def skill_search(request):
 
     skills = Skill.objects.all()
     filters_applied = []
+    invalid_category = ""
 
     if query:
         # __icontains: case-insensitive substring match.
@@ -324,11 +325,22 @@ def skill_search(request):
         filters_applied.append(f'name contains "{query}"')
 
     if category:
-        # __exact: the category code must match exactly.
-        skills = skills.filter(category__exact=category)
-        filters_applied.append(
-            f"category is {Skill.Category(category).label}"
-        )
+        # The code arrives straight from the query string, so it cannot be
+        # trusted to be one of the real choices. Look the label up instead of
+        # calling Skill.Category(category), which raises ValueError on anything
+        # unrecognised and would turn a hand-edited URL into a 500.
+        label = dict(Skill.Category.choices).get(category)
+
+        if label is None:
+            # Unknown code: match nothing and say so, rather than silently
+            # ignoring the filter and showing the whole catalog.
+            skills = skills.none()
+            invalid_category = category
+            filters_applied.append(f'category "{category}" is not a category')
+        else:
+            # __exact: the category code must match exactly.
+            skills = skills.filter(category__exact=category)
+            filters_applied.append(f"category is {label}")
 
     if role:
         # RELATIONSHIP SPANNING: skill -> assessments -> candidate -> role.
@@ -352,6 +364,7 @@ def skill_search(request):
         "role": role,
         "categories": Skill.Category.choices,
         "filters_applied": filters_applied,
+        "invalid_category": invalid_category,
         "total_in_catalog": Skill.objects.count(),
         "matches": skills.count(),
     }
@@ -359,7 +372,7 @@ def skill_search(request):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2 — Search form 2: POST
+# SECTION 2 - Search form 2: POST
 #
 # Candidate records are personal: real names, email addresses, the role
 # somebody is quietly job-hunting for. A GET search would write that straight
@@ -415,7 +428,7 @@ def candidate_search(request):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2 — Aggregations
+# SECTION 2 - Aggregations
 # ---------------------------------------------------------------------------
 def insights(request):
     """Totals and grouped summaries across the whole database.

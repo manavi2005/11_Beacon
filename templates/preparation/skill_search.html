@@ -52,7 +52,11 @@
     {% empty %}
       <tr>
         <td colspan="5">
-          {% if filters_applied %}
+          {% if invalid_category %}
+            "{{ invalid_category }}" is not one of the skill categories. Pick one
+            from the dropdown, or
+            <a href="{% url 'preparation:skill_search' %}">reset</a> to see the whole catalog.
+          {% elif filters_applied %}
             No skills match those filters. Try widening the search, or
             <a href="{% url 'preparation:skill_search' %}">reset</a> to see the whole catalog.
           {% else %}

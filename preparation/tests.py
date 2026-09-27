@@ -11,7 +11,13 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import CandidateProfile, PlanTask, PreparationPlan, Skill
+from .models import (
+    CandidateProfile,
+    PlanTask,
+    PreparationPlan,
+    Skill,
+    SkillAssessment,
+)
 from django.contrib.auth.models import User
 
 
@@ -103,3 +109,161 @@ class TemplateBehaviourTests(TestCase):
         response = self.client.get(reverse("preparation:skill_catalog_render"))
         self.assertNotContains(response, "Site-wide skeleton")
         self.assertNotContains(response, "{#")
+
+
+class UrlsAndNavigationTests(TestCase):
+    """Assignment 3, Section 1: home page, navigation, PK detail pages."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.skill = Skill.objects.create(
+            name="SQL and relational modeling",
+            category=Skill.Category.TECHNICAL,
+        )
+        user = User.objects.create_user(
+            "bpatel", first_name="Bharat", last_name="Patel",
+            email="bpatel@example.edu", password="test-only-pw",
+        )
+        cls.candidate = CandidateProfile.objects.create(
+            user=user, target_role="Data Analyst", preparation_timeline_weeks=4,
+        )
+        cls.plan = PreparationPlan.objects.create(
+            candidate=cls.candidate, title="Data Analyst sprint",
+            focus_role="Data Analyst",
+            target_date=timezone.localdate() + timezone.timedelta(weeks=4),
+        )
+        cls.task = PlanTask.objects.create(
+            plan=cls.plan, skill=cls.skill,
+            title="Write 5 JOIN queries", week_number=1,
+        )
+
+    def test_root_url_is_not_a_404(self):
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_nav_has_at_least_three_reversed_links(self):
+        """Nav links must come from {% url %}, so a bad route name would fail
+        to render rather than silently produce a dead link."""
+        body = self.client.get("/").content.decode()
+        nav = body.split("<nav>")[1].split("</nav>")[0]
+        hrefs = [h for h in nav.split('href="')[1:]]
+        self.assertGreaterEqual(len(hrefs), 3)
+        for expected in ("/candidates/", "/search/skills/", "/insights/"):
+            self.assertIn(expected, nav)
+
+    def test_get_absolute_url_returns_a_working_pk_url(self):
+        for obj in (self.skill, self.candidate, self.plan, self.task):
+            with self.subTest(model=type(obj).__name__):
+                url = obj.get_absolute_url()
+                self.assertIn(str(obj.pk), url)
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_list_page_links_to_detail_page(self):
+        """The end-to-end flow: list -> link -> detail."""
+        body = self.client.get(reverse("preparation:candidate_list")).content.decode()
+        self.assertIn(self.candidate.get_absolute_url(), body)
+        response = self.client.get(self.candidate.get_absolute_url())
+        self.assertContains(response, "Data Analyst")
+
+    def test_unknown_pk_is_404_not_500(self):
+        for url in ("/skills/9999/", "/candidates/9999/", "/plans/9999/", "/tasks/9999/"):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+
+
+class OrmQueryTests(TestCase):
+    """Assignment 3, Section 2: search, relationship spanning, aggregation."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sql = Skill.objects.create(
+            name="SQL and relational modeling", category=Skill.Category.TECHNICAL)
+        cls.pitch = Skill.objects.create(
+            name="Resume and elevator pitch", category=Skill.Category.COMMUNICATION)
+        user = User.objects.create_user(
+            "ekim", first_name="Eunji", last_name="Kim",
+            email="ekim@example.edu", password="test-only-pw")
+        cls.candidate = CandidateProfile.objects.create(
+            user=user, target_role="Data Analyst", preparation_timeline_weeks=4)
+        SkillAssessment.objects.create(
+            candidate=cls.candidate, skill=cls.sql,
+            proficiency_score=40, required_level=80)
+
+    # --- GET search -----------------------------------------------------
+    def test_get_search_filters_by_name(self):
+        r = self.client.get(reverse("preparation:skill_search"), {"q": "SQL"})
+        self.assertContains(r, "SQL and relational modeling")
+        self.assertNotContains(r, "Resume and elevator pitch")
+
+    def test_get_search_is_shareable_as_a_url(self):
+        """Same querystring, same results: that is the point of using GET."""
+        url = reverse("preparation:skill_search") + "?q=SQL"
+        first = self.client.get(url).content.decode()
+        second = self.client.get(url).content.decode()
+        self.assertEqual(first, second)
+
+    def test_get_search_spans_relationships(self):
+        """skill -> assessments -> candidate -> target_role, via __."""
+        r = self.client.get(reverse("preparation:skill_search"), {"role": "Data Analyst"})
+        self.assertContains(r, "SQL and relational modeling")
+        self.assertNotContains(r, "Resume and elevator pitch")
+
+    def test_get_search_empty_state(self):
+        r = self.client.get(reverse("preparation:skill_search"), {"q": "zzzznomatch"})
+        self.assertContains(r, "No skills match")
+
+    def test_unknown_category_does_not_crash(self):
+        """Regression guard.
+
+        The category code comes straight from the query string. Passing it to
+        Skill.Category() raised ValueError, so a hand-edited URL returned a
+        500 instead of an empty result.
+        """
+        for bad in ("BOGUS", "tech", "' OR 1=1--"):
+            with self.subTest(category=bad):
+                r = self.client.get(reverse("preparation:skill_search"),
+                                    {"category": bad})
+                self.assertEqual(r.status_code, 200)
+                self.assertContains(r, "is not one of the skill categories")
+
+    def test_valid_category_still_filters(self):
+        r = self.client.get(reverse("preparation:skill_search"),
+                            {"category": Skill.Category.TECHNICAL})
+        self.assertContains(r, "SQL and relational modeling")
+        self.assertNotContains(r, "Resume and elevator pitch")
+
+    # --- POST search ----------------------------------------------------
+    def test_post_search_finds_candidate_across_relationship(self):
+        """CandidateProfile -> User via user__, one form field, several fields
+        searched."""
+        r = self.client.post(reverse("preparation:candidate_search"), {"term": "Eunji"})
+        self.assertContains(r, "Eunji")
+
+    def test_post_search_keeps_the_term_out_of_the_url(self):
+        r = self.client.post(reverse("preparation:candidate_search"), {"term": "Eunji"})
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("Eunji", r.request["QUERY_STRING"])
+
+    def test_post_search_empty_state(self):
+        r = self.client.post(reverse("preparation:candidate_search"), {"term": "zzzznomatch"})
+        self.assertContains(r, "No candidate")
+
+    def test_get_on_post_search_shows_form_without_results(self):
+        r = self.client.get(reverse("preparation:candidate_search"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "<form")
+
+    # --- aggregation ----------------------------------------------------
+    def test_insights_totals_and_grouping(self):
+        r = self.client.get(reverse("preparation:insights"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["totals"]["skills"], Skill.objects.count())
+        self.assertEqual(r.context["totals"]["candidates"], CandidateProfile.objects.count())
+        groups = {g["label"]: g["skill_count"] for g in r.context["by_category"]}
+        self.assertEqual(sum(groups.values()), Skill.objects.count())
+
+    def test_candidate_list_annotations_match_reality(self):
+        r = self.client.get(reverse("preparation:candidate_list"))
+        for row in r.context["candidates"]:
+            with self.subTest(candidate=str(row)):
+                self.assertEqual(row.assessment_count, row.assessments.count())
+                self.assertEqual(row.plan_count, row.plans.count())

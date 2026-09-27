@@ -109,7 +109,7 @@ with `{% url %}`. Two search forms demonstrate the GET/POST distinction:
 result stays shareable as a link, while `/search/candidates/` looks up
 personal candidate records with `request.POST` so names and emails never
 enter the URL or the browser history. `/insights/` presents database-side
-aggregations — totals, skills grouped by category, and per-plan completion
+aggregations: totals, skills grouped by category, and per-plan completion
 counts.
 
 ---
