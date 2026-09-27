@@ -578,11 +578,126 @@ WHAT THE STYLING ACTUALLY CHANGED
   inline <style> block has crept back in. 31 total, all passing.
 
 
+SECTION 4 - DATA VISUALIZATION (Meet)
+
+WHAT WAS BUILT
+
+  Four charts at /charts/, each drawn at request time from an ORM aggregate
+  and served from its own URL as image/png:
+
+    /charts/skills-by-category.png   bar, skills per category
+    /charts/plan-progress.png        stacked bar, done against remaining
+    /charts/skill-gap.png            grouped bar, proficiency vs required
+    /charts/task-status.png          pie, share of tasks by status
+
+  The drawing lives in preparation/charts.py. The views only pick a chart,
+  set the content type and a short Cache-Control, and return the bytes.
+
+  Nothing is precomputed and no image is written to disk. There is a test
+  that adds a Skill row and asserts the rendered PNG bytes change, which is
+  the difference between a live chart and a checked-in picture of one.
+
+
+THE TWO DECISIONS THAT MATTER ON A SERVER
+
+  1. The Agg backend, set before matplotlib is used for anything.
+
+     Matplotlib defaults to an interactive backend that expects a window
+     system. On a laptop with a display that quietly works, which is how
+     this bites you: it runs locally and falls over on the server, where
+     there is no display for it to talk to. Agg is the pure-software
+     renderer. It draws into memory and has no window at all.
+
+  2. Figure() directly, never pyplot.
+
+     This is the part worth remembering. pyplot keeps every figure it
+     creates in a global registry, so an interactive session can get back
+     to them later. In a web process that registry is a memory leak with a
+     clean-looking cause: each request calls plt.figure(), nothing ever
+     calls plt.close(), the figures are never collected because the
+     registry still references them, and the process grows until someone
+     restarts it. The symptom is a server that is fine for a day and then
+     is not.
+
+     Building Figure() objects directly skips the registry. A figure
+     becomes ordinary garbage the moment the view returns. It also avoids
+     two requests mutating the same global state at once, which matters
+     under any threaded server.
+
+     There is a test for this. It renders every chart twelve times and then
+     asserts plt.get_fignums() is empty. If somebody later reaches for
+     plt.subplots() because it is the familiar API, that test fails and
+     says why.
+
+
+BYTESIO AND THE RAM IMPLICATIONS
+
+  render_png() draws into a BytesIO buffer rather than a temp file. The
+  alternative is savefig("/tmp/chart.png") followed by reading the file
+  back, which is a real disk write and a real disk read for something that
+  exists only long enough to go out over the wire.
+
+  Being honest about the cost, since the brief asks for awareness and not
+  just the import: the buffer holds the whole encoded PNG at once. Our
+  charts are 17 to 38 KB, so a request briefly costs that much RAM on top
+  of the figure itself. Fine at this size. It would stop being fine in two
+  cases:
+
+    - a much larger image, where a single buffer is megabytes rather than
+      kilobytes, and
+    - a high request rate, where N concurrent requests each hold their own
+      buffer and figure at the same time. The peak is roughly N times one
+      render, not one render.
+
+  The fix in either case is not to stream the image, it is to stop
+  redrawing per request: render once and cache the bytes, keyed on
+  something that changes when the data changes. We have not done that
+  because the numbers are small and a stale chart is worse than a
+  re-render here, but it is the obvious next step if /charts/ ever gets
+  real traffic.
+
+  What we did do is make the cost bounded and released. The buffer is
+  closed in a finally block, the figure is a local that goes out of scope,
+  and neither is held in a module-level registry. The response also sets
+  Content-Length, so the browser knows the size up front instead of
+  reading until the connection closes.
+
+
+WHY SEPARATE .PNG URLS AND NOT INLINE DATA URIS
+
+  A base64 data URI inside the <img src> would avoid the extra request.
+  We did not do that: a data URI is re-sent inside every HTML response and
+  cannot be cached on its own, while a real URL is fetched once, cached
+  under its own key, and reused. It also means each chart can be opened
+  and linked to directly, which is what the brief is asking for with the
+  enrollment.png example.
+
+
+ACCESSIBILITY
+
+  Each figure has a heading, a caption naming the query behind it, and alt
+  text that describes the data rather than repeating the title. Two of the
+  charts also have the underlying numbers in a table beneath them, so the
+  figures are available to a reader who cannot see the image at all.
+
+  The masthead logo is deliberately alt="", because the BEACON wordmark
+  beside it already says the same thing and a screen reader announcing
+  "Beacon logo Beacon" is worse than silence. A test caught us counting
+  that one as a missing chart alt.
+
+  Tests: 10 added. Real PNG magic bytes on every endpoint rather than just
+  a 200, Content-Length matching the body, chart output changing when the
+  data changes, page aggregates matching the ORM, alt text and captions on
+  all four figures, every chart still rendering against an empty database,
+  the pyplot registry staying empty, and the backend being Agg. 40 total.
+
+
 REMINDERS / TODO
 
   [x] Screenshots for Assignment 3: home, navigation, detail-via-link, plus
       GET search and aggregations. Named a3-section1-* and a3-section2-*.
   [x] Section 3 screenshots showing the CSS applied, named a3-section3-*.
+  [x] Section 4 screenshot of the charts page, named a3-section4-*.
   [ ] Templates for Screens 1, 2 and 5 are still not built - only the data
       behind them exists.
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).

@@ -42,4 +42,21 @@ urlpatterns = [
     path("search/candidates/", views.candidate_search, name="candidate_search"),
     # Section 2 - aggregations
     path("insights/", views.insights, name="insights"),
+    # -- Section 4: Matplotlib charts ---------------------------------------
+    # The page that displays them, then one PNG endpoint per chart. Each .png
+    # URL returns image/png directly, so it works as an <img src> and can be
+    # opened on its own.
+    path("charts/", views.charts_page, name="charts"),
+    path(
+        "charts/skills-by-category.png",
+        views.chart_skills_by_category,
+        name="chart_skills_by_category",
+    ),
+    path(
+        "charts/plan-progress.png",
+        views.chart_plan_progress,
+        name="chart_plan_progress",
+    ),
+    path("charts/skill-gap.png", views.chart_skill_gap, name="chart_skill_gap"),
+    path("charts/task-status.png", views.chart_task_status, name="chart_task_status"),
 ]
