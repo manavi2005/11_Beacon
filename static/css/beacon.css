@@ -445,3 +445,35 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   .masthead { background: #fff; color: var(--ink); }
   .masthead__title, .masthead__tagline { color: var(--ink); }
 }
+
+/* ---------------------------------------------------------------------------
+   10. Charts (Section 4)
+
+   The PNG is a fixed-width raster, so it has to be allowed to shrink on a
+   narrow screen without distorting. width:100% with height:auto does that,
+   and max-width caps it at its natural size so it never upscales and blurs.
+   --------------------------------------------------------------------------- */
+.chart {
+  margin: var(--s4) 0 var(--s5);
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.chart img {
+  display: block;
+  width: 100%;
+  max-width: 792px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.chart figcaption {
+  margin-top: var(--s3);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}

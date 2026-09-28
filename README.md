@@ -94,6 +94,8 @@ Every page is reachable from the navigation bar at the top of the site.
 | `/search/skills/` | Skill search form (GET) | FBV, `render()` |
 | `/search/candidates/` | Candidate lookup form (POST) | FBV, `render()` |
 | `/insights/` | Totals and grouped summaries (`count()`, `annotate()`) | FBV, `render()` |
+| `/charts/` | Four Matplotlib charts drawn from live ORM aggregates | FBV, `render()` |
+| `/charts/*.png` | Each chart on its own URL, returning `image/png` | FBV, `HttpResponse` |
 | `/admin/` | Django Admin for all five models | - |
 
 The four bolded rows are the four required kinds of view.
@@ -129,6 +131,14 @@ In production, `ManifestStaticFilesStorage` serves the stylesheet under a
 content-hashed name such as `beacon.a0c1fb82e482.css`, so it can be cached
 indefinitely and a change to the file changes the URL. The reasoning is in
 [`docs/notes/notes.txt`](docs/notes/notes.txt).
+
+**Charts.** `/charts/` shows four Matplotlib figures, each drawn at request
+time from an ORM aggregate and served from its own `.png` URL as
+`image/png`. Nothing is precomputed and no image file is written to disk:
+[`preparation/charts.py`](preparation/charts.py) renders into a `BytesIO`
+buffer and the view returns the bytes. It uses the headless `Agg` backend
+and builds `Figure` objects directly rather than through `pyplot`, which is
+what keeps a long-running server from accumulating figures it never closes.
 
 ---
 

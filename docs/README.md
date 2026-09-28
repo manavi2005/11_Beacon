@@ -35,6 +35,7 @@ docs/
     ├── a3-section1-*.png   <- Assignment 3: home, navigation, detail via link
     ├── a3-section2-*.png   <- Assignment 3: search and aggregations
     ├── a3-section3-*.png   <- Assignment 3: the styled UI
+    ├── a3-section4-*.png   <- Assignment 3: the charts page
     ├── admin/              <- Django Admin list views (earlier assignment)
     └── superseded/         <- older captures, kept for the record only
 ```
@@ -162,3 +163,17 @@ fires.
 | README UI note | [README, "Look and feel"](../README.md) |
 | Static organisation write-up | `notes.txt`, "STATIC FILE ORGANIZATION" |
 | Cache busting (bonus) | `ManifestStaticFilesStorage` in [production.py](../beacon_core/settings/production.py); write-up in `notes.txt` |
+
+## Assignment 3, Section 4 - Data visualization
+
+| Requirement | Where to look |
+|---|---|
+| ORM-based aggregation | [`charts.py`](../preparation/charts.py): `values()` + `Count`, filtered `Count` with `Q`, and two `Avg` aggregates |
+| Chart generated correctly | Four figures, each with a title, axis labels, and a legend where there is more than one series |
+| Image endpoint works | `/charts/skills-by-category.png`, `/charts/plan-progress.png`, `/charts/skill-gap.png`, `/charts/task-status.png`, each returning `image/png` |
+| Returned with `HttpResponse` | `_png()` in [views.py](../preparation/views.py), sets `Content-Type` and `Content-Length` |
+| `BytesIO` | `render_png()` in `charts.py`; RAM trade-off written up in `notes.txt` |
+| Headless rendering | `matplotlib.use("Agg")` before use, and `Figure()` rather than `pyplot`, so no figure registry to leak |
+| Displayed on a page | [`templates/preparation/charts.html`](../templates/preparation/charts.html) |
+| Heading, caption, alt text | one `<h2>`, one `<figcaption>` naming the query, and descriptive `alt` per figure |
+| Screenshot | [charts page](screenshots/a3-section4-charts-page.png) |

@@ -309,3 +309,146 @@ class StaticFilesTests(TestCase):
         for url in ("/", "/skills/", "/candidates/", "/tasks/", "/insights/"):
             with self.subTest(url=url):
                 self.assertContains(self.client.get(url), "css/beacon.css")
+
+
+class ChartTests(TestCase):
+    """Assignment 3, Section 4: ORM-backed Matplotlib charts served as PNG."""
+
+    PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sql = Skill.objects.create(
+            name="SQL and relational modeling", category=Skill.Category.TECHNICAL)
+        cls.pitch = Skill.objects.create(
+            name="Resume and elevator pitch", category=Skill.Category.COMMUNICATION)
+        user = User.objects.create_user(
+            "dokafor", first_name="Daniel", last_name="Okafor",
+            email="dokafor@example.edu", password="test-only-pw")
+        cls.candidate = CandidateProfile.objects.create(
+            user=user, target_role="Data Analyst", preparation_timeline_weeks=4)
+        SkillAssessment.objects.create(
+            candidate=cls.candidate, skill=cls.sql,
+            proficiency_score=40, required_level=80)
+        cls.plan = PreparationPlan.objects.create(
+            candidate=cls.candidate, title="Data Analyst sprint",
+            focus_role="Data Analyst",
+            target_date=timezone.localdate() + timezone.timedelta(weeks=4))
+        PlanTask.objects.create(
+            plan=cls.plan, skill=cls.sql, title="Write 5 JOIN queries",
+            week_number=1, status=PlanTask.Status.DONE)
+        PlanTask.objects.create(
+            plan=cls.plan, skill=cls.sql, title="Window functions drill",
+            week_number=2)
+
+    CHART_ROUTES = [
+        "preparation:chart_skills_by_category",
+        "preparation:chart_plan_progress",
+        "preparation:chart_skill_gap",
+        "preparation:chart_task_status",
+    ]
+
+    # --- image endpoint -------------------------------------------------
+    def test_every_chart_endpoint_returns_a_real_png(self):
+        """Not just a 200: the bytes must actually start with the PNG magic
+        number, so an HTML error page cannot pass as an image."""
+        for name in self.CHART_ROUTES:
+            with self.subTest(route=name):
+                r = self.client.get(reverse(name))
+                self.assertEqual(r.status_code, 200)
+                self.assertEqual(r["Content-Type"], "image/png")
+                self.assertTrue(r.content.startswith(self.PNG_MAGIC))
+                self.assertGreater(len(r.content), 1000)
+
+    def test_content_length_matches_the_body(self):
+        r = self.client.get(reverse("preparation:chart_skills_by_category"))
+        self.assertEqual(int(r["Content-Length"]), len(r.content))
+
+    def test_chart_urls_end_in_png(self):
+        """The endpoint is addressable as an image, as the brief asks."""
+        for name in self.CHART_ROUTES:
+            with self.subTest(route=name):
+                self.assertTrue(reverse(name).endswith(".png"))
+
+    # --- ORM aggregation ------------------------------------------------
+    def test_chart_data_follows_the_database(self):
+        """Add a row, and the rendered chart changes. That is the difference
+        between a live chart and a checked-in image."""
+        before = self.client.get(reverse("preparation:chart_skills_by_category")).content
+        Skill.objects.create(name="Python fundamentals",
+                             category=Skill.Category.TECHNICAL)
+        after = self.client.get(reverse("preparation:chart_skills_by_category")).content
+        self.assertNotEqual(before, after)
+
+    def test_page_aggregates_match_the_orm(self):
+        r = self.client.get(reverse("preparation:charts"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["task_total"], PlanTask.objects.count())
+        self.assertEqual(r.context["plan_total"], PreparationPlan.objects.count())
+        self.assertEqual(
+            sum(row["total"] for row in r.context["category_rows"]),
+            Skill.objects.count(),
+        )
+        self.assertEqual(
+            sum(row["total"] for row in r.context["status_rows"]),
+            PlanTask.objects.count(),
+        )
+
+    # --- template integration -------------------------------------------
+    def test_page_shows_every_chart_with_alt_text_and_a_caption(self):
+        body = self.client.get(reverse("preparation:charts")).content.decode()
+        for name in self.CHART_ROUTES:
+            with self.subTest(route=name):
+                self.assertIn(f'src="{reverse(name)}"', body)
+        self.assertEqual(body.count("<figcaption>"), 4)
+
+        # Scoped to the chart figures. The masthead logo also carries an alt
+        # attribute, deliberately empty: it is decorative, because the BEACON
+        # wordmark next to it already says the same thing, and a screen reader
+        # announcing "Beacon logo Beacon" would be worse than silence.
+        import re
+        figures = re.findall(r'<figure class="chart">(.*?)</figure>', body, re.S)
+        self.assertEqual(len(figures), 4)
+        for figure in figures:
+            alt = re.search(r'<img[^>]*\salt="([^"]*)"', figure, re.S)
+            self.assertIsNotNone(alt, "a chart image is missing alt text")
+            # Alt text should describe the data, not just repeat the title.
+            self.assertGreater(len(" ".join(alt.group(1).split())), 40)
+
+    # --- empty database -------------------------------------------------
+    def test_charts_still_render_with_no_data(self):
+        """An empty database must produce a chart saying so, not a traceback."""
+        PlanTask.objects.all().delete()
+        SkillAssessment.objects.all().delete()
+        PreparationPlan.objects.all().delete()
+        Skill.objects.all().delete()
+        for name in self.CHART_ROUTES:
+            with self.subTest(route=name):
+                r = self.client.get(reverse(name))
+                self.assertEqual(r.status_code, 200)
+                self.assertTrue(r.content.startswith(self.PNG_MAGIC))
+
+    # --- memory behaviour -----------------------------------------------
+    def test_rendering_does_not_accumulate_figures(self):
+        """The pyplot figure registry is the classic leak in this pattern.
+
+        charts.py builds Figure() objects directly and never touches pyplot,
+        so repeated requests must leave the registry empty. If someone
+        switches to plt.figure() without plt.close(), this count climbs and
+        the test fails.
+        """
+        import matplotlib.pyplot as plt
+        plt.close("all")
+        for _ in range(12):
+            for name in self.CHART_ROUTES:
+                self.client.get(reverse(name))
+        self.assertEqual(
+            plt.get_fignums(), [],
+            "figures are accumulating: something is using pyplot without closing",
+        )
+
+    def test_renderer_uses_the_headless_backend(self):
+        """Agg has no window system. Any interactive backend would fail on a
+        server without a display."""
+        import matplotlib
+        self.assertEqual(matplotlib.get_backend().lower(), "agg")
