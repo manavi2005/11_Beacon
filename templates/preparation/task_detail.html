@@ -6,6 +6,7 @@
 {% block content %}
   <p class="tag">Extra - CBV, generic DetailView</p>
 
+  <div class="table-scroll">
   <table>
     <tr><th>Plan</th><td>{{ task.plan.title }}</td></tr>
     <tr><th>Roadmap week</th><td>{{ task.week_number }}</td></tr>
@@ -15,6 +16,7 @@
     <tr><th>Estimated time</th><td>{{ task.estimated_minutes }} min</td></tr>
     <tr><th>Due</th><td>{{ task.due_date|default:"No deadline" }}</td></tr>
   </table>
+  </div>
 
   <h2>Instructions</h2>
   <p>{{ task.instructions|default:"No instructions recorded." }}</p>

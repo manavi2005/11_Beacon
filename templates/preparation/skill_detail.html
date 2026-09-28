@@ -11,14 +11,17 @@
   <p class="tag">{{ skill.get_category_display }} skill &middot; id {{ skill.pk }}</p>
   <p>{{ skill.description|default:"No description recorded for this skill yet." }}</p>
 
+  <div class="table-scroll">
   <table>
     <tr><th>Candidates assessed</th><td>{{ assessments|length }}</td></tr>
     <tr><th>Average proficiency</th>
         <td>{% if average_proficiency %}{{ average_proficiency|floatformat:1 }} / 100{% else %}Not yet measured{% endif %}</td></tr>
     <tr><th>Tasks targeting it</th><td>{{ tasks|length }}</td></tr>
   </table>
+  </div>
 
   <h2>Who has been assessed on this</h2>
+  <div class="table-scroll">
   <table>
     <tr><th>Candidate</th><th>Target role</th><th>Score</th><th>Required</th><th>Gap</th></tr>
     {% for assessment in assessments %}
@@ -33,8 +36,10 @@
       <tr><td colspan="5">Nobody has been assessed on this skill yet. It will appear here once a candidate completes an assessment covering it.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <h2>Tasks that target this skill</h2>
+  <div class="table-scroll">
   <table>
     <tr><th>Task</th><th>Plan</th><th>Week</th><th>Status</th></tr>
     {% for task in tasks %}
@@ -48,6 +53,7 @@
       <tr><td colspan="4">No preparation tasks target this skill yet.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <p><a href="{% url 'preparation:skill_search' %}">Back to the skill catalog</a></p>
 {% endblock %}

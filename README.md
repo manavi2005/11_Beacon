@@ -112,6 +112,24 @@ enter the URL or the browser history. `/insights/` presents database-side
 aggregations: totals, skills grouped by category, and per-plan completion
 counts.
 
+**Look and feel.** The site is styled by one stylesheet,
+[`static/css/beacon.css`](static/css/beacon.css), loaded with
+`{% static %}` in `base.html`. It replaced the inline `<style>` block that
+every page used to carry its own copy of. The layout is a navy masthead with
+the Beacon lighthouse mark, a wrapping pill navigation, and page content on a
+white card: tables get zebra striping and uppercase headers so a 24-row task
+list stays readable, totals are shown as stat tiles rather than a two-column
+table, plan progress gets a bar beside the percentage, and statuses are
+colour-coded pills where the word still carries the meaning on its own. The
+two brand colours are the university's, navy for structure and orange for
+anything actionable. It reflows to one column on a phone, and the wider tables
+scroll sideways inside their own box instead of crushing their columns.
+
+In production, `ManifestStaticFilesStorage` serves the stylesheet under a
+content-hashed name such as `beacon.a0c1fb82e482.css`, so it can be cached
+indefinitely and a change to the file changes the URL. The reasoning is in
+[`docs/notes/notes.txt`](docs/notes/notes.txt).
+
 ---
 
 ## 3. Directory structure
@@ -145,6 +163,12 @@ counts.
 │   └── management/commands/
 │       ├── seed_demo_data.py
 │       └── verify_constraints.py
+│
+├── static/                       # our own assets, served by {% static %}
+│   ├── css/beacon.css            # the whole site stylesheet
+│   └── img/beacon-logo.svg       # lighthouse mark, used as logo and favicon
+│
+├── staticfiles/                  # git-ignored; collectstatic build output
 │
 ├── templates/
 │   ├── base.html                 # inherited by every page

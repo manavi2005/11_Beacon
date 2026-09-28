@@ -26,3 +26,40 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = "DENY"
+
+
+# ---------------------------------------------------------------------------
+# Static files: cache busting
+# ---------------------------------------------------------------------------
+# The problem this solves. Static files want a long cache lifetime, because
+# re-downloading an unchanged stylesheet on every page view is waste. But a
+# long lifetime and a fixed filename are a bad pair: ship a fix to
+# beacon.css and every browser that already cached it keeps the old copy
+# until the cache expires. The user sees a half-broken page and "hard refresh"
+# becomes the support answer.
+#
+# ManifestStaticFilesStorage removes the conflict. collectstatic hashes the
+# contents of each file into its name:
+#
+#     css/beacon.css  ->  css/beacon.6f4e1b2a9c3d.css
+#
+# and writes staticfiles.json mapping the plain name to the hashed one.
+# {% static "css/beacon.css" %} reads that manifest, so templates keep naming
+# the file the readable way and the served URL carries the hash.
+#
+# The filename now depends on the content, so editing the CSS changes the URL,
+# and a changed URL is a different cache entry that the browser has to fetch.
+# Nothing expires early, nothing stale is served, and the cache can be set to
+# a year without risk.
+#
+# Development deliberately does not use this: manage.py runserver serves
+# straight from STATICFILES_DIRS, an edit shows up on reload, and there is no
+# manifest to keep in step.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}

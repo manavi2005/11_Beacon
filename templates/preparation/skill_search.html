@@ -36,6 +36,7 @@
     {% endif %}
   </p>
 
+  <div class="table-scroll">
   <table>
     <tr>
       <th>Skill</th><th>Category</th><th>Candidates assessed</th>
@@ -67,6 +68,7 @@
       </tr>
     {% endfor %}
   </table>
+  </div>
 
   <p class="tag">Compare with the
     <a href="{% url 'preparation:candidate_search' %}">candidate lookup</a>,

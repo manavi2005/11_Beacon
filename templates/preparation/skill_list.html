@@ -18,6 +18,7 @@ that changes between them is view_label / explainer.
     {% if query %}<a href="{% url 'preparation:skill_catalog_render' %}">Clear</a>{% endif %}
   </form>
 
+  <div class="table-scroll">
   <table>
     <tr><th>Skill</th><th>Category</th><th>What mastery looks like</th></tr>
     {% for skill in skills %}
@@ -39,4 +40,5 @@ that changes between them is view_label / explainer.
       </tr>
     {% endfor %}
   </table>
+  </div>
 {% endblock %}

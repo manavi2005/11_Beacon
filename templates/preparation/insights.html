@@ -12,18 +12,25 @@
   None of it is a Python loop over a queryset.</p>
 
   <h2>Totals</h2>
-  <table>
-    <tr><th>Skills in the catalog</th><td>{{ totals.skills }}</td></tr>
-    <tr><th>Candidates</th><td>{{ totals.candidates }}</td></tr>
-    <tr><th>Assessments recorded</th><td>{{ totals.assessments }}</td></tr>
-    <tr><th>Preparation plans</th><td>{{ totals.plans }}</td></tr>
-    <tr><th>Tasks</th><td>{{ totals.tasks }}</td></tr>
-    <tr><th>Tasks completed</th><td>{{ totals.tasks_done }}</td></tr>
-  </table>
+  <ul class="stats">
+    <li class="stat"><span class="stat__value">{{ totals.skills }}</span>
+        <span class="stat__label">Skills</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.candidates }}</span>
+        <span class="stat__label">Candidates</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.assessments }}</span>
+        <span class="stat__label">Assessments</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.plans }}</span>
+        <span class="stat__label">Plans</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.tasks }}</span>
+        <span class="stat__label">Tasks</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.tasks_done }}</span>
+        <span class="stat__label">Tasks done</span></li>
+  </ul>
 
   <h2>Skills by category</h2>
   <p class="tag">Grouped with <code>values("category").annotate(Count("id"))</code>
-  &mdash; one row per category, not one per skill.</p>
+  - one row per category, not one per skill.</p>
+  <div class="table-scroll">
   <table>
     <tr><th>Category</th><th>Skills</th></tr>
     {% for row in by_category %}
@@ -32,10 +39,12 @@
       <tr><td colspan="2">No skills in the catalog, so there is nothing to group.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <h2>Plan progress</h2>
   <p class="tag">Each plan carries a filtered count: total tasks, and how many
   of those tasks have status DONE.</p>
+  <div class="table-scroll">
   <table>
     <tr><th>Plan</th><th>Candidate</th><th>Deadline</th><th>Tasks done</th><th>Total tasks</th></tr>
     {% for plan in plans %}
@@ -50,10 +59,12 @@
       <tr><td colspan="5">No preparation plans exist yet.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <h2>Weakest skills across all candidates</h2>
-  <p class="tag">Average proficiency per skill, lowest first &mdash; the skills
+  <p class="tag">Average proficiency per skill, lowest first - the skills
   Beacon should be generating the most practice for.</p>
+  <div class="table-scroll">
   <table>
     <tr><th>Skill</th><th>Category</th><th>Candidates assessed</th><th>Avg proficiency</th><th>Tasks targeting it</th></tr>
     {% for skill in skills %}
@@ -68,6 +79,7 @@
       <tr><td colspan="5">No skill has been assessed yet, so no averages can be computed.</td></tr>
     {% endfor %}
   </table>
+  </div>
 
   <h2>Tasks by target role</h2>
   <p class="tag">Relationship spanning:
@@ -83,6 +95,7 @@
   <p>{{ task_match_count }} task{{ task_match_count|pluralize }} match
      {% if role %}candidates targeting "{{ role }}"{% else %}(no role filter applied){% endif %}.</p>
 
+  <div class="table-scroll">
   <table>
     <tr><th>Task</th><th>Skill</th><th>Candidate</th><th>Target role</th><th>Status</th></tr>
     {% for task in tasks %}
@@ -98,4 +111,5 @@
         Try a partial role name such as "Analyst".</td></tr>
     {% endfor %}
   </table>
+  </div>
 {% endblock %}

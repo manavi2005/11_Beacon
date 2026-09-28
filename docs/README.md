@@ -34,6 +34,7 @@ docs/
     ├── section3-*.png      <- Assignment 2
     ├── a3-section1-*.png   <- Assignment 3: home, navigation, detail via link
     ├── a3-section2-*.png   <- Assignment 3: search and aggregations
+    ├── a3-section3-*.png   <- Assignment 3: the styled UI
     ├── admin/              <- Django Admin list views (earlier assignment)
     └── superseded/         <- older captures, kept for the record only
 ```
@@ -144,3 +145,20 @@ fires.
 | Grouped summary, `annotate` + `Count` | skills per category, tasks per plan, learners per skill |
 | `{% for %}` with `{% empty %}` | every list template |
 | Screenshots | [GET search](screenshots/a3-section2-search-get.png), [aggregations](screenshots/a3-section2-aggregations.png) |
+
+## Assignment 3, Section 3 - Static files and UI styling
+
+| Requirement | Where to look |
+|---|---|
+| `static/` directory configured | `STATICFILES_DIRS` in [base.py](../beacon_core/settings/base.py); project level, reasoning in `notes.txt` |
+| Static files load correctly | `STATIC_URL`, `STATIC_ROOT`, both finders left on |
+| `{% load static %}` | first line of [`templates/base.html`](../templates/base.html) |
+| Custom CSS file linked | [`static/css/beacon.css`](../static/css/beacon.css), linked with `{% static 'css/beacon.css' %}` |
+| Colours | navy and orange brand tokens on `:root`, navy for structure, orange for anything actionable |
+| Layout | masthead, pill nav, content card, stat tiles, progress meters, responsive under 700px |
+| Fonts | system font stack, no network request |
+| Logo / header | [`static/img/beacon-logo.svg`](../static/img/beacon-logo.svg), used in the masthead and as the favicon |
+| Screenshot with CSS applied | [dashboard](screenshots/a3-section3-styled-dashboard.png), [insights](screenshots/a3-section3-styled-insights.png), [search](screenshots/a3-section3-styled-search.png), [mobile](screenshots/a3-section3-styled-mobile.png) |
+| README UI note | [README, "Look and feel"](../README.md) |
+| Static organisation write-up | `notes.txt`, "STATIC FILE ORGANIZATION" |
+| Cache busting (bonus) | `ManifestStaticFilesStorage` in [production.py](../beacon_core/settings/production.py); write-up in `notes.txt` |
