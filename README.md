@@ -410,11 +410,12 @@ stale: `CandidateProfile.readiness_percent` (Screen 3's Overall Readiness),
 python manage.py test preparation
 ```
 
-Eight tests, no fixtures needed. They load each of the four graded views and
-assert the right template and data came back, check that `{% empty %}` fires,
-and guard against the multi-line `{# #}` comment bug that once printed template
-notes onto every page. Not an assignment requirement - they are there so a later
-change cannot quietly break the Section 2 deliverable.
+41 tests, no fixtures needed. They load every page and assert the right
+template and data came back, check that `{% empty %}` fires, exercise both
+search forms, the aggregations and the chart endpoints, and guard against the
+multi-line `{# #}` comment bug that once printed template notes onto every
+page. Not an assignment requirement - they are there so a later change cannot
+quietly break an earlier deliverable.
 
 ### Constraints
 
@@ -433,6 +434,16 @@ is never modified. Saved output: `docs/data_model/constraint_validation.txt`.
 6. Deleting a `PreparationPlan` -> its tasks cascade away
 7. Deleting a tagged `Skill` -> task survives, `skill` set to `NULL`
 8. Deleting a `User` -> their `CandidateProfile` cascades away
+
+### Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every pull
+request into `main` and every push to it. On a clean Ubuntu runner with
+Python 3.11 it installs `requirements.txt`, runs `manage.py check`, confirms no
+model change is missing a migration, builds and seeds a fresh database, runs
+`verify_constraints`, and runs the full test suite. A PR shows a green tick or
+a red cross before anyone merges it, so a branch that breaks `main` is caught
+on the PR rather than after the merge.
 
 ---
 
