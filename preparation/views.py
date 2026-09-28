@@ -299,45 +299,6 @@ class CandidateListView(ListView):
             .order_by("user__username")
         )
 
-class CandidateSearchView(View):
-    template_name = "preparation/candidate_search.html"
-
-    def get(self, request):
-        # Initial page - no search submitted yet
-        return render(request, self.template_name, {
-            "searched": False,
-            "term": "",
-            "results": [],
-        })
-
-    def post(self, request):
-        term = request.POST.get("term", "").strip()
-
-        results = CandidateProfile.objects.select_related(
-            "user"
-        ).annotate(
-            assessment_count=Count("assessments", distinct=True),
-            average_proficiency=Avg(
-                "assessments__proficiency_score"
-            ),
-        )
-
-        if term:
-            results = results.filter(
-                Q(user__first_name__icontains=term)
-                | Q(user__last_name__icontains=term)
-                | Q(user__username__icontains=term)
-                | Q(user__email__icontains=term)
-                | Q(target_role__icontains=term)
-                | Q(target_company__icontains=term)
-            )
-
-        return render(request, self.template_name, {
-            "searched": True,
-            "term": term,
-            "results": results,
-        })
-
 
 # ---------------------------------------------------------------------------
 # SECTION 2 - Search form 1: GET
@@ -429,12 +390,24 @@ def skill_search(request):
 # exactly the behaviour we want here and exactly the behaviour we do not want
 # on the skill catalog above.
 # ---------------------------------------------------------------------------
-def candidate_search(request):
-    """Look up candidates with request.POST."""
-    term = ""
-    results = None
+class CandidateSearchView(View):
+    """Look up candidates with request.POST.
 
-    if request.method == "POST":
+    Inheriting View dispatches by method: GET shows the empty form, POST runs
+    the search. A blank term returns nothing rather than every candidate, so
+    the page never lists personal records that nobody asked for.
+    """
+
+    template_name = "preparation/candidate_search.html"
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            "searched": False,
+            "term": "",
+            "results": None,
+        })
+
+    def post(self, request):
         term = request.POST.get("term", "").strip()
 
         if term:
@@ -460,12 +433,11 @@ def candidate_search(request):
         else:
             results = CandidateProfile.objects.none()
 
-    context = {
-        "term": term,
-        "results": results,
-        "searched": request.method == "POST",
-    }
-    return render(request, "preparation/candidate_search.html", context)
+        return render(request, self.template_name, {
+            "searched": True,
+            "term": term,
+            "results": results,
+        })
 
 
 # ---------------------------------------------------------------------------

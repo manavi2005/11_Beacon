@@ -1,0 +1,50 @@
+# Continuous integration: every push and every pull request into main runs
+# the same checks we run by hand before merging. A red X on a PR means main
+# would break if it were merged as-is.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      # CI has no .env file. base.py falls back to a dev-only key, but set one
+      # explicitly so the run never depends on that fallback.
+      DJANGO_SECRET_KEY: ci-only-not-a-real-secret
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      # Headless Matplotlib backend; there is no display on the runner.
+      MPLBACKEND: Agg
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django system check
+        run: python manage.py check
+
+      - name: No model change is missing a migration
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Migrate and seed a fresh database
+        run: |
+          python manage.py migrate --noinput
+          python manage.py seed_demo_data
+
+      - name: Model constraints hold
+        run: python manage.py verify_constraints
+
+      - name: Test suite
+        run: python manage.py test preparation --verbosity 2

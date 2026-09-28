@@ -250,6 +250,12 @@ class OrmQueryTests(TestCase):
         r = self.client.post(reverse("preparation:candidate_search"), {"term": "zzzznomatch"})
         self.assertContains(r, "No candidate")
 
+    def test_post_search_blank_term_lists_nobody(self):
+        """A blank submission must not dump every candidate onto the page."""
+        r = self.client.post(reverse("preparation:candidate_search"), {"term": "   "})
+        self.assertContains(r, "No search term was entered")
+        self.assertNotContains(r, "Eunji")
+
     def test_get_on_post_search_shows_form_without_results(self):
         r = self.client.get(reverse("preparation:candidate_search"))
         self.assertEqual(r.status_code, 200)

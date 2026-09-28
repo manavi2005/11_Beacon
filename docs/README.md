@@ -138,7 +138,7 @@ fires.
 |---|---|
 | List of objects from one model | `/candidates/`, `CandidateListView` |
 | Search form using `request.GET` | `/search/skills/`, `skill_search` |
-| Search form using `request.POST` | `/search/candidates/`, `candidate_search` |
+| Search form using `request.POST` | `/search/candidates/`, `CandidateSearchView` |
 | Why each method | GET keeps the skill filter shareable as a link; POST keeps personal candidate data out of the URL and history. Reasoned through in `notes.txt` |
 | Field lookups | `__icontains`, `__exact`, `__gt` |
 | Relationship spanning with `__` | `assessments__candidate__target_role`, `plan__candidate__target_role`, `user__first_name` |
