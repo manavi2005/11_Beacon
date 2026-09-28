@@ -23,6 +23,7 @@ from django.template import loader
 from django.views import View
 from django.views.generic import DetailView, ListView
 
+from . import charts
 from .models import (
     CandidateProfile,
     PlanTask,
@@ -511,3 +512,88 @@ def insights(request):
         "task_match_count": tasks.count(),
     }
     return render(request, "preparation/insights.html", context)
+
+
+# ---------------------------------------------------------------------------
+# SECTION 4 - Matplotlib charts served as PNG endpoints
+#
+# Each endpoint returns image/png rather than HTML, so the URL can be used
+# directly as the src of an <img>. The drawing itself lives in charts.py; the
+# views below only choose a chart, set the content type, and say how long the
+# response may be cached.
+#
+# Why the charts are not inlined as base64 data URIs instead: a separate URL
+# means the browser fetches the image on its own connection, caches it under
+# its own key, and can reuse it across pages. A data URI is re-sent inside
+# every HTML response and cannot be cached separately.
+# ---------------------------------------------------------------------------
+def _png(image_bytes, *, max_age=300):
+    """Wrap raw PNG bytes in an HttpResponse.
+
+    Content-Length is set so the browser can show real progress and knows the
+    response is complete. Cache-Control is deliberately short: the underlying
+    rows change whenever someone completes a task, and a stale chart is worse
+    than a re-render that costs a few milliseconds.
+    """
+    response = HttpResponse(image_bytes, content_type="image/png")
+    response["Content-Length"] = str(len(image_bytes))
+    response["Cache-Control"] = f"max-age={max_age}"
+    return response
+
+
+def chart_skills_by_category(request):
+    """/charts/skills-by-category.png"""
+    return _png(charts.skills_by_category_png())
+
+
+def chart_plan_progress(request):
+    """/charts/plan-progress.png"""
+    return _png(charts.plan_progress_png())
+
+
+def chart_skill_gap(request):
+    """/charts/skill-gap.png"""
+    return _png(charts.skill_gap_png())
+
+
+def chart_task_status(request):
+    """/charts/task-status.png"""
+    return _png(charts.task_status_png())
+
+
+def charts_page(request):
+    """The page that displays all four charts.
+
+    The numbers beside each chart come from the same ORM aggregates the charts
+    are drawn from, so a reader who cannot see the images still gets the
+    figures, and the alt text on each <img> describes what the chart shows
+    rather than repeating its title.
+    """
+    status_counts = (
+        PlanTask.objects.values("status").annotate(total=Count("id")).order_by("-total")
+    )
+
+    context = {
+        "category_rows": [
+            {
+                "label": Skill.Category(row["category"]).label,
+                "total": row["total"],
+            }
+            for row in Skill.objects.values("category")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+        ],
+        "status_rows": [
+            {
+                "label": PlanTask.Status(row["status"]).label,
+                "total": row["total"],
+            }
+            for row in status_counts
+        ],
+        "task_total": PlanTask.objects.count(),
+        "plan_total": PreparationPlan.objects.count(),
+        "assessed_skill_count": Skill.objects.annotate(
+            learners=Count("assessments", distinct=True)
+        ).filter(learners__gt=0).count(),
+    }
+    return render(request, "preparation/charts.html", context)

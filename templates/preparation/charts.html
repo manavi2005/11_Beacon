@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% comment %}
+  Section 4. Each <img> points at a PNG endpoint that draws the chart from a
+  live ORM aggregate. Nothing here is a precomputed image file.
+
+  Every figure carries a heading, a caption saying which query produced it,
+  and alt text that describes the shape of the data rather than repeating the
+  title. A screen reader that skips the image should still learn something.
+{% endcomment %}
+
+{% block title %}Beacon - charts{% endblock %}
+{% block heading %}Charts{% endblock %}
+
+{% block content %}
+  <p class="tag">Matplotlib, rendered server-side and served as PNG</p>
+  <p>
+    Every chart below is drawn at request time from the database. The ORM does
+    the aggregation, Matplotlib draws the figure into an in-memory buffer, and
+    the view returns it as <code>image/png</code>. No image file is written to
+    disk, and nothing is precomputed. Each chart also has its own URL, so it
+    can be opened on its own or linked to directly.
+  </p>
+
+  <h2>Skills by category</h2>
+  <figure class="chart">
+    <img src="{% url 'preparation:chart_skills_by_category' %}"
+         alt="Bar chart of the {{ category_rows|length }} skill categories in the
+              catalog.{% for row in category_rows %} {{ row.label }}:
+              {{ row.total }}.{% endfor %}"
+         width="792" loading="lazy">
+    <figcaption>
+      Grouped with <code>Skill.objects.values("category").annotate(Count("id"))</code>.
+      The database returns one row per category, not one per skill.
+    </figcaption>
+  </figure>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th>Category</th><th>Skills</th></tr>
+    {% for row in category_rows %}
+      <tr><td>{{ row.label }}</td><td>{{ row.total }}</td></tr>
+    {% empty %}
+      <tr><td colspan="2">No skills in the catalog, so the chart has nothing to draw.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  <h2>Plan progress</h2>
+  <figure class="chart">
+    <img src="{% url 'preparation:chart_plan_progress' %}"
+         alt="Stacked horizontal bar chart showing, for each of the
+              {{ plan_total }} preparation plans, how many of its tasks are
+              done and how many remain. Plans are ordered with the soonest
+              deadline at the top."
+         width="792" loading="lazy">
+    <figcaption>
+      Two counts on the same relation, one of them filtered:
+      <code>Count("tasks", filter=Q(tasks__status=DONE))</code> beside a plain
+      <code>Count("tasks")</code>, so done and total arrive together.
+    </figcaption>
+  </figure>
+
+  <h2>Widest skill gaps</h2>
+  <figure class="chart">
+    <img src="{% url 'preparation:chart_skill_gap' %}"
+         alt="Grouped horizontal bar chart comparing, for each of the weakest
+              assessed skills, the current average proficiency against the
+              average level the target roles require. {{ assessed_skill_count }}
+              skills have been assessed."
+         width="792" loading="lazy">
+    <figcaption>
+      Two <code>Avg</code> aggregates over the assessments relation, filtered to
+      skills that have actually been assessed and ordered weakest first. This is
+      the query the roadmap screen is really asking: where is the gap widest.
+    </figcaption>
+  </figure>
+
+  <h2>Task status</h2>
+  <figure class="chart">
+    <img src="{% url 'preparation:chart_task_status' %}"
+         alt="Pie chart of all {{ task_total }} tasks by
+              status.{% for row in status_rows %} {{ row.label }}:
+              {{ row.total }}.{% endfor %}"
+         width="594" loading="lazy">
+    <figcaption>
+      The same <code>values()</code> and <code>Count()</code> grouping as the
+      first chart. A pie is defensible here because the four statuses are
+      mutually exclusive parts of one whole, which is the only thing a pie
+      reads well.
+    </figcaption>
+  </figure>
+
+  <div class="table-scroll">
+  <table>
+    <tr><th>Status</th><th>Tasks</th></tr>
+    {% for row in status_rows %}
+      <tr><td>{{ row.label }}</td><td>{{ row.total }}</td></tr>
+    {% empty %}
+      <tr><td colspan="2">No tasks yet, so there is nothing to divide up.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  <h2>The endpoints</h2>
+  <p>Each chart is its own URL and returns <code>image/png</code>:</p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>URL</th><th>Chart</th></tr>
+    <tr>
+      <td><a href="{% url 'preparation:chart_skills_by_category' %}">/charts/skills-by-category.png</a></td>
+      <td>Bar, skills per category</td>
+    </tr>
+    <tr>
+      <td><a href="{% url 'preparation:chart_plan_progress' %}">/charts/plan-progress.png</a></td>
+      <td>Stacked bar, done against remaining</td>
+    </tr>
+    <tr>
+      <td><a href="{% url 'preparation:chart_skill_gap' %}">/charts/skill-gap.png</a></td>
+      <td>Grouped bar, proficiency against required</td>
+    </tr>
+    <tr>
+      <td><a href="{% url 'preparation:chart_task_status' %}">/charts/task-status.png</a></td>
+      <td>Pie, task status share</td>
+    </tr>
+  </table>
+  </div>
+{% endblock %}
