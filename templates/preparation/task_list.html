@@ -7,6 +7,12 @@
   <p class="tag">{{ view_label }}</p>
   <p>{{ explainer }}</p>
 
+  <p>
+      <a href="{% url 'preparation:task_create' %}">
+          Create a new task
+      </a>
+  </p>
+
   <div class="table-scroll">
   <table>
     <tr>

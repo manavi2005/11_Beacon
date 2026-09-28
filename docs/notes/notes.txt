@@ -691,6 +691,69 @@ ACCESSIBILITY
   all four figures, every chart still rendering against an empty database,
   the pyplot registry staying empty, and the backend being Agg. 40 total.
 
+SECTION 5 - Forms & User Input (Chu-Yun)
+
+WHAT WAS BUILT
+
+    /tasks/create/          create new tasks by user side
+    /search/candidates/     revised to add the post function
+
+    The existing skill search form uses GET because it is a search/filter
+    operation over public skill reference data. Revised /search/candidates/ to
+    keep the search term out of the URL by POST method.
+
+    For the POST requirement, we added a real database-changing form for creating
+    a PlanTask. The form is a ModelForm based on PlanTask. It allows the user to
+    enter the plan, skill, title, week number, instructions, rationale, due date,
+    estimated time, priority, and status.
+
+
+SECTION 6 - Creating APIs (Chu-Yun)
+
+WHAT WAS BUILT
+
+    /api/skills/            provide JSON output for API
+
+Planning:
+
+    For the first Beacon API, I decided to expose the Skill catalog as JSON. Skills
+    are reusable reference data in the application, so they are a reasonable
+    starting point for a public read-only API.
+
+    The endpoint is implemented as a function-based view called skill_api() in
+    preparation/views.py. It uses Django's JsonResponse to serialize the response
+    as JSON.
+
+    The API returns the number of matching skills and a list containing each
+    skill's ID, name, category code, and human-readable category label.
+
+HttpResponse vs JsonResponse:
+
+    The project already uses HttpResponse for other response types. For example,
+    the skill catalog manually creates an HttpResponse containing rendered HTML,
+    while the chart endpoints use HttpResponse with image/png content.
+
+    The new skill API uses JsonResponse because its purpose is to return structured
+    JSON data.
+
+The MIME types demonstrate the difference:
+
+    ```
+    HTML HttpResponse:  text/html; charset=utf-8
+    JSON JsonResponse:  application/json
+    PNG HttpResponse:   image/png
+    ```
+
+    This shows that HttpResponse is a general response class, while JsonResponse
+    provides a response specifically intended for JSON data.
+
+Testing and demonstration:
+
+    The API in the browser using both the unfiltered endpoint
+    and filtered URLs. The screenshots will show the JSON response from
+    /api/skills/ and the reduced results from a query such as
+    /api/skills/?q=python.
+
 
 REMINDERS / TODO
 
