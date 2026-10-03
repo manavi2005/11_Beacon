@@ -1,0 +1,91 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "title": {
+    "text": "Widest skill gaps",
+    "subtitle": "Average points each skill sits below what candidates' target roles require",
+    "anchor": "start"
+  },
+  "description": "Bar chart of the average gap between required level and current proficiency, one bar per assessed skill, widest gap first.",
+  "data": {
+    "url": "http://127.0.0.1:8000/api/skills/summary/"
+  },
+  "transform": [
+    {
+      "filter": "datum.learners > 0"
+    }
+  ],
+  "width": 560,
+  "height": {
+    "step": 26
+  },
+  "mark": {
+    "type": "bar",
+    "cornerRadiusEnd": 3
+  },
+  "encoding": {
+    "y": {
+      "field": "skill",
+      "type": "nominal",
+      "sort": "-x",
+      "title": null,
+      "axis": {
+        "labelLimit": 220
+      }
+    },
+    "x": {
+      "field": "avg_gap",
+      "type": "quantitative",
+      "title": "Average gap (required minus proficiency, points)"
+    },
+    "color": {
+      "field": "category",
+      "type": "nominal",
+      "title": "Category",
+      "scale": {
+        "range": [
+          "#13294b",
+          "#e84a27",
+          "#5a7099",
+          "#f4a48f"
+        ]
+      }
+    },
+    "tooltip": [
+      {
+        "field": "skill",
+        "title": "Skill"
+      },
+      {
+        "field": "category",
+        "title": "Category"
+      },
+      {
+        "field": "avg_gap",
+        "title": "Average gap"
+      },
+      {
+        "field": "avg_proficiency",
+        "title": "Average proficiency"
+      },
+      {
+        "field": "avg_required",
+        "title": "Average required"
+      },
+      {
+        "field": "learners",
+        "title": "Candidates assessed"
+      }
+    ]
+  },
+  "config": {
+    "font": "system-ui, -apple-system, Segoe UI, sans-serif",
+    "view": {
+      "stroke": null
+    },
+    "axis": {
+      "labelColor": "#1c1c1c",
+      "titleColor": "#5b6472",
+      "gridColor": "#e1e5ec"
+    }
+  }
+}

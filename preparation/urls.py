@@ -62,4 +62,17 @@ urlpatterns = [
     path("charts/task-status.png", views.chart_task_status, name="chart_task_status"),
 
     path("api/skills/", views.skill_api, name="skill_api"),
+    # =====================================================================
+    # ASSIGNMENT 4
+    # =====================================================================
+    # Part 1.1 - internal JSON API, chart-ready
+    path("api/skills/summary/", views.api_skill_summary, name="api_skill_summary"),
+    path("api/assessments/", views.api_assessments, name="api_assessments"),
+    # Part 1.2 - Vega-Lite: the page, each spec, and each chart as a PNG
+    path("vega-lite/", views.vega_lite_page, name="vega_lite"),
+    path("vega-lite/chart<int:number>.json", views.vega_lite_spec, name="vega_lite_spec"),
+    path("vega-lite/chart<int:number>.png", views.vega_lite_png, name="vega_lite_png"),
+    # Part 2 - external API (Jobicy) joined with internal skill gaps
+    path("api/market-demand/", views.api_market_demand, name="api_market_demand"),
+    path("market/", views.market_page, name="market"),
 ]
