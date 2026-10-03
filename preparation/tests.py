@@ -7,6 +7,11 @@ cheapest way to notice if a later change breaks one of them.
 Run with:  python manage.py test preparation
 """
 
+import json
+from unittest import mock
+
+import requests
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -458,3 +463,300 @@ class ChartTests(TestCase):
         server without a display."""
         import matplotlib
         self.assertEqual(matplotlib.get_backend().lower(), "agg")
+
+
+# ===========================================================================
+# ASSIGNMENT 4
+# ===========================================================================
+def _a4_fixture(cls):
+    """Two skills, two candidates with different roles, three assessments."""
+    cls.python = Skill.objects.create(
+        name="Python fundamentals", category=Skill.Category.TECHNICAL
+    )
+    cls.sql = Skill.objects.create(
+        name="SQL & relational modeling", category=Skill.Category.TECHNICAL
+    )
+    cls.pitch = Skill.objects.create(
+        name="Resume & elevator pitch", category=Skill.Category.COMMUNICATION
+    )
+    analyst = CandidateProfile.objects.create(
+        user=User.objects.create_user(
+            "eunji", first_name="Eunji", email="eunji@example.edu",
+            password="test-only-pw",
+        ),
+        target_role="Data Analyst", preparation_timeline_weeks=4,
+    )
+    trader = CandidateProfile.objects.create(
+        user=User.objects.create_user("tquant", password="test-only-pw"),
+        target_role="Quantitative Trader", preparation_timeline_weeks=6,
+    )
+    SkillAssessment.objects.create(
+        candidate=analyst, skill=cls.sql, proficiency_score=40, required_level=80
+    )
+    SkillAssessment.objects.create(
+        candidate=analyst, skill=cls.python, proficiency_score=75, required_level=70
+    )
+    SkillAssessment.objects.create(
+        candidate=trader, skill=cls.python, proficiency_score=30, required_level=90
+    )
+
+
+class InternalApiTests(TestCase):
+    """Part 1.1: GET-only, JSON-only, chart-ready rows from the models."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def test_skill_summary_is_a_flat_list_aggregated_per_skill(self):
+        r = self.client.get(reverse("preparation:api_skill_summary"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/json")
+        rows = {row["skill"]: row for row in r.json()}
+        self.assertEqual(set(rows), {"Python fundamentals", "SQL & relational modeling",
+                                     "Resume & elevator pitch"})
+        python = rows["Python fundamentals"]
+        self.assertEqual(python["learners"], 2)
+        self.assertEqual(python["avg_proficiency"], 52.5)
+        self.assertEqual(python["avg_required"], 80.0)
+        self.assertEqual(python["avg_gap"], 27.5)
+        # Unassessed skills stay listed, with nulls rather than fake zeros.
+        self.assertEqual(rows["Resume & elevator pitch"]["learners"], 0)
+        self.assertIsNone(rows["Resume & elevator pitch"]["avg_gap"])
+
+    def test_assessments_are_anonymous(self):
+        r = self.client.get(reverse("preparation:api_assessments"))
+        rows = r.json()
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(
+            set(rows[0]),
+            {"skill", "category", "experience", "proficiency", "required", "gap",
+             "assessed_on"},
+        )
+        body = r.content.decode()
+        for personal in ("Eunji", "eunji", "example.edu"):
+            self.assertNotIn(personal, body)
+
+    def test_apis_allow_cross_origin_reads(self):
+        """The Vega-Lite editor fetches from another origin."""
+        for name in ("api_skill_summary", "api_assessments"):
+            r = self.client.get(reverse(f"preparation:{name}"))
+            self.assertEqual(r["Access-Control-Allow-Origin"], "*")
+
+    def test_preflight_allows_public_site_to_read_localhost(self):
+        """Chrome asks before vega.github.io may read from 127.0.0.1."""
+        r = self.client.options(
+            reverse("preparation:api_assessments"),
+            headers={"Origin": "https://vega.github.io",
+                     "Access-Control-Request-Private-Network": "true"},
+        )
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(r["Access-Control-Allow-Origin"], "*")
+        self.assertEqual(r["Access-Control-Allow-Private-Network"], "true")
+        self.assertNotIn("PUT", r["Access-Control-Allow-Methods"])
+
+    def test_apis_are_get_only(self):
+        for name in ("api_skill_summary", "api_assessments"):
+            self.assertEqual(self.client.post(reverse(f"preparation:{name}")).status_code, 405)
+
+
+class VegaLiteTests(TestCase):
+    """Part 1.2: specs use data.url, the page embeds them, PNGs render."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def test_specs_load_data_by_url_and_never_inline(self):
+        from . import vega
+
+        for number, info in vega.CHARTS.items():
+            with self.subTest(chart=number):
+                spec = vega.load_spec(number)
+                self.assertIn("vega-lite/v6", spec["$schema"])
+                self.assertEqual(spec["data"], {"url": reverse(info["api_name"])})
+                self.assertNotIn('"values"', json.dumps(spec))
+
+    def test_one_bar_chart_and_one_scatter(self):
+        from . import vega
+
+        self.assertEqual(vega.load_spec(1)["mark"]["type"], "bar")
+        marks = [layer["mark"]["type"] for layer in vega.load_spec(2)["layer"]]
+        self.assertIn("point", marks)
+
+    def test_spec_endpoint_returns_absolute_data_url(self):
+        r = self.client.get(reverse("preparation:vega_lite_spec", args=[1]))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["data"]["url"], "http://testserver/api/skills/summary/")
+
+    def test_png_endpoints_return_images(self):
+        for number in (1, 2):
+            with self.subTest(chart=number):
+                r = self.client.get(reverse("preparation:vega_lite_png", args=[number]))
+                self.assertEqual(r.status_code, 200)
+                self.assertEqual(r["Content-Type"], "image/png")
+                self.assertTrue(r.content.startswith(b"\x89PNG"))
+
+    def test_unknown_chart_is_404(self):
+        self.assertEqual(
+            self.client.get(reverse("preparation:vega_lite_png", args=[9])).status_code, 404
+        )
+
+    def test_page_embeds_both_charts(self):
+        r = self.client.get(reverse("preparation:vega_lite"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "vega-embed@")
+        for number in (1, 2):
+            self.assertContains(r, f'id="vega-chart-{number}"')
+            self.assertContains(r, f"/vega-lite/chart{number}.json")
+        self.assertContains(r, reverse("preparation:vega_lite"))  # in the nav
+
+
+def _jobicy_response(jobs, status=200):
+    response = mock.Mock(status_code=status)
+    response.json.return_value = {"jobs": jobs}
+    if status >= 400:
+        response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    else:
+        response.raise_for_status.return_value = None
+    return response
+
+
+FAKE_JOBS = [
+    {"jobTitle": "Data Analyst", "companyName": "Acme", "url": "https://jobicy.com/jobs/1",
+     "jobExcerpt": "SQL every day", "jobDescription": "<p>PostgreSQL and Python</p>",
+     "pubDate": "2026-09-30 10:00:00"},
+    {"jobTitle": "BI Analyst", "companyName": "Globex", "url": "https://jobicy.com/jobs/2",
+     "jobExcerpt": "Dashboards", "jobDescription": "<p>Strong <b>SQL</b>. Digital tools.</p>",
+     "pubDate": "2026-09-29 10:00:00"},
+]
+
+
+class MarketDemandTests(TestCase):
+    """Part 2: requests.get to Jobicy, combined with internal gaps, as JSON.
+
+    requests.get is always mocked: a test suite must not depend on, or add
+    load to, someone else's server.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def setUp(self):
+        cache.clear()
+
+    def _get(self, q="data analyst"):
+        return self.client.get(reverse("preparation:api_market_demand"), {"q": q})
+
+    @mock.patch("preparation.market.requests.get")
+    def test_calls_jobicy_with_params_and_timeout(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        self._get("data analyst")
+        _, kwargs = get.call_args
+        self.assertEqual(kwargs["params"]["tag"], "data analyst")
+        self.assertEqual(kwargs["timeout"], 5)
+        get.return_value.raise_for_status.assert_called_once()
+
+    @mock.patch("preparation.market.requests.get")
+    def test_triangulates_demand_with_the_role_cohort(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        r = self._get("data analyst")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["postings_analyzed"], 2)
+        self.assertTrue(data["cohort"]["matched_target_role"])
+        rows = {row["skill"]: row for row in data["skills"]}
+
+        sql = rows["SQL & relational modeling"]
+        self.assertEqual(sql["postings_mentioning"], 2)
+        self.assertEqual(sql["demand_pct"], 100.0)
+        self.assertEqual(sql["avg_gap"], 40.0)       # analyst only: 80 - 40
+        self.assertEqual(sql["priority"], 40.0)
+
+        python = rows["Python fundamentals"]
+        self.assertEqual(python["postings_mentioning"], 1)
+        self.assertEqual(python["avg_gap"], -5.0)    # trader's 30/90 is excluded
+        self.assertEqual(python["priority"], 0.0)    # ahead already, so no priority
+
+        self.assertEqual(data["skills"][0]["skill"], "SQL & relational modeling")
+
+    @mock.patch("preparation.market.requests.get")
+    def test_unmatched_role_falls_back_to_all_candidates_and_says_so(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        data = self._get("astronaut").json()
+        self.assertFalse(data["cohort"]["matched_target_role"])
+        python = {row["skill"]: row for row in data["skills"]}["Python fundamentals"]
+        self.assertEqual(python["avg_gap"], 27.5)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_nothing_is_stored_and_raw_text_is_not_leaked(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        before = Skill.objects.count(), SkillAssessment.objects.count()
+        data = self._get().json()
+        self.assertEqual((Skill.objects.count(), SkillAssessment.objects.count()), before)
+        self.assertNotIn("_text", data["sample_postings"][0])
+        self.assertEqual(data["sample_postings"][0]["url"], "https://jobicy.com/jobs/1")
+
+    @mock.patch("preparation.market.requests.get")
+    def test_repeat_queries_are_served_from_cache(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        self._get("data analyst")
+        self._get("Data Analyst")
+        self.assertEqual(get.call_count, 1)
+
+    def test_missing_query_is_400(self):
+        r = self.client.get(reverse("preparation:api_market_demand"))
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("error", r.json())
+
+    @mock.patch("preparation.market.requests.get")
+    def test_upstream_failures_become_clean_json_errors(self, get):
+        cases = [
+            (requests.Timeout(), 504),
+            (requests.ConnectionError(), 502),
+        ]
+        for exc, status in cases:
+            with self.subTest(exc=type(exc).__name__):
+                cache.clear()
+                get.side_effect = exc
+                r = self._get()
+                self.assertEqual(r.status_code, status)
+                self.assertEqual(r["Content-Type"], "application/json")
+                self.assertIn("error", r.json())
+
+    @mock.patch("preparation.market.requests.get")
+    def test_http_error_status_is_502(self, get):
+        get.return_value = _jobicy_response([], status=503)
+        r = self._get()
+        self.assertEqual(r.status_code, 502)
+        self.assertIn("503", r.json()["error"])
+
+    @mock.patch("preparation.market.requests.get")
+    def test_non_json_body_is_502(self, get):
+        response = _jobicy_response([])
+        response.json.side_effect = ValueError("not json")
+        get.return_value = response
+        self.assertEqual(self._get().status_code, 502)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_page_renders_report_and_credits_jobicy(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        r = self.client.get(reverse("preparation:market"), {"q": "data analyst"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "SQL &amp; relational modeling")
+        self.assertContains(r, 'href="https://jobicy.com/jobs/1"')
+        self.assertContains(r, "https://jobicy.com")
+
+    @mock.patch("preparation.market.requests.get")
+    def test_page_shows_a_message_when_jobicy_is_down(self, get):
+        get.side_effect = requests.Timeout()
+        r = self.client.get(reverse("preparation:market"), {"q": "data analyst"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Could not load job postings")
+
+    def test_page_without_query_does_not_call_jobicy(self):
+        with mock.patch("preparation.market.requests.get") as get:
+            r = self.client.get(reverse("preparation:market"))
+        self.assertEqual(r.status_code, 200)
+        get.assert_not_called()

@@ -16,14 +16,18 @@ between them is how the response is plumbed - that is the whole point of the
 exercise, and it is also what Section 3 means by "template reuse".
 """
 
+from functools import wraps
+
 from django.db.models import Avg, Count, Q
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template import loader
+from django.urls import reverse
 from django.views import View
+from django.views.decorators.http import require_safe
 from django.views.generic import CreateView, DetailView, ListView
 
-from . import charts
+from . import charts, market, vega
 from .models import (
     CandidateProfile,
     PlanTask,
@@ -648,3 +652,143 @@ def skill_api(request):
     }
 
     return JsonResponse(data)
+
+
+# ===========================================================================
+# ASSIGNMENT 4
+# ===========================================================================
+# ---------------------------------------------------------------------------
+# Part 1.1 - Internal JSON API for charts
+#
+# GET only, JSON only, rows straight from the models. Each response is a bare
+# array of flat records, which is what Vega-Lite's data: {url: ...} reads
+# without any format hints.
+#
+# Access-Control-Allow-Origin: * lets a page on another origin - the online
+# Vega-Lite editor, or a classmate's site - fetch these URLs from the
+# browser. That is safe here because the endpoints are read-only and return
+# no personal data: assessment rows carry scores, never names or emails.
+# ---------------------------------------------------------------------------
+def _api_response(data, status=200):
+    response = JsonResponse(data, safe=False, status=status)
+    response["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
+def public_api(view):
+    """Read-only, cross-origin JSON endpoint.
+
+    GET and HEAD run the view. OPTIONS answers the browser's CORS preflight
+    without running it: Chrome sends one before a page on a public site
+    (vega.github.io/editor) may read from a private address such as
+    127.0.0.1, and only proceeds if Access-Control-Allow-Private-Network
+    comes back. Anything else is 405, so the endpoint can never write.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if request.method == "OPTIONS":
+            response = HttpResponse(status=204)
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type"
+            response["Access-Control-Allow-Private-Network"] = "true"
+            response["Access-Control-Max-Age"] = "86400"
+            return response
+        return require_safe(view)(request, *args, **kwargs)
+
+    return wrapper
+
+
+@public_api
+def api_skill_summary(request):
+    """/api/skills/summary/ - one aggregated row per skill."""
+    return _api_response(vega.skill_summary_rows())
+
+
+@public_api
+def api_assessments(request):
+    """/api/assessments/ - one anonymous row per skill assessment."""
+    return _api_response(vega.assessment_rows())
+
+
+# ---------------------------------------------------------------------------
+# Part 1.2 - Vega-Lite charts
+#
+# Every chart is reachable three ways:
+#   /vega-lite/                 both charts embedded in a page (vega-embed)
+#   /vega-lite/chart<N>.json    the spec, with an absolute data URL, ready to
+#                               paste into the Vega-Lite editor
+#   /vega-lite/chart<N>.png     the same chart drawn on the server
+# ---------------------------------------------------------------------------
+def _chart_or_404(number):
+    if number not in vega.CHARTS:
+        raise Http404("No such chart.")
+    return vega.CHARTS[number]
+
+
+def vega_lite_page(request):
+    """The page that embeds both Vega-Lite charts."""
+    charts_info = [
+        {"number": number, **info, "api_url": reverse(info["api_name"])}
+        for number, info in vega.CHARTS.items()
+    ]
+    return render(request, "preparation/vega_lite.html", {"charts": charts_info})
+
+
+@public_api
+def vega_lite_spec(request, number):
+    """/vega-lite/chart<N>.json"""
+    _chart_or_404(number)
+    return _api_response(vega.spec_for_editor(number, request.build_absolute_uri))
+
+
+@require_safe
+def vega_lite_png(request, number):
+    """/vega-lite/chart<N>.png"""
+    _chart_or_404(number)
+    return _png(vega.render_png(number))
+
+
+# ---------------------------------------------------------------------------
+# Part 2 - External API (Jobicy), triangulated with internal skill gaps
+#
+# Two views over the same market.market_report():
+#   /api/market-demand/?q=<role>   the processed result as JSON
+#   /market/?q=<role>              the same result as a page
+# The external call, the error handling and the analysis live in market.py,
+# so neither view knows anything about Jobicy.
+# ---------------------------------------------------------------------------
+@public_api
+def api_market_demand(request):
+    """/api/market-demand/?q=data analyst"""
+    query = request.GET.get("q", "").strip()
+    if not query:
+        return _api_response(
+            {"error": "Add a role to search for, e.g. ?q=data analyst"}, status=400
+        )
+    try:
+        report = market.market_report(query)
+    except market.MarketDataError as exc:
+        return _api_response({"error": exc.message, "query": query}, status=exc.status)
+    return _api_response(report)
+
+
+@require_safe
+def market_page(request):
+    """/market/?q=data analyst"""
+    query = request.GET.get("q", "").strip()
+    context = {
+        "query": query,
+        "report": None,
+        "error": None,
+        "suggestions": sorted(
+            set(CandidateProfile.objects.values_list("target_role", flat=True))
+        ),
+    }
+    if query:
+        try:
+            context["report"] = market.market_report(query)
+        except market.MarketDataError as exc:
+            context["error"] = exc.message
+    return render(request, "preparation/market.html", context)

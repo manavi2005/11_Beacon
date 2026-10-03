@@ -1,0 +1,134 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "title": {
+    "text": "Proficiency against requirement",
+    "subtitle": "One point per skill assessment. Points above the diagonal are gaps still to close.",
+    "anchor": "start"
+  },
+  "description": "Scatter plot of every skill assessment: current proficiency on the x axis, the level the target role requires on the y axis, coloured by skill category. A diagonal line marks where proficiency equals the requirement.",
+  "data": {
+    "url": "http://127.0.0.1:8000/api/assessments/"
+  },
+  "width": 520,
+  "height": 380,
+  "layer": [
+    {
+      "mark": {
+        "type": "rule",
+        "strokeDash": [
+          4,
+          4
+        ],
+        "color": "#9aa3b2"
+      },
+      "encoding": {
+        "x": {
+          "datum": 0,
+          "type": "quantitative"
+        },
+        "y": {
+          "datum": 0,
+          "type": "quantitative"
+        },
+        "x2": {
+          "datum": 100
+        },
+        "y2": {
+          "datum": 100
+        }
+      }
+    },
+    {
+      "mark": {
+        "type": "point",
+        "filled": true,
+        "size": 90,
+        "opacity": 0.85
+      },
+      "encoding": {
+        "x": {
+          "field": "proficiency",
+          "type": "quantitative",
+          "title": "Current proficiency (0-100)",
+          "scale": {
+            "domain": [
+              0,
+              100
+            ]
+          }
+        },
+        "y": {
+          "field": "required",
+          "type": "quantitative",
+          "title": "Level the target role requires (0-100)",
+          "scale": {
+            "domain": [
+              0,
+              100
+            ]
+          }
+        },
+        "color": {
+          "field": "category",
+          "type": "nominal",
+          "title": "Category",
+          "scale": {
+            "range": [
+              "#13294b",
+              "#e84a27",
+              "#5a7099",
+              "#f4a48f"
+            ]
+          }
+        },
+        "shape": {
+          "field": "experience",
+          "type": "nominal",
+          "title": "Experience"
+        },
+        "tooltip": [
+          {
+            "field": "skill",
+            "title": "Skill"
+          },
+          {
+            "field": "category",
+            "title": "Category"
+          },
+          {
+            "field": "experience",
+            "title": "Experience"
+          },
+          {
+            "field": "proficiency",
+            "title": "Proficiency"
+          },
+          {
+            "field": "required",
+            "title": "Required"
+          },
+          {
+            "field": "gap",
+            "title": "Gap"
+          },
+          {
+            "field": "assessed_on",
+            "title": "Assessed on",
+            "type": "temporal"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "font": "system-ui, -apple-system, Segoe UI, sans-serif",
+    "view": {
+      "stroke": null
+    },
+    "axis": {
+      "labelColor": "#1c1c1c",
+      "titleColor": "#5b6472",
+      "gridColor": "#e1e5ec"
+    }
+  }
+}

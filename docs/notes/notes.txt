@@ -766,3 +766,69 @@ REMINDERS / TODO
   [ ] Decide whether SkillAssessment keeps history (see Week 3 open question).
   [ ] The plan generator still has no API key wired up; .env.example has the
       placeholder line ready.
+
+
+--------------------------------------------------------------------------------
+WEEK 6 - INTERNAL API, VEGA-LITE & AN EXTERNAL API (ASSIGNMENT 4)
+--------------------------------------------------------------------------------
+
+PART 1 - Internal API and Vega-Lite charts
+
+  Two new chart-ready endpoints, both GET-only, flat JSON arrays:
+    /api/skills/summary/   one row per skill, aggregated by the database
+    /api/assessments/      one row per assessment, no names or emails
+
+  Why a bare array rather than {"count": ..., "results": [...]} like
+  /api/skills/: Vega-Lite's data.url reads an array of records directly. The
+  wrapped shape would need format: {property: "results"} in every spec, and
+  anyone pasting the URL into the editor would trip over it.
+
+  Why assessments are anonymous: the endpoint is public and meant for
+  classmates. A chart of scores does not need to know whose score it is.
+
+  Charts: a bar chart of the average gap per skill (aggregated summary) and
+  a scatter of proficiency against required level with a y = x line. Both
+  specs use data: {url: ...}; none has inline values. Each is embedded on
+  /vega-lite/ and also served as /vega-lite/chart<N>.json (the spec) and
+  /vega-lite/chart<N>.png (drawn on the server with vl-convert).
+
+  Two problems hit while testing:
+    1. The online editor could not read 127.0.0.1. Browsers block a public
+       https page from reading a private address unless the server answers
+       the preflight with Access-Control-Allow-Private-Network, and Chrome
+       also asks the user once. The API now answers OPTIONS properly.
+    2. The PNG renderer must not fetch the API over HTTP: the server would
+       be waiting on its own request, and a single-worker deployment would
+       hang. The PNG view passes it the same rows the API returns instead.
+
+PART 2 - External API: Jobicy
+
+  Picked Jobicy (remote job postings, keyless) over Remotive. Remotive asks
+  callers to stay under about four requests a day, which a class demo would
+  break, and its search results for "data analyst" were mostly unrelated.
+
+  /api/market-demand/?q=<role> fetches up to 50 postings, counts how many
+  mention each catalog skill, joins that with the average gap for candidates
+  targeting that role, and ranks by demand x gap. Nothing is stored; each
+  query is cached in memory for an hour.
+
+  Keyword matching is a heuristic and is documented as one. Two patterns
+  were too generous on the first pass: "salary" made "Negotiating an offer"
+  match 72% of ads, and "stakeholders" did the same for STAR storytelling.
+  Both were narrowed to words that actually mean the skill.
+
+  Errors: no q -> 400; timeout -> 504; HTTP error, connection error or a
+  non-JSON body -> 502. All return JSON, and the page shows a message.
+
+  Tests mock requests.get, so CI never calls Jobicy.
+
+
+REMINDERS / TODO
+
+  [ ] Assignment 4 asks for db.sqlite3 to be committed, but .gitignore still
+      excludes it (decided in Week 2). Needs a team decision before
+      submission.
+  [ ] Screenshots of both charts working in the Vega-Lite editor, named
+      a4-part1-editor-*.
+  [ ] Screenshot of /market/?q=data analyst and the JSON endpoint, named
+      a4-part2-*.
