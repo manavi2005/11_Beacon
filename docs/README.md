@@ -36,6 +36,8 @@ docs/
     ├── a3-section2-*.png   <- Assignment 3: search and aggregations
     ├── a3-section3-*.png   <- Assignment 3: the styled UI
     ├── a3-section4-*.png   <- Assignment 3: the charts page
+    ├── a4-part1-*.png      <- Assignment 4: Vega-Lite charts
+    ├── a4-part2-*.png      <- Assignment 4: external API
     ├── admin/              <- Django Admin list views (earlier assignment)
     └── superseded/         <- older captures, kept for the record only
 ```
@@ -89,6 +91,26 @@ The written comparison the bonus asks for - *HttpResponse vs render* and
 To reproduce the empty state without touching the database, visit
 `/skills/?q=zzzz` - the filter matches nothing and the `{% empty %}` branch
 fires.
+
+---
+
+## Assignment 4: Internal API, Vega-Lite and an external API
+
+| Requirement | Where to look |
+|---|---|
+| Internal JSON API, GET only, from the models, chart-ready | `/api/skills/summary/`, `/api/assessments/` - [`preparation/vega.py`](../preparation/vega.py) row builders |
+| Bar chart (aggregated summary) | [`vega_lite/chart1.vl.json`](vega_lite/chart1.vl.json), source [`preparation/vega_lite/skill_gap_bar.vl.json`](../preparation/vega_lite/skill_gap_bar.vl.json) |
+| Line or scatter chart | [`vega_lite/chart2.vl.json`](vega_lite/chart2.vl.json), source [`preparation/vega_lite/assessment_scatter.vl.json`](../preparation/vega_lite/assessment_scatter.vl.json) |
+| `data: {url: ...}`, no inline data | Both specs. `VegaLiteTests.test_specs_load_data_by_url_and_never_inline` enforces it |
+| Charts embedded in an HTML page | `/vega-lite/` - [`templates/preparation/vega_lite.html`](../templates/preparation/vega_lite.html) |
+| Chart outputs on dedicated endpoints | `/vega-lite/chart1.png`, `/vega-lite/chart2.png` (and `.json` for each spec) |
+| Screenshots of working charts | [`a4-part1-vega-lite-chart1.png`](screenshots/a4-part1-vega-lite-chart1.png), [`a4-part1-vega-lite-chart2.png`](screenshots/a4-part1-vega-lite-chart2.png) |
+| External keyless API, `?q=`, `requests.get(params=, timeout=5)`, `raise_for_status()` | [`preparation/market.py`](../preparation/market.py) `fetch_postings()` |
+| Errors handled | `MarketDataError` -> 400 / 502 / 504 JSON; the page shows a message |
+| Combined with internal data, processed, not stored | `market_report()`: demand per skill x the role cohort's average gap |
+| New internal endpoint for the processed result | `/api/market-demand/?q=data analyst`, page at `/market/?q=data analyst` |
+
+Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-external-api).
 
 ---
 

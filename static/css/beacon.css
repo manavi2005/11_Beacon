@@ -477,3 +477,12 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   line-height: 1.5;
   color: var(--ink-muted);
 }
+
+/* Vega-Lite (Assignment 4). vega-embed always adds an empty <form> for
+   interactive widget bindings; without this the site-wide form styling above
+   would draw it as an empty grey bar under every chart. */
+.vega-embed .vega-bindings:empty { display: none; }
+/* The specs have a fixed width so the server PNG and the page match. On a
+   narrow screen the chart scrolls sideways inside its card, like the wide
+   tables do, instead of pushing the whole page wider than the viewport. */
+.vega-chart { max-width: 100%; overflow-x: auto; }

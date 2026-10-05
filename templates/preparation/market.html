@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% comment %}
+  Assignment 4, Part 2. Live job postings from Jobicy (external, keyless)
+  joined with Beacon's own skill gaps (internal, from the ORM). Nothing from
+  Jobicy is stored. The same report is available as JSON at
+  /api/market-demand/?q=...
+
+  Jobicy's terms: credit Jobicy with a link, and send every job link to the
+  original posting URL. Both are done below.
+{% endcomment %}
+
+{% block title %}Beacon - job market{% endblock %}
+{% block heading %}Job market vs skill gaps{% endblock %}
+
+{% block content %}
+  <p class="tag">External API (Jobicy) triangulated with Beacon's own data</p>
+  <p>
+    Enter a target role. Beacon pulls live remote job postings for it, counts
+    how many mention each skill in the catalog, and sets that beside how far
+    candidates aiming at that role are from the required level. Skills that
+    employers ask for <em>and</em> candidates are behind on rise to the top.
+  </p>
+
+  <form method="get">
+    <input type="text" name="q" value="{{ query }}" placeholder="e.g. data analyst"
+           list="role-suggestions" aria-label="Target role">
+    <datalist id="role-suggestions">
+      {% for role in suggestions %}<option value="{{ role }}">{% endfor %}
+    </datalist>
+    <button type="submit">Analyze</button>
+  </form>
+
+  {% if error %}
+    <p><strong>Could not load job postings.</strong> {{ error }}
+       Beacon's own data is unaffected; try again in a minute.</p>
+  {% elif report %}
+    <ul class="stats">
+      <li class="stat"><span class="stat__value">{{ report.postings_analyzed }}</span>
+          <span class="stat__label">Postings analyzed</span></li>
+      <li class="stat"><span class="stat__value">{{ report.skills|length }}</span>
+          <span class="stat__label">Skills measured</span></li>
+    </ul>
+    <p class="tag">Internal cohort: {{ report.cohort.description }}.
+      Same result as JSON:
+      <a href="{% url 'preparation:api_market_demand' %}?q={{ query|urlencode }}"><code>/api/market-demand/?q={{ query }}</code></a></p>
+
+    <h2>Where to spend preparation time</h2>
+    <div class="table-scroll">
+    <table>
+      <tr>
+        <th>Skill</th><th>Category</th><th>Postings mentioning</th>
+        <th>Demand</th><th>Avg gap</th><th>Priority</th>
+      </tr>
+      {% for row in report.skills %}
+        <tr>
+          <td>{{ row.skill }}</td>
+          <td>{{ row.category }}</td>
+          <td>{{ row.postings_mentioning }} of {{ report.postings_analyzed }}</td>
+          <td>{{ row.demand_pct }}%</td>
+          <td>{% if row.avg_gap is None %}<span class="muted">not assessed</span>{% else %}{{ row.avg_gap }}{% endif %}</td>
+          <td>{{ row.priority }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">The skill catalog is empty, so there is nothing to
+          compare the postings against. Run <code>python manage.py seed_demo_data</code>.</td></tr>
+      {% endfor %}
+    </table>
+    </div>
+    <p class="tag">Priority = demand % &times; positive gap / 100. A skill needs
+      both employer demand and a real gap to score.</p>
+
+    <h2>Sample postings</h2>
+    <ul>
+      {% for post in report.sample_postings %}
+        <li><a href="{{ post.url }}" rel="noopener" target="_blank">{{ post.title }}</a>
+            &middot; {{ post.company }}{% if post.published %} &middot; {{ post.published }}{% endif %}</li>
+      {% empty %}
+        <li>Jobicy had no remote postings tagged "{{ query }}". Try a broader role,
+            such as "analyst" or "engineer".</li>
+      {% endfor %}
+    </ul>
+    <p class="tag">Job data from <a href="{{ report.source.url }}" rel="noopener">Jobicy</a>,
+      fetched live and not stored.</p>
+  {% else %}
+    <p class="muted">Pick a role above. Candidates in the database are currently
+      aiming at: {{ suggestions|join:", " }}.</p>
+  {% endif %}
+{% endblock %}

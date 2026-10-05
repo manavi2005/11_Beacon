@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% comment %}
+  Assignment 4, Part 1.2. Both charts are Vega-Lite specs that load their
+  rows from this site's own JSON API with data: {url: ...}. vega-embed fetches
+  each spec from /vega-lite/chart<N>.json, then fetches the API URL named
+  inside it, then draws. No data is inlined in the page.
+
+  The three libraries are pinned to the Vega-Lite release vl-convert uses for
+  the .png endpoints, so the embedded chart and the PNG are drawn by the same
+  version.
+{% endcomment %}
+
+{% block title %}Beacon - Vega-Lite charts{% endblock %}
+{% block heading %}Vega-Lite charts{% endblock %}
+
+{% block content %}
+  <p class="tag">Declarative charts drawn from Beacon's internal JSON API</p>
+  <p>
+    Each chart below is a Vega-Lite specification that points at one of
+    Beacon's API endpoints with <code>data: {"url": ...}</code>. The browser
+    fetches the rows live, so the chart changes the moment the database does.
+    Every chart also has its own URLs: the spec, ready to paste into the
+    <a href="https://vega.github.io/editor/" rel="noopener">Vega-Lite editor</a>,
+    and a PNG drawn on the server.
+  </p>
+
+  {% for chart in charts %}
+    <h2>Chart {{ chart.number }}: {{ chart.title }}</h2>
+    <p class="tag">{{ chart.kind }} &middot; data from
+      <a href="{{ chart.api_url }}"><code>{{ chart.api_url }}</code></a></p>
+
+    <figure class="chart">
+      <div id="vega-chart-{{ chart.number }}" class="vega-chart"
+           data-spec="{% url 'preparation:vega_lite_spec' chart.number %}">
+        {% comment %}
+          Shown if JavaScript is off or the CDN is unreachable: the server-side
+          PNG of the same chart, so the page never ends up blank.
+        {% endcomment %}
+        <img src="{% url 'preparation:vega_lite_png' chart.number %}"
+             alt="{{ chart.title }} ({{ chart.kind|lower }}), rendered on the server."
+             width="640" loading="lazy">
+      </div>
+      <figcaption>
+        <a href="{% url 'preparation:vega_lite_spec' chart.number %}">chart{{ chart.number }}.json</a>
+        (spec) &middot;
+        <a href="{% url 'preparation:vega_lite_png' chart.number %}">chart{{ chart.number }}.png</a>
+        (server-rendered image)
+      </figcaption>
+    </figure>
+  {% endfor %}
+
+  <script src="https://cdn.jsdelivr.net/npm/vega@6.4.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@6.4.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@7.3.0"></script>
+  <script>
+    // Replace each PNG fallback with the live, interactive chart. If embedding
+    // fails for any reason, the PNG stays where it is.
+    document.querySelectorAll(".vega-chart").forEach(function (el) {
+      if (typeof vegaEmbed !== "function") return;
+      fetch(el.dataset.spec)
+        .then(function (r) { return r.json(); })
+        .then(function (spec) {
+          var holder = document.createElement("div");
+          return vegaEmbed(holder, spec, { actions: { source: true, editor: true, export: true, compiled: false } })
+            .then(function () { el.replaceChildren(holder); });
+        })
+        .catch(function (err) { console.warn("Vega-Lite embed failed, keeping PNG", err); });
+    });
+  </script>
+{% endblock %}

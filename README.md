@@ -21,6 +21,9 @@ everything they could do, it tells them what to do next.
 8. [Proving it works](#8-proving-it-works)
 9. [Git workflow](#9-git-workflow)
 10. [Documentation index](#10-documentation-index)
+11. [Forms & User Input](#11-forms--user-input)
+12. [Creating APIs](#12-creating-apis)
+13. [Vega-Lite charts and an external API](#13-vega-lite-charts-and-an-external-api)
 
 ---
 
@@ -92,10 +95,17 @@ Every page is reachable from the navigation bar at the top of the site.
 | `/candidates/` | Every candidate, annotated with counts and averages | CBV, generic `ListView` |
 | `/candidates/<pk>/` | One candidate: goal, scores, plans, biggest gaps | CBV, generic `DetailView` |
 | `/search/skills/` | Skill search form (GET) | FBV, `render()` |
-| `/search/candidates/` | Candidate lookup form (POST) | FBV, `render()` |
+| `/search/candidates/` | Candidate lookup form (POST) | CBV, base `View` |
 | `/insights/` | Totals and grouped summaries (`count()`, `annotate()`) | FBV, `render()` |
 | `/charts/` | Four Matplotlib charts drawn from live ORM aggregates | FBV, `render()` |
 | `/charts/*.png` | Each chart on its own URL, returning `image/png` | FBV, `HttpResponse` |
+| `/api/skills/summary/` | One aggregated row per skill, chart-ready JSON | FBV, `JsonResponse` |
+| `/api/assessments/` | One anonymous row per skill assessment, chart-ready JSON | FBV, `JsonResponse` |
+| `/vega-lite/` | Two Vega-Lite charts loading the API above by URL | FBV, `render()` |
+| `/vega-lite/chart<N>.json` | Each chart's spec, with an absolute data URL for the editor | FBV, `JsonResponse` |
+| `/vega-lite/chart<N>.png` | Each Vega-Lite chart drawn on the server | FBV, `HttpResponse` |
+| `/api/market-demand/?q=<role>` | Jobicy job postings joined with Beacon's skill gaps | FBV, `JsonResponse` |
+| `/market/?q=<role>` | The same report as a page | FBV, `render()` |
 | `/admin/` | Django Admin for all five models | - |
 
 The four bolded rows are the four required kinds of view.
@@ -685,3 +695,98 @@ This demonstrates that `HttpResponse` is a general HTTP response class whose con
 The first Beacon API serves the project's skill catalog because skills are reusable reference data that can be consumed independently from the HTML pages.
 
 A future version could expose additional read-only project data, such as preparation plans, task progress, or candidate skill summaries. Any future endpoint would need to consider which information is appropriate to expose publicly, especially for candidate-related data.
+
+---
+
+## 13. Vega-Lite charts and an external API
+
+Assignment 4, Parts 1 and 2. Code: [`preparation/vega.py`](preparation/vega.py),
+[`preparation/market.py`](preparation/market.py), and the Assignment 4 block
+at the end of [`preparation/views.py`](preparation/views.py).
+
+### 13.1 Internal API for charts
+
+| Method | URL | Returns |
+|---|---|---|
+| GET | `/api/skills/summary/` | One row per skill: `skill`, `category`, `learners`, `avg_proficiency`, `avg_required`, `avg_gap`, `tasks` |
+| GET | `/api/assessments/` | One row per assessment: `skill`, `category`, `experience`, `proficiency`, `required`, `gap`, `assessed_on` |
+
+Both return a bare JSON array of flat records, which is what Vega-Lite's
+`data: {"url": ...}` reads with no format hints. The numbers are computed by
+the database (`annotate()` with `Count` and `Avg`), not by Python loops.
+
+`/api/assessments/` is deliberately anonymous: it carries scores, never a
+candidate's name, username or email. These endpoints are public, and the
+assignment expects classmates to load them in the Vega-Lite editor.
+
+**Cross-origin access.** Every response carries
+`Access-Control-Allow-Origin: *`, and an `OPTIONS` preflight is answered with
+`Access-Control-Allow-Private-Network: true`. Without both, a page on another
+site, such as the online Vega-Lite editor, cannot read the data. The endpoints
+are read-only, so allowing any origin is safe: only GET, HEAD and OPTIONS
+are accepted.
+
+### 13.2 Vega-Lite charts
+
+| Chart | Kind | Data | Spec | PNG |
+|---|---|---|---|---|
+| 1. Widest skill gaps | Bar, aggregated summary | `/api/skills/summary/` | `/vega-lite/chart1.json` | `/vega-lite/chart1.png` |
+| 2. Proficiency against requirement | Scatter, with a y = x reference line | `/api/assessments/` | `/vega-lite/chart2.json` | `/vega-lite/chart2.png` |
+
+The specs live in [`preparation/vega_lite/`](preparation/vega_lite/) as plain
+JSON and use `data: {"url": ...}` with no inline values. A test enforces that.
+`/vega-lite/` embeds both with vega-embed. The `.json` endpoint returns the
+spec with an absolute data URL for whatever host served it, so it can be
+pasted straight into the [Vega-Lite editor](https://vega.github.io/editor/).
+Copies made against the local server are in
+[`docs/vega_lite/`](docs/vega_lite/).
+
+The `.png` endpoints draw the same specs on the server with `vl-convert`,
+pinned to Vega-Lite 6.4, the same version the page loads from the CDN. When
+drawing a PNG, the server hands vl-convert the rows the API would return,
+rather than letting it fetch the API over HTTP. Fetching its own URL would
+make the server wait on itself and hang on a single-worker deployment.
+
+**Using the editor locally.** Run the server, open the editor, and paste in
+`http://127.0.0.1:8000/vega-lite/chart1.json`'s contents. The first time,
+Chrome asks whether `vega.github.io` may access devices on your local network.
+Allow it, because that is the browser asking whether a public site may read
+from `127.0.0.1`.
+
+### 13.3 External API: Jobicy job postings
+
+`/api/market-demand/?q=data analyst` answers one question: *of the skills
+our candidates are behind on, which ones do employers hiring for that role
+actually ask for?*
+
+1. **Fetch.** `requests.get("https://jobicy.com/api/v2/remote-jobs",
+   params={"count": 50, "tag": q}, timeout=5)`, then `raise_for_status()`.
+   Jobicy is free and keyless. Open-Meteo was excluded by the assignment.
+2. **Measure.** For each catalog skill, count how many postings mention it,
+   using a keyword list per skill in `market.SKILL_KEYWORDS` (a "SQL"
+   skill also matches "PostgreSQL"). Matches use word boundaries, so "git"
+   does not match "digital".
+3. **Triangulate.** Join those counts with the average gap (required minus
+   proficiency) for candidates whose `target_role` matches `q`. If no
+   candidate targets that role, all candidates are used, and the response
+   says so.
+4. **Rank.** `priority = demand % x positive gap / 100`, so a skill scores
+   only if employers want it *and* candidates are behind on it.
+
+Nothing from Jobicy is stored in the database. Each query's postings are
+cached in memory for an hour, so a classroom loading the same page does not
+send Jobicy one request each. Following Jobicy's terms, the page credits
+Jobicy and links every posting to its original URL.
+
+**Errors.** No `q` returns 400. A Jobicy timeout returns 504. An error
+status, a dropped connection or a non-JSON body returns 502. Each is a JSON
+`{"error": ...}`, never a traceback, and `/market/` shows the same message on
+the page instead of failing.
+
+### 13.4 Tests
+
+`InternalApiTests`, `VegaLiteTests` and `MarketDemandTests` in
+[`preparation/tests.py`](preparation/tests.py) cover the row shapes, the
+anonymity of `/api/assessments/`, CORS, the specs having no inline data, the
+PNG endpoints, and every Jobicy failure path. `requests.get` is mocked in
+every test, so the suite never calls Jobicy.
