@@ -823,6 +823,81 @@ PART 2 - External API: Jobicy
   Tests mock requests.get, so CI never calls Jobicy.
 
 
+PART 3 - CSV AND JSON EXPORTS, REPORTS PAGE (Meet)
+
+  Routes:
+    /reports/                   grouped summaries, totals, download buttons
+    /reports/candidates.csv     CSV download
+    /reports/candidates.json    JSON download with metadata
+
+  Exported model is CandidateProfile - the row somebody would actually want
+  out of Beacon, and the closest thing we have to the brief's "Students".
+
+  ONE DECISION WORTH KEEPING
+
+  Both downloads are built from the same function. exports.candidate_rows()
+  returns flat dicts, EXPORT_COLUMNS fixes their order, and the two views
+  only differ in how they serialise and what filename they offer.
+
+  The reason is that nothing would fail if they each built their own query.
+  The CSV and the JSON would slowly disagree - a column added to one, a
+  filter changed in the other - and nobody would notice until someone
+  compared two files. There is a test asserting the two downloads describe
+  the same record ids in the same order, which is the only thing that keeps
+  that honest.
+
+  Rows are ordered by username rather than relying on Meta.ordering, which
+  on this model is -updated_at. An export whose row order changes every time
+  somebody edits a profile is an export you cannot diff against last week's.
+
+  A BUG WORTH REMEMBERING
+
+  candidates_by_role() first had:
+
+      .annotate(
+          assessments=Count("assessments", distinct=True),
+          average_gap=Avg("assessments__required_level") - ...,
+      )
+
+  which failed with:
+
+      Unsupported lookup 'required_level' for IntegerField
+      or join on the field not permitted
+
+  The message points at the field, but the cause is the alias. Naming the
+  annotation "assessments" shadows the relation of the same name, so the
+  next line's "assessments__required_level" resolved against the Count (an
+  integer) instead of the related table. Renaming it to assessment_count
+  fixed it.
+
+  Rule: never give an annotation the same name as a relation you still need
+  to traverse in the same queryset.
+
+  The gap is now Avg(F(required) - F(proficiency)), the mean of each row's
+  gap rather than the difference of two means. Same answer when every
+  assessment has both scores, and unambiguous when one is missing.
+
+  SMALL THINGS
+
+  - CSV content type carries charset=utf-8. Without it a spreadsheet can
+    fall back to a local 8-bit encoding and mangle real names.
+  - csv.DictWriter gets restval="" so a missing key is an empty cell rather
+    than the string "None", which is what a spreadsheet expects.
+  - The download buttons are links, not buttons. They are plain GETs with
+    no side effects, so they should be bookmarkable and openable in a new
+    tab. The HTML download attribute is only a hint; the filename the user
+    gets is the timestamped one from Content-Disposition.
+  - Totals are counted directly rather than summed from the groupings. A
+    grouping silently drops rows whose key is null, and a total that
+    disagrees with its own table is worse than no total.
+
+  Tests: 14 added, covering both content types and dispositions, the
+  timestamp format, the header row, deterministic ordering, the JSON
+  metadata and indentation, the two downloads agreeing, the groupings
+  adding up to the totals, and everything surviving an empty database
+  (header-only CSV, record_count 0, {% empty %} branches). 78 total.
+
+
 REMINDERS / TODO
 
   [ ] Assignment 4 asks for db.sqlite3 to be committed, but .gitignore still

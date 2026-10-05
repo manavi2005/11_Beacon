@@ -106,6 +106,9 @@ Every page is reachable from the navigation bar at the top of the site.
 | `/vega-lite/chart<N>.png` | Each Vega-Lite chart drawn on the server | FBV, `HttpResponse` |
 | `/api/market-demand/?q=<role>` | Jobicy job postings joined with Beacon's skill gaps | FBV, `JsonResponse` |
 | `/market/?q=<role>` | The same report as a page | FBV, `render()` |
+| `/reports/` | Grouped summaries, totals, and the two download buttons | FBV, `render()` |
+| `/reports/candidates.csv` | Every candidate as a CSV download | FBV, `HttpResponse` |
+| `/reports/candidates.json` | The same candidates as JSON, with metadata | FBV, `JsonResponse` |
 | `/admin/` | Django Admin for all five models | - |
 
 The four bolded rows are the four required kinds of view.
@@ -141,6 +144,21 @@ In production, `ManifestStaticFilesStorage` serves the stylesheet under a
 content-hashed name such as `beacon.a0c1fb82e482.css`, so it can be cached
 indefinitely and a change to the file changes the URL. The reasoning is in
 [`docs/notes/notes.txt`](docs/notes/notes.txt).
+
+**Reports and exports.** `/reports/` is the page a user goes to when they
+want the data out of Beacon rather than on screen. It carries three grouped
+summaries (candidates by experience level, candidates by target role with the
+cohort's average skill gap, and tasks per plan with done against all), a
+totals line, and two download buttons.
+
+Both downloads cover the same model, `CandidateProfile`, and are built from
+the same rows in [`preparation/exports.py`](preparation/exports.py), so the
+CSV and the JSON can never describe different records. Each is served with
+`Content-Disposition: attachment` and a timestamped filename such as
+`candidates_2026-10-04_20-05.csv`, so downloading the report twice gives two
+dated files rather than `candidates (1).csv`. The JSON carries `generated_at`,
+`record_count` and the records themselves, pretty-printed with
+`json_dumps_params={"indent": 2}`.
 
 **Charts.** `/charts/` shows four Matplotlib figures, each drawn at request
 time from an ORM aggregate and served from its own `.png` URL as

@@ -7,7 +7,11 @@ cheapest way to notice if a later change breaks one of them.
 Run with:  python manage.py test preparation
 """
 
+import csv
+import io
 import json
+import re
+from datetime import datetime
 from unittest import mock
 
 import requests
@@ -16,6 +20,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from . import exports
 from .models import (
     CandidateProfile,
     PlanTask,
@@ -760,3 +765,153 @@ class MarketDemandTests(TestCase):
             r = self.client.get(reverse("preparation:market"))
         self.assertEqual(r.status_code, 200)
         get.assert_not_called()
+
+
+class ExportAndReportTests(TestCase):
+    """Assignment 4, Part 3: CSV export, JSON export, and the reports page."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.skill = Skill.objects.create(
+            name="SQL and relational modeling", category=Skill.Category.TECHNICAL)
+        user = User.objects.create_user(
+            "bpatel", first_name="Bharat", last_name="Patel",
+            email="bpatel@example.edu", password="test-only-pw")
+        cls.candidate = CandidateProfile.objects.create(
+            user=user, target_role="Data Analyst",
+            experience_level=CandidateProfile.ExperienceLevel.NEW_GRAD,
+            preparation_timeline_weeks=4)
+        SkillAssessment.objects.create(
+            candidate=cls.candidate, skill=cls.skill,
+            proficiency_score=40, required_level=80)
+        cls.plan = PreparationPlan.objects.create(
+            candidate=cls.candidate, title="Data Analyst sprint",
+            focus_role="Data Analyst",
+            target_date=timezone.localdate() + timezone.timedelta(weeks=4))
+        PlanTask.objects.create(plan=cls.plan, skill=cls.skill,
+                                title="Write 5 JOIN queries", week_number=1,
+                                status=PlanTask.Status.DONE)
+        PlanTask.objects.create(plan=cls.plan, skill=cls.skill,
+                                title="Window functions drill", week_number=2)
+
+    CSV_URL = "preparation:export_candidates_csv"
+    JSON_URL = "preparation:export_candidates_json"
+    FILENAME = re.compile(r'filename="candidates_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.(csv|json)"')
+
+    # --- CSV ------------------------------------------------------------
+    def test_csv_is_served_as_a_download(self):
+        r = self.client.get(reverse(self.CSV_URL))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("text/csv", r["Content-Type"])
+        self.assertTrue(r["Content-Disposition"].startswith("attachment;"))
+
+    def test_csv_filename_is_timestamped(self):
+        r = self.client.get(reverse(self.CSV_URL))
+        self.assertRegex(r["Content-Disposition"], self.FILENAME)
+
+    def test_csv_first_row_is_headers_then_one_row_per_record(self):
+        r = self.client.get(reverse(self.CSV_URL))
+        rows = list(csv.reader(io.StringIO(r.content.decode("utf-8"))))
+        self.assertEqual(rows[0], [label for _, label in exports.EXPORT_COLUMNS])
+        self.assertEqual(len(rows) - 1, CandidateProfile.objects.count())
+
+    def test_csv_rows_are_ordered_deterministically(self):
+        """Meta.ordering on this model is -updated_at, so an unordered export
+        would reshuffle whenever a profile is touched. Two downloads of
+        unchanged data must be byte-identical apart from the timestamp."""
+        first = self.client.get(reverse(self.CSV_URL)).content
+        second = self.client.get(reverse(self.CSV_URL)).content
+        self.assertEqual(first, second)
+
+    def test_csv_writes_empty_cells_not_the_string_none(self):
+        r = self.client.get(reverse(self.CSV_URL))
+        self.assertNotIn(",None,", r.content.decode())
+
+    # --- JSON -----------------------------------------------------------
+    def test_json_is_served_as_a_download(self):
+        r = self.client.get(reverse(self.JSON_URL))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("application/json", r["Content-Type"])
+        self.assertTrue(r["Content-Disposition"].startswith("attachment;"))
+        self.assertRegex(r["Content-Disposition"], self.FILENAME)
+
+    def test_json_carries_the_required_metadata(self):
+        payload = json.loads(self.client.get(reverse(self.JSON_URL)).content)
+        self.assertEqual(
+            set(payload), {"generated_at", "record_count", "candidates"})
+        self.assertEqual(payload["record_count"], len(payload["candidates"]))
+        self.assertEqual(payload["record_count"], CandidateProfile.objects.count())
+        # generated_at must be a parseable ISO timestamp, not free text.
+        datetime.fromisoformat(payload["generated_at"])
+
+    def test_json_is_pretty_printed(self):
+        """json_dumps_params={"indent": 2}: a download a human opens should
+        not be one long line."""
+        body = self.client.get(reverse(self.JSON_URL)).content.decode()
+        self.assertIn('\n  "record_count"', body)
+
+    # --- the invariant that matters -------------------------------------
+    def test_csv_and_json_describe_the_same_records(self):
+        """Both are built from exports.candidate_rows(). If someone later
+        gives one of them its own query, the two downloads drift apart
+        silently; this is what catches that."""
+        csv_rows = list(csv.reader(io.StringIO(
+            self.client.get(reverse(self.CSV_URL)).content.decode("utf-8"))))
+        payload = json.loads(self.client.get(reverse(self.JSON_URL)).content)
+        self.assertEqual(len(csv_rows) - 1, payload["record_count"])
+        self.assertEqual(
+            [row[0] for row in csv_rows[1:]],
+            [str(rec["id"]) for rec in payload["candidates"]],
+        )
+        self.assertEqual(len(csv_rows[0]), len(payload["candidates"][0]))
+
+    # --- reports page ---------------------------------------------------
+    def test_reports_page_renders_with_totals_and_groupings(self):
+        r = self.client.get(reverse("preparation:reports"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["totals"]["candidates"], CandidateProfile.objects.count())
+        self.assertEqual(r.context["totals"]["tasks"], PlanTask.objects.count())
+        # at least two grouped summaries, as the brief requires
+        self.assertTrue(r.context["by_experience"])
+        self.assertTrue(r.context["by_role"])
+        self.assertTrue(r.context["by_plan"])
+
+    def test_grouped_summaries_add_up_to_the_totals(self):
+        r = self.client.get(reverse("preparation:reports"))
+        self.assertEqual(
+            sum(row["candidates"] for row in r.context["by_experience"]),
+            r.context["totals"]["candidates"])
+        self.assertEqual(
+            sum(row["tasks_total"] for row in r.context["by_plan"]),
+            r.context["totals"]["tasks"])
+
+    def test_reports_page_links_both_downloads(self):
+        body = self.client.get(reverse("preparation:reports")).content.decode()
+        self.assertIn(reverse(self.CSV_URL), body)
+        self.assertIn(reverse(self.JSON_URL), body)
+        self.assertIn("Download CSV", body)
+        self.assertIn("Download JSON", body)
+
+    def test_reports_page_is_reachable_from_the_nav(self):
+        body = self.client.get("/").content.decode()
+        self.assertIn(reverse("preparation:reports"), body)
+
+    # --- empty database -------------------------------------------------
+    def test_everything_survives_an_empty_database(self):
+        """The {% empty %} branches and a header-only CSV, rather than a 500."""
+        PlanTask.objects.all().delete()
+        PreparationPlan.objects.all().delete()
+        SkillAssessment.objects.all().delete()
+        CandidateProfile.objects.all().delete()
+
+        page = self.client.get(reverse("preparation:reports"))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "No candidates yet")
+
+        csv_resp = self.client.get(reverse(self.CSV_URL))
+        rows = list(csv.reader(io.StringIO(csv_resp.content.decode("utf-8"))))
+        self.assertEqual(len(rows), 1, "only the header row should remain")
+
+        payload = json.loads(self.client.get(reverse(self.JSON_URL)).content)
+        self.assertEqual(payload["record_count"], 0)
+        self.assertEqual(payload["candidates"], [])

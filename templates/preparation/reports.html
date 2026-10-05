@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% comment %}
+  Assignment 4, Part 3.
+
+  Three grouped summaries, a totals line, and the two downloads. Every table
+  has a header row and an {% empty %} branch, so a fresh database explains
+  itself rather than showing an empty frame.
+
+  The candidate table at the bottom is deliberately the same rows, in the
+  same column order, as the two export files: what you see here is what you
+  download.
+{% endcomment %}
+
+{% block title %}Beacon - reports{% endblock %}
+{% block heading %}Reports{% endblock %}
+
+{% block content %}
+  <p class="tag">Grouped summaries, with CSV and JSON downloads</p>
+  <p>
+    Every figure below is a database aggregate, computed when this page was
+    requested. The two downloads contain the candidate records listed at the
+    bottom, in the same column order, so the file matches the page.
+  </p>
+
+  {% comment %}
+    The downloads. Plain links rather than a form: the browser already turns
+    a link into a download when the response carries
+    Content-Disposition: attachment, and a GET with no side effects should be
+    a link so it can be bookmarked, copied and opened in a new tab.
+
+    The download attribute is a hint only. The filename the user actually
+    gets is the timestamped one set by the view in Content-Disposition,
+    which wins over this.
+  {% endcomment %}
+  <p class="downloads">
+    <a class="btn" href="{% url 'preparation:export_candidates_csv' %}"
+       download="{{ csv_name }}">Download CSV</a>
+    <a class="btn btn--ghost" href="{% url 'preparation:export_candidates_json' %}"
+       download="{{ json_name }}">Download JSON</a>
+    <span class="muted">
+      {{ totals.candidates }} candidate{{ totals.candidates|pluralize }},
+      saved as <code>{{ csv_name }}</code>
+    </span>
+  </p>
+
+  <h2>Totals</h2>
+  <ul class="stats">
+    <li class="stat"><span class="stat__value">{{ totals.candidates }}</span>
+        <span class="stat__label">Candidates</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.assessments }}</span>
+        <span class="stat__label">Assessments</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.plans }}</span>
+        <span class="stat__label">Plans</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.tasks }}</span>
+        <span class="stat__label">Tasks</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.tasks_done }}</span>
+        <span class="stat__label">Tasks done</span></li>
+    <li class="stat"><span class="stat__value">{{ totals.percent_done }}%</span>
+        <span class="stat__label">Complete</span></li>
+  </ul>
+  <p class="muted">
+    {{ totals.candidates }} candidate{{ totals.candidates|pluralize }} hold
+    {{ totals.assessments }} assessment{{ totals.assessments|pluralize }} across
+    {{ totals.plans }} plan{{ totals.plans|pluralize }}, and
+    {{ totals.tasks_done }} of {{ totals.tasks }} task{{ totals.tasks|pluralize }}
+    {{ totals.tasks_done|pluralize:"is,are" }} done.
+  </p>
+
+  <h2>Candidates by experience level</h2>
+  <p class="tag">Grouped with
+  <code>values("experience_level").annotate(Count("id"))</code></p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Experience level</th><th>Candidates</th><th>Average proficiency</th></tr>
+    {% for row in by_experience %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td>{{ row.candidates }}</td>
+        <td>{% if row.average_readiness %}{{ row.average_readiness }}{% else %}not assessed{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3">No candidates yet. Run
+        <code>python manage.py seed_demo_data</code> to load the demo rows.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  <h2>Candidates by target role</h2>
+  <p class="tag">Average gap is required level minus current proficiency, so a
+  larger number means the cohort is further from ready.</p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Target role</th><th>Candidates</th><th>Assessments</th><th>Average gap</th></tr>
+    {% for row in by_role %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td>{{ row.candidates }}</td>
+        <td>{{ row.assessments }}</td>
+        <td>{% if row.average_gap %}{{ row.average_gap }} points{% else %}not assessed{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No candidates yet, so there are no roles to group by.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  <h2>Tasks per plan, done against all</h2>
+  <p class="tag">A count and a filtered count of the same relation:
+  <code>Count("tasks")</code> beside
+  <code>Count("tasks", filter=Q(status=DONE))</code></p>
+  <div class="table-scroll">
+  <table>
+    <tr>
+      <th>Plan</th><th>Candidate</th><th>Deadline</th>
+      <th>Done</th><th>All</th><th>Progress</th>
+    </tr>
+    {% for row in by_plan %}
+      <tr>
+        <td><a href="{{ row.plan_url }}">{{ row.plan }}</a></td>
+        <td><a href="{{ row.candidate_url }}">{{ row.candidate }}</a></td>
+        <td>{{ row.target_date }}</td>
+        <td>{{ row.tasks_done }}</td>
+        <td>{{ row.tasks_total }}</td>
+        <td>
+          {{ row.percent_done }}%
+          <span class="meter">
+            <span class="meter__fill" style="width: {{ row.percent_done }}%"></span>
+          </span>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">No preparation plans yet, so no task counts to show.</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+
+  <h2>The records in the exports</h2>
+  <p class="tag">Same rows, same column order, as
+  <code>{{ csv_name }}</code> and <code>{{ json_name }}</code></p>
+  <div class="table-scroll">
+  <table>
+    <tr>
+      {% for label in headers %}<th>{{ label }}</th>{% endfor %}
+    </tr>
+    {% for cells in rows %}
+      <tr>
+        {% for cell in cells %}
+          <td>{{ cell|default_if_none:"" }}</td>
+        {% endfor %}
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="{{ headers|length }}">
+          No candidates yet, so both downloads would contain only a header row.
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+  </div>
+{% endblock %}
