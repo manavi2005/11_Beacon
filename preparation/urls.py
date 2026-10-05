@@ -75,4 +75,18 @@ urlpatterns = [
     # Part 2 - external API (Jobicy) joined with internal skill gaps
     path("api/market-demand/", views.api_market_demand, name="api_market_demand"),
     path("market/", views.market_page, name="market"),
+    # Part 3 - reports page, and the two downloads it links to. The URLs end
+    # in .csv and .json so the path itself says what comes back, and so the
+    # file keeps a sensible name if someone saves it with right-click.
+    path("reports/", views.reports_page, name="reports"),
+    path(
+        "reports/candidates.csv",
+        views.export_candidates_csv,
+        name="export_candidates_csv",
+    ),
+    path(
+        "reports/candidates.json",
+        views.export_candidates_json,
+        name="export_candidates_json",
+    ),
 ]

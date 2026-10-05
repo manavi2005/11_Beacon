@@ -486,3 +486,41 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
    narrow screen the chart scrolls sideways inside its card, like the wide
    tables do, instead of pushing the whole page wider than the viewport. */
 .vega-chart { max-width: 100%; overflow-x: auto; }
+
+/* ---------------------------------------------------------------------------
+   11. Download buttons (A4 Part 3)
+
+   These are links, not <button>s, because they are plain GETs with no side
+   effects. They are styled as buttons so they read as the actions they are.
+   --------------------------------------------------------------------------- */
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  margin: var(--s4) 0 var(--s5);
+}
+
+.btn {
+  display: inline-block;
+  padding: var(--s2) var(--s5);
+  border-radius: var(--radius-sm);
+  background: var(--navy);
+  color: #fff;
+  font-size: .9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color .12s ease;
+}
+
+.btn:hover { background: var(--navy-700); color: #fff; }
+.btn:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+/* The second action, so it reads as secondary to Download CSV. */
+.btn--ghost {
+  background: transparent;
+  color: var(--navy);
+  border: 1px solid var(--navy);
+}
+
+.btn--ghost:hover { background: var(--navy-100); color: var(--navy); }

@@ -21,13 +21,14 @@ from functools import wraps
 from django.db.models import Avg, Count, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.template import loader
 from django.urls import reverse
 from django.views import View
 from django.views.decorators.http import require_safe
 from django.views.generic import CreateView, DetailView, ListView
 
-from . import charts, market, vega
+from . import charts, exports, market, vega
 from .models import (
     CandidateProfile,
     PlanTask,
@@ -792,3 +793,90 @@ def market_page(request):
         except market.MarketDataError as exc:
             context["error"] = exc.message
     return render(request, "preparation/market.html", context)
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 4, PART 3 - CSV and JSON exports, and the reports page
+#
+# Both exports describe the same model (CandidateProfile) and are built from
+# the same rows, in preparation/exports.py. The only thing that differs here
+# is how those rows are serialised and what filename they are offered under.
+#
+# The Content-Disposition header is what turns a response into a download:
+# "attachment" tells the browser to save rather than display, and filename=
+# is what it saves as. Without it, the CSV would render as text in the tab
+# and the JSON would open in the browser's JSON viewer.
+# ---------------------------------------------------------------------------
+def export_candidates_csv(request):
+    """Every candidate as a CSV download.
+
+    URL: /reports/candidates.csv
+
+    charset=utf-8 is on the content type because the data contains real
+    names: without it a spreadsheet may fall back to a local 8-bit encoding
+    and turn any non-ASCII character into mojibake.
+    """
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        f'attachment; filename="{exports.export_filename("csv")}"'
+    )
+    # HttpResponse is a file-like object, so csv writes straight into the
+    # response rather than building the whole file in memory first.
+    exports.write_csv(response, exports.candidate_rows())
+    return response
+
+
+def export_candidates_json(request):
+    """The same candidates as a JSON download, with metadata.
+
+    URL: /reports/candidates.json
+
+    generated_at and record_count are what make a downloaded file readable
+    six weeks later: without them it is a bare array with no way to tell when
+    it was taken or whether it is complete.
+    """
+    rows = exports.candidate_rows()
+    payload = {
+        "generated_at": timezone.localtime().isoformat(),
+        "record_count": len(rows),
+        "candidates": rows,
+    }
+    response = JsonResponse(
+        payload,
+        # indent=2 so the file a user opens is readable rather than one long
+        # line. It costs a little size and is worth it for a download.
+        json_dumps_params={"indent": 2},
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="{exports.export_filename("json")}"'
+    )
+    return response
+
+
+def reports_page(request):
+    """Grouped summaries, totals, and the two download buttons.
+
+    URL: /reports/
+
+    Every number on this page is a database aggregate, and the same
+    candidate rows that back the exports are listed underneath, so what you
+    see is what you download.
+    """
+    rows = exports.candidate_rows()
+    context = {
+        "totals": exports.report_totals(),
+        "by_experience": exports.candidates_by_experience(),
+        "by_role": exports.candidates_by_role(),
+        "by_plan": exports.tasks_by_plan(),
+        "headers": [label for _, label in exports.EXPORT_COLUMNS],
+        # Cells are aligned to EXPORT_COLUMNS here rather than looked up by
+        # key in the template: Django has no dict-lookup-by-variable filter,
+        # and flattening in the view keeps the column order defined in exactly
+        # one place for the page and both downloads.
+        "rows": [
+            [row[key] for key, _ in exports.EXPORT_COLUMNS] for row in rows
+        ],
+        "csv_name": exports.export_filename("csv"),
+        "json_name": exports.export_filename("json"),
+    }
+    return render(request, "preparation/reports.html", context)

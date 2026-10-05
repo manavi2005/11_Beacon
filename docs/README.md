@@ -37,6 +37,7 @@ docs/
     ├── a3-section3-*.png   <- Assignment 3: the styled UI
     ├── a3-section4-*.png   <- Assignment 3: the charts page
     ├── a4-part1-*.png      <- Assignment 4: Vega-Lite charts
+    ├── a4-part3-*.png      <- Assignment 4: the reports page
     ├── a4-part2-*.png      <- Assignment 4: external API
     ├── admin/              <- Django Admin list views (earlier assignment)
     └── superseded/         <- older captures, kept for the record only
@@ -199,3 +200,21 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Displayed on a page | [`templates/preparation/charts.html`](../templates/preparation/charts.html) |
 | Heading, caption, alt text | one `<h2>`, one `<figcaption>` naming the query, and descriptive `alt` per figure |
 | Screenshot | [charts page](screenshots/a3-section4-charts-page.png) |
+
+## Assignment 4, Part 3 - CSV and JSON exports, reports page
+
+| Requirement | Where to look |
+|---|---|
+| CSV export for one model | `/reports/candidates.csv`, `export_candidates_csv` in [views.py](../preparation/views.py) |
+| `Content-Type: text/csv` | set with `charset=utf-8`, so names with non-ASCII characters survive a spreadsheet |
+| `Content-Disposition` + timestamped filename | `candidates_YYYY-MM-DD_HH-MM.csv`, built by `export_filename()` |
+| First row is column headers | `write_csv()` writes the readable labels from `EXPORT_COLUMNS`, not the machine keys |
+| Rows pulled from the DB, ordered | `export_queryset()`, ordered by username so two downloads are comparable |
+| JSON export, same model | `/reports/candidates.json`, `export_candidates_json` |
+| `generated_at`, `record_count`, `candidates` | the three top-level keys of the payload |
+| `JsonResponse(json_dumps_params={"indent": 2})` | in `export_candidates_json` |
+| Linked from a visible page, with buttons | Download CSV / Download JSON on [`/reports/`](../templates/preparation/reports.html) |
+| Reports page with 2+ grouped summaries | by experience level, by target role, and tasks per plan (done vs all) |
+| One totals line | `report_totals()`, rendered as stat tiles plus a sentence |
+| Tables with headers and `{% empty %}` | all four tables in `reports.html` |
+| Screenshot | [reports page](screenshots/a4-part3-reports-page.png) |
