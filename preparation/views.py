@@ -24,9 +24,17 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.template import loader
 from django.urls import reverse
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    UserCreationForm,
+)
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
 from django.views import View
-from django.views.decorators.http import require_safe
+from django.views.decorators.http import require_safe, require_POST, require_GET
 from django.views.generic import CreateView, DetailView, ListView
+from django.utils.decorators import method_decorator
 
 from . import charts, exports, market, vega
 from .models import (
@@ -42,6 +50,7 @@ from .forms import PlanTaskForm
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
 def _skill_context(request, view_label, explainer):
     """Build the context both skill views need.
 
@@ -66,6 +75,7 @@ def _skill_context(request, view_label, explainer):
 # ---------------------------------------------------------------------------
 # 1. Function-based view - HttpResponse (manual)
 # ---------------------------------------------------------------------------
+@login_required
 def skill_catalog_manual(request):
     """Load the template by hand, render it to a string, wrap it in HttpResponse.
 
@@ -92,6 +102,7 @@ def skill_catalog_manual(request):
 # ---------------------------------------------------------------------------
 # 2. Function-based view - render() shortcut
 # ---------------------------------------------------------------------------
+@login_required
 def skill_catalog_render(request):
     """The same page, using the render() shortcut.
 
@@ -111,6 +122,7 @@ def skill_catalog_render(request):
 # ---------------------------------------------------------------------------
 # 3. Class-based view - base View
 # ---------------------------------------------------------------------------
+@method_decorator(login_required, name="dispatch")
 class PlanBoardView(View):
     """Every preparation plan, queried and rendered by hand inside get().
 
@@ -139,6 +151,7 @@ class PlanBoardView(View):
 # ---------------------------------------------------------------------------
 # 4. Class-based view - generic ListView
 # ---------------------------------------------------------------------------
+@method_decorator(login_required, name="dispatch")
 class PlanTaskListView(ListView):
     """Every task across every plan, via Django's generic ListView.
 
@@ -172,6 +185,7 @@ class PlanTaskListView(ListView):
 # ---------------------------------------------------------------------------
 # Extra (not required): generic DetailView
 # ---------------------------------------------------------------------------
+@method_decorator(login_required, name="dispatch")
 class PlanTaskDetailView(DetailView):
     """One task in full. Included to show a second generic CBV in use."""
 
@@ -183,6 +197,7 @@ class PlanTaskDetailView(DetailView):
 # ---------------------------------------------------------------------------
 # Part 4 dashboard (kept so the existing route keeps working)
 # ---------------------------------------------------------------------------
+@login_required
 def dashboard(request):
     """Read-only summary of what is currently in the database."""
     context = {
@@ -203,6 +218,7 @@ def dashboard(request):
 # as {{ object.get_absolute_url }} rather than {% url %}, so the model decides
 # where its own page lives.
 # ---------------------------------------------------------------------------
+@method_decorator(login_required, name="dispatch")
 class SkillDetailView(DetailView):
     """One skill: who has been assessed on it, and which tasks target it.
 
@@ -231,7 +247,7 @@ class SkillDetailView(DetailView):
         )["average"]
         return context
 
-
+@method_decorator(login_required, name="dispatch")
 class PlanDetailView(DetailView):
     """One preparation plan and the tasks inside it.
 
@@ -250,7 +266,7 @@ class PlanDetailView(DetailView):
         context["tasks"] = self.object.tasks.select_related("skill")
         return context
 
-
+@method_decorator(login_required, name="dispatch")
 class CandidateDetailView(DetailView):
     """One candidate: their goal, their scores and their plans.
 
@@ -277,7 +293,7 @@ class CandidateDetailView(DetailView):
         context["biggest_gaps"] = gaps[:3]
         return context
 
-
+@method_decorator(login_required, name="dispatch")
 class CandidateListView(ListView):
     """Every candidate, each annotated with summary numbers.
 
@@ -316,6 +332,7 @@ class CandidateListView(ListView):
 # That link can be pasted into a team chat and it reproduces exactly what the
 # sender saw. GET is the right method precisely because the query is visible.
 # ---------------------------------------------------------------------------
+@login_required
 def skill_search(request):
     """Filter the skill catalog with request.GET."""
     query = request.GET.get("q", "").strip()
@@ -395,6 +412,7 @@ def skill_search(request):
 # exactly the behaviour we want here and exactly the behaviour we do not want
 # on the skill catalog above.
 # ---------------------------------------------------------------------------
+@method_decorator(login_required, name="dispatch")
 class CandidateSearchView(View):
     """Look up candidates with request.POST.
 
@@ -448,6 +466,7 @@ class CandidateSearchView(View):
 # ---------------------------------------------------------------------------
 # SECTION 2 - Aggregations
 # ---------------------------------------------------------------------------
+@login_required
 def insights(request):
     """Totals and grouped summaries across the whole database.
 
@@ -544,6 +563,7 @@ def insights(request):
 # its own key, and can reuse it across pages. A data URI is re-sent inside
 # every HTML response and cannot be cached separately.
 # ---------------------------------------------------------------------------
+
 def _png(image_bytes, *, max_age=300):
     """Wrap raw PNG bytes in an HttpResponse.
 
@@ -558,26 +578,27 @@ def _png(image_bytes, *, max_age=300):
     return response
 
 
+@login_required
 def chart_skills_by_category(request):
     """/charts/skills-by-category.png"""
     return _png(charts.skills_by_category_png())
 
-
+@login_required
 def chart_plan_progress(request):
     """/charts/plan-progress.png"""
     return _png(charts.plan_progress_png())
 
-
+@login_required
 def chart_skill_gap(request):
     """/charts/skill-gap.png"""
     return _png(charts.skill_gap_png())
 
-
+@login_required
 def chart_task_status(request):
     """/charts/task-status.png"""
     return _png(charts.task_status_png())
 
-
+@login_required
 def charts_page(request):
     """The page that displays all four charts.
 
@@ -615,6 +636,7 @@ def charts_page(request):
     }
     return render(request, "preparation/charts.html", context)
 
+@method_decorator(login_required, name="dispatch")
 class PlanTaskCreateView(CreateView):
     """Create a new preparation task using a POST form.
 
@@ -627,6 +649,8 @@ class PlanTaskCreateView(CreateView):
     model = PlanTask
     form_class = PlanTaskForm
     template_name = "preparation/task_form.html"
+
+@login_required
 def skill_api(request):
 
     query = request.GET.get("q", "").strip()
@@ -670,11 +694,11 @@ def skill_api(request):
 # browser. That is safe here because the endpoints are read-only and return
 # no personal data: assessment rows carry scores, never names or emails.
 # ---------------------------------------------------------------------------
+
 def _api_response(data, status=200):
     response = JsonResponse(data, safe=False, status=status)
     response["Access-Control-Allow-Origin"] = "*"
     return response
-
 
 def public_api(view):
     """Read-only, cross-origin JSON endpoint.
@@ -722,12 +746,13 @@ def api_assessments(request):
 #                               paste into the Vega-Lite editor
 #   /vega-lite/chart<N>.png     the same chart drawn on the server
 # ---------------------------------------------------------------------------
+
 def _chart_or_404(number):
     if number not in vega.CHARTS:
         raise Http404("No such chart.")
     return vega.CHARTS[number]
 
-
+@login_required
 def vega_lite_page(request):
     """The page that embeds both Vega-Lite charts."""
     charts_info = [
@@ -807,6 +832,7 @@ def market_page(request):
 # is what it saves as. Without it, the CSV would render as text in the tab
 # and the JSON would open in the browser's JSON viewer.
 # ---------------------------------------------------------------------------
+@login_required
 def export_candidates_csv(request):
     """Every candidate as a CSV download.
 
@@ -825,7 +851,7 @@ def export_candidates_csv(request):
     exports.write_csv(response, exports.candidate_rows())
     return response
 
-
+@login_required
 def export_candidates_json(request):
     """The same candidates as a JSON download, with metadata.
 
@@ -852,7 +878,7 @@ def export_candidates_json(request):
     )
     return response
 
-
+@login_required
 def reports_page(request):
     """Grouped summaries, totals, and the two download buttons.
 
@@ -880,3 +906,61 @@ def reports_page(request):
         "json_name": exports.export_filename("json"),
     }
     return render(request, "preparation/reports.html", context)
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5, PART 1 - Internal Django Authentication
+# ---------------------------------------------------------------------------
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect("/")
+
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            login(request, form.get_user())
+            return redirect(request.POST.get("next") or "/")
+    else:
+        form = AuthenticationForm(request)
+
+    return render(
+        request,
+        "registration/login.html",
+        {"form": form},
+    )
+
+
+def signup_view(request):
+    if request.user.is_authenticated:
+        return redirect("/")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect("/")
+    else:
+        form = UserCreationForm()
+
+    return render(
+        request,
+        "registration/signup.html",
+        {"form": form},
+    )
+
+
+@require_POST
+def logout_view(request):
+    logout(request)
+    return redirect("/")
+
+@require_GET
+def private_api(request):
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"error": "Authentication required"},
+            status=401,
+        )
+
+    return JsonResponse({"message": "Authenticated"})

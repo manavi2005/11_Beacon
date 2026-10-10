@@ -89,4 +89,11 @@ urlpatterns = [
         views.export_candidates_json,
         name="export_candidates_json",
     ),
+
+    # =====================================================================
+    # ASSIGNMENT 5, PART 1 - Internal Django Authentication
+    # =====================================================================
+    path("accounts/login/", views.login_view, name="login"),
+    path("accounts/signup/", views.signup_view, name="signup"),
+    path("accounts/logout/", views.logout_view, name="logout"),
 ]

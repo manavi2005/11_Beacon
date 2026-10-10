@@ -46,20 +46,33 @@ Django prints it as page text.
     never breaks navigation.
     {% endcomment %}
     <nav class="nav">
-      <a href="{% url 'preparation:dashboard' %}">Dashboard</a>
-      <a href="{% url 'preparation:skill_catalog_manual' %}">Skills (HttpResponse FBV)</a>
-      <a href="{% url 'preparation:skill_catalog_render' %}">Skills (render FBV)</a>
-      <a href="{% url 'preparation:plan_board' %}">Plans (base CBV)</a>
-      <a href="{% url 'preparation:task_list' %}">Tasks (generic CBV)</a>
-      <a href="{% url 'preparation:candidate_list' %}">Candidates</a>
-      <a href="{% url 'preparation:skill_search' %}">Search skills</a>
-      <a href="{% url 'preparation:candidate_search' %}">Find a candidate</a>
-      <a href="{% url 'preparation:insights' %}">Insights</a>
-      <a href="{% url 'preparation:charts' %}">Charts</a>
-      <a href="{% url 'preparation:vega_lite' %}">Vega-Lite</a>
-      <a href="{% url 'preparation:market' %}">Job market</a>
-      <a href="{% url 'preparation:reports' %}">Reports</a>
-      <a href="{% url 'admin:index' %}">Admin</a>
+        {% if user.is_authenticated %}
+            <a href="{% url 'preparation:dashboard' %}">Dashboard</a>
+            <a href="{% url 'preparation:skill_catalog_manual' %}">Skills (HttpResponse FBV)</a>
+            <a href="{% url 'preparation:skill_catalog_render' %}">Skills (render FBV)</a>
+            <a href="{% url 'preparation:plan_board' %}">Plans (base CBV)</a>
+            <a href="{% url 'preparation:task_list' %}">Tasks (generic CBV)</a>
+            <a href="{% url 'preparation:candidate_list' %}">Candidates</a>
+            <a href="{% url 'preparation:skill_search' %}">Search skills</a>
+            <a href="{% url 'preparation:candidate_search' %}">Find a candidate</a>
+            <a href="{% url 'preparation:insights' %}">Insights</a>
+            <a href="{% url 'preparation:charts' %}">Charts</a>
+            <a href="{% url 'preparation:vega_lite' %}">Vega-Lite</a>
+            <a href="{% url 'preparation:market' %}">Job market</a>
+            <a href="{% url 'preparation:reports' %}">Reports</a>
+            <a href="{% url 'admin:index' %}">Admin</a>
+
+            <form method="post"
+                  action="{% url 'preparation:logout' %}"
+                  class="nav-logout">
+                {% csrf_token %}
+                <button type="submit" class="nav-logout__button">Log Out</button>
+            </form>
+        {% else %}
+            <a href="{% url 'preparation:login' %}">Log In</a>
+            <a href="{% url 'preparation:signup' %}">Sign Up</a>
+        {% endif %}
+
     </nav>
 
     <main class="content">

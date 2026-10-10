@@ -13,8 +13,12 @@ DEBUG = False
 
 # With DEBUG = False, Django refuses any host that is not listed here.
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "beacon.example.com").split(",")
+    'SimonHwang1998.pythonanywhere.com'
+] + [h.strip()
+    for h in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS",
+        "beacon.example.com,127.0.0.1,localhost",
+    ).split(",")
     if h.strip()
 ]
 
@@ -27,6 +31,9 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = "DENY"
 
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 
 # ---------------------------------------------------------------------------
 # Static files: cache busting
@@ -55,6 +62,10 @@ X_FRAME_OPTIONS = "DENY"
 # Development deliberately does not use this: manage.py runserver serves
 # straight from STATICFILES_DIRS, an edit shows up on reload, and there is no
 # manifest to keep in step.
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
