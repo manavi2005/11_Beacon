@@ -60,6 +60,11 @@ class GradedViewsTests(TestCase):
             week_number=1,
         )
 
+    def setUp(self):
+        # Create and log in a test user for template tests
+        self.user = User.objects.create_user("templateuser", password="test-only-pw")
+        self.client.login(username="templateuser", password="test-only-pw")
+
     def test_fbv_httpresponse_renders_skill_list(self):
         """View 1: FBV built by hand out of loader.get_template + HttpResponse."""
         response = self.client.get(reverse("preparation:skill_catalog_manual"))
@@ -92,6 +97,11 @@ class GradedViewsTests(TestCase):
 
 class TemplateBehaviourTests(TestCase):
     """Section 3: inheritance, the {% empty %} branch, and no leaked comments."""
+
+    def setUp(self):
+        # Create and log in a test user for template tests
+        self.user = User.objects.create_user("templateuser", password="test-only-pw")
+        self.client.login(username="templateuser", password="test-only-pw")
 
     def test_every_page_extends_base_and_shows_the_nav(self):
         response = self.client.get(reverse("preparation:skill_catalog_render"))
@@ -147,6 +157,10 @@ class UrlsAndNavigationTests(TestCase):
             title="Write 5 JOIN queries", week_number=1,
         )
 
+    def setUp(self):
+        # Log in before each test
+        self.client.login(username="bpatel", password="test-only-pw")
+
     def test_root_url_is_not_a_404(self):
         self.assertEqual(self.client.get("/").status_code, 200)
 
@@ -201,6 +215,10 @@ class OrmQueryTests(TestCase):
             candidate=cls.candidate, skill=cls.sql,
             proficiency_score=40, required_level=80)
 
+    def setUp(self):
+        # Log in before each test
+        self.client.login(username="ekim", password="test-only-pw")
+
     # --- GET search -----------------------------------------------------
     def test_get_search_filters_by_name(self):
         r = self.client.get(reverse("preparation:skill_search"), {"q": "SQL"})
@@ -208,11 +226,30 @@ class OrmQueryTests(TestCase):
         self.assertNotContains(r, "Resume and elevator pitch")
 
     def test_get_search_is_shareable_as_a_url(self):
-        """Same querystring, same results: that is the point of using GET."""
-        url = reverse("preparation:skill_search") + "?q=SQL"
-        first = self.client.get(url).content.decode()
-        second = self.client.get(url).content.decode()
-        self.assertEqual(first, second)
+        url = reverse("preparation:skill_search") + "?q=Python"
+
+        first_response = self.client.get(url)
+        second_response = self.client.get(url)
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
+
+        first_html = first_response.content.decode()
+        second_html = second_response.content.decode()
+
+        # Remove CSRF tokens before comparing the rendered pages.
+        first_html = re.sub(
+            r'(<input[^>]*name="csrfmiddlewaretoken"[^>]*value=")[^"]*(")',
+            r'\1CSRF_TOKEN\2',
+            first_html,
+        )
+        second_html = re.sub(
+            r'(<input[^>]*name="csrfmiddlewaretoken"[^>]*value=")[^"]*(")',
+            r'\1CSRF_TOKEN\2',
+            second_html,
+        )
+
+        self.assertEqual(first_html, second_html)
 
     def test_get_search_spans_relationships(self):
         """skill -> assessments -> candidate -> target_role, via __."""
@@ -291,6 +328,11 @@ class OrmQueryTests(TestCase):
 class StaticFilesTests(TestCase):
     """Assignment 3, Section 3: static configuration and CSS delivery."""
 
+    def setUp(self):
+        # Create and log in a test user for static files tests
+        self.user = User.objects.create_user("staticuser", password="test-only-pw")
+        self.client.login(username="staticuser", password="test-only-pw")
+
     def test_static_dir_is_on_the_search_path(self):
         from django.conf import settings
         from pathlib import Path
@@ -356,6 +398,10 @@ class ChartTests(TestCase):
         PlanTask.objects.create(
             plan=cls.plan, skill=cls.sql, title="Window functions drill",
             week_number=2)
+
+    def setUp(self):
+        # Log in before each test
+        self.client.login(username="dokafor", password="test-only-pw")
 
     CHART_ROUTES = [
         "preparation:chart_skills_by_category",
@@ -513,6 +559,10 @@ class InternalApiTests(TestCase):
     def setUpTestData(cls):
         _a4_fixture(cls)
 
+    def setUp(self):
+        # Log in before each test
+        self.client.login(username="bpatel", password="test-only-pw")
+
     def test_skill_summary_is_a_flat_list_aggregated_per_skill(self):
         r = self.client.get(reverse("preparation:api_skill_summary"))
         self.assertEqual(r.status_code, 200)
@@ -571,6 +621,9 @@ class VegaLiteTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         _a4_fixture(cls)
+
+    def setUp(self):
+        self.client.login(username="eunji", password="test-only-pw")
 
     def test_specs_load_data_by_url_and_never_inline(self):
         from . import vega
@@ -793,6 +846,11 @@ class ExportAndReportTests(TestCase):
                                 status=PlanTask.Status.DONE)
         PlanTask.objects.create(plan=cls.plan, skill=cls.skill,
                                 title="Window functions drill", week_number=2)
+
+    def setUp(self):
+        # Log in before each test
+        self.client.login(username="bpatel", password="test-only-pw")
+
 
     CSV_URL = "preparation:export_candidates_csv"
     JSON_URL = "preparation:export_candidates_json"
