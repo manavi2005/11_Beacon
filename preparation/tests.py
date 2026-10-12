@@ -1309,3 +1309,48 @@ class SiteDomainCommandTests(TestCase):
         from django.core.management.base import CommandError
         with self.assertRaises(CommandError):
             call_command("set_site_domain", "https://example.com/", stdout=io.StringIO())
+
+
+class OAuthDependencyTests(TestCase):
+    """The Google callback decodes a JWT, and that import is a separate extra.
+
+    Regression guard. requirements.txt originally pinned plain
+    django-allauth, which installs fine and serves the login page fine: the
+    button renders, and the redirect to Google is correct. The missing
+    dependency only surfaces when Google redirects BACK, because
+    allauth.socialaccount.internal.jwtkit imports jwt lazily to verify the
+    id_token. Production hit ModuleNotFoundError: No module named 'jwt' at
+    exactly that point.
+
+    The lesson for the rest of the suite: the other OAuth tests assert on the
+    request we send and never contact Google, which is right, but it left the
+    return half of the handshake completely uncovered. This test covers the
+    one part of it that does not need a network call.
+    """
+
+    def test_pyjwt_is_installed(self):
+        try:
+            import jwt  # noqa: F401
+        except ImportError:  # pragma: no cover
+            self.fail(
+                "PyJWT is missing. allauth needs it to verify Google's "
+                "id_token. Install django-allauth[socialaccount], not plain "
+                "django-allauth."
+            )
+
+    def test_allauth_can_resolve_its_jwt_helper(self):
+        """allauth defers the jwt import, so a plain `import jwt` passing is
+        not quite proof. This touches the attribute allauth itself reaches
+        for in the callback."""
+        from allauth.socialaccount.internal import jwtkit
+
+        self.assertTrue(hasattr(jwtkit, "verify_and_decode"))
+        self.assertIsNotNone(jwtkit.jwt.PyJWTError)
+
+    def test_requirements_pins_the_socialaccount_extra(self):
+        """Installing the right thing on a fresh machine depends on this
+        line, and nothing else in the suite reads it."""
+        import pathlib
+
+        text = pathlib.Path("requirements.txt").read_text()
+        self.assertIn("django-allauth[socialaccount]", text)
