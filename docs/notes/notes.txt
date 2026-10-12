@@ -898,6 +898,88 @@ PART 3 - CSV AND JSON EXPORTS, REPORTS PAGE (Meet)
   (header-only CSV, record_count 0, {% empty %} branches). 78 total.
 
 
+ASSIGNMENT 5 PART 1 - AUTHENTICATION: COMPLETION AND FIXES (Meet)
+
+  Built on Chu-Yun's Addlogin branch. His login, signup and logout all work;
+  these are the gaps found reviewing it, plus the two things he asked about.
+
+  THE TWO THINGS HE REPORTED: ONE CAUSE
+
+  Both came from the same place, and neither was a bug in his code.
+
+  "Production formatting is wrong." Production uses
+  ManifestStaticFilesStorage for the A3 cache-busting bonus. It reads
+  staticfiles.json to map beacon.css to its hashed name, and that file only
+  exists after collectstatic. Without it {% static %} raises ValueError and
+  every page 500s, not just loses styling. Then, separately, runserver
+  refuses to serve static files when DEBUG=False, by design, so even after
+  collectstatic the CSS 404s unless you pass --insecure.
+
+      python manage.py collectstatic --noinput --settings=...production
+      python manage.py runserver --settings=...production --insecure
+
+  Now in the README, because it will catch the next person too.
+
+  "The logout button does not match the other functions." It does match.
+  Measured both in the browser: same 28.8px height, 13.44px font, weight
+  500, padding 4px 12px, radius 99px. What he saw was the production page
+  with no CSS at all, where <a> is blue underlined text and <button> is a
+  native grey button on its own line, because <form> is block-level. Fix
+  the static files and this disappears. His CSS was right.
+
+  FOUR GAPS FIXED
+
+  1. The three settings were in production.py only. Development fell back to
+     Django's defaults: LOGIN_REDIRECT_URL = "/accounts/profile/", a route
+     we do not have, and LOGOUT_REDIRECT_URL = None. It looked fine only
+     because the views hardcoded redirect("/") and never read the settings.
+     Moved to base.py and the views now use them, so the configuration is
+     the thing that decides.
+
+  2. /market/ was still public while every other page was protected. Added
+     @login_required. This broke three of Manavi's tests that assumed the
+     page was open, which is the tests doing their job; they now sign in.
+
+  3. private_api() was written but never routed - dead code. Replaced with
+     /api/whoami/, which returns 401 with a JSON body rather than using
+     @login_required. That decorator answers 302 to an HTML login page,
+     which a JSON client cannot act on. Browser-facing protected routes
+     keep the redirect, because for a browser that is the right answer.
+
+  4. Five test logins failed silently. InternalApiTests signed in as
+     "bpatel" but its fixture creates "tquant", and VegaLiteTests used
+     "eunji". Client.login() returns False rather than raising, nobody
+     checked it, so those tests ran anonymous and passed anyway because the
+     endpoints they hit are public. Found it by monkeypatching
+     Client.login to print its return value.
+
+     Every login in the suite is now wrapped in assertTrue, so a wrong
+     username fails loudly instead of quietly changing what is tested.
+
+  AN OPEN REDIRECT WORTH KNOWING ABOUT
+
+  login_view honoured ?next= without checking it. That turns our own login
+  form into a redirector: /accounts/login/?next=https://evil.example.com
+  sends the user off-site after a real login on a real domain, which is
+  exactly what makes a phishing link credible. Now guarded with
+  url_has_allowed_host_and_scheme, with a test.
+
+  Tests: 20 added for Part 1, which previously had none of its own. They
+  cover both forms, bad credentials, the password validators, logout being
+  POST-only, the three settings resolving to routes that exist, the
+  open-redirect guard, every protected page redirecting anonymous users,
+  the JSON API answering 401 rather than redirecting, and the nav hiding
+  and showing links. 98 total, all passing.
+
+  STILL TO DO ON THE DEPLOYED SITE
+
+  Requirement 1.5 says the deployed site must reflect this. After merge,
+  someone with PythonAnywhere access has to pull, run collectstatic with
+  the production settings, confirm the /static/ mapping points at
+  staticfiles/, and reload. Without the collectstatic step the live site
+  will 500 exactly as it did locally.
+
+
 REMINDERS / TODO
 
   [ ] Assignment 4 asks for db.sqlite3 to be committed, but .gitignore still
