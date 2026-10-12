@@ -179,6 +179,38 @@ cannot act on a redirect to markup. The browser-facing protected routes
 (`/api/skills/`, `/reports/candidates.json`) do redirect, which is right for
 a browser.
 
+**Google sign-in.** The login and signup pages carry a "Continue with
+Google" button, handled by `django-allauth`. Username and password still
+work alongside it: both backends are configured, and dropping
+`ModelBackend` would lock out every account created before this, including
+the superuser.
+
+The credentials are read from `GOOGLE_OAUTH_CLIENT_ID` and
+`GOOGLE_OAUTH_CLIENT_SECRET` in `.env`, never from a committed file and
+never from a `SocialApp` row, because this project commits `db.sqlite3`.
+When those are absent, which is the case in CI and on a machine that has
+not set them, the button is hidden rather than rendered as a control that
+would send the user to an error page. The rest of the site is unaffected.
+
+The same Google client needs **both** redirect URIs registered:
+
+```
+http://127.0.0.1:8000/accounts/google/login/callback/
+https://<your-domain>/accounts/google/login/callback/
+```
+
+`allauth.urls` is mounted after `preparation.urls` on purpose. allauth also
+defines `accounts/login/` and `accounts/signup/`, and Django matches in
+order, so listing it second leaves the custom pages in charge of those two
+URLs while allauth owns everything under `accounts/google/`.
+
+After deploying, point `django.contrib.sites` at the real host, or allauth
+builds callbacks for `example.com`:
+
+```bash
+python manage.py set_site_domain yourname.pythonanywhere.com
+```
+
 **Reports and exports.** `/reports/` is the page a user goes to when they
 want the data out of Beacon rather than on screen. It carries three grouped
 summaries (candidates by experience level, candidates by target role with the

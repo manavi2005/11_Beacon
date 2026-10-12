@@ -63,9 +63,23 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # django.contrib.sites is a hard requirement of allauth: a social login
+    # callback has to know which domain it belongs to, and the Site row is
+    # where that lives.
+    "django.contrib.sites",
+    # Assignment 5, Part 2: Google OAuth through django-allauth.
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     # Beacon feature apps
     "preparation",
 ]
+
+# Which Site row the social callbacks belong to. Changing the deployed
+# domain means updating that row (via the admin) as well as ALLOWED_HOSTS
+# and the redirect URI registered with Google.
+SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -75,6 +89,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # allauth needs this to handle its own redirects and to keep the social
+    # login flow's state between the outbound request and the callback.
+    # Without it allauth raises ImproperlyConfigured at the first request.
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "beacon_core.urls"
@@ -90,6 +108,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Tells the templates whether Google credentials exist on
+                # this machine, so the button is only shown when it works.
+                "preparation.context_processors.google_oauth",
             ],
         },
     },
@@ -126,6 +147,64 @@ DATABASES = {
 LOGIN_URL = "preparation:login"
 LOGIN_REDIRECT_URL = "preparation:dashboard"
 LOGOUT_REDIRECT_URL = "preparation:login"
+
+
+# ---------------------------------------------------------------------------
+# Google OAuth via django-allauth (Assignment 5, Part 2)
+# ---------------------------------------------------------------------------
+# Two backends, both needed. ModelBackend keeps username/password working for
+# the accounts created in Part 1; allauth's backend handles the social login.
+# Dropping ModelBackend would lock out every existing user, including the
+# superuser the admin needs.
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# The credentials come from the environment, never from this file. .env is
+# git-ignored; .env.example documents the two names without carrying values.
+# Empty strings are a deliberate fallback rather than a crash: the test suite
+# and CI have no Google credentials, and the rest of the site must still run
+# without them. The button checks for them before rendering.
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        # Configuring the app here rather than as a SocialApp row in the
+        # database means the credentials live in the environment on each
+        # machine, and nothing secret is ever written into db.sqlite3, which
+        # this project commits.
+        "APP": {
+            "client_id": GOOGLE_OAUTH_CLIENT_ID,
+            "secret": GOOGLE_OAUTH_CLIENT_SECRET,
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        # Google has already verified the address it hands us, so making the
+        # user confirm it by email again is friction with nothing behind it.
+        "VERIFIED_EMAIL": True,
+    }
+}
+
+# Let a Google login attach itself to an existing account with the same
+# verified email, instead of refusing or silently creating a second account
+# for the same person. Safe here only because VERIFIED_EMAIL is on: without
+# that, anyone could claim an address they do not own.
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+
+# Skip allauth's "you are about to sign in as ..." interstitial. The user
+# just clicked a button that says Continue with Google; asking them to
+# confirm again adds a page and tells them nothing.
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# allauth's own account settings. Username and password stay the login
+# method, because Part 1's forms are built on them.
+ACCOUNT_LOGIN_METHODS = {"username"}
+ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
 
 
 # ---------------------------------------------------------------------------

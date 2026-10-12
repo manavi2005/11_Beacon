@@ -12,6 +12,13 @@ from django.urls import include, path
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("preparation.urls")),
+    # allauth comes AFTER preparation.urls on purpose. allauth also defines
+    # accounts/login/ and accounts/signup/, and Django matches in order, so
+    # listing it second leaves Part 1's custom pages in charge of those two
+    # URLs while allauth still owns the Google routes beneath
+    # accounts/google/. Reversing it would silently replace our login page
+    # with allauth's.
+    path("accounts/", include("allauth.urls")),
 ]
 
 # During development, let Django serve uploaded resumes. In production this is
