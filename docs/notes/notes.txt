@@ -1068,6 +1068,58 @@ ASSIGNMENT 5 PART 2 - GOOGLE OAUTH (Meet)
   and into the environment on PythonAnywhere.
 
 
+A5 DEPLOYMENT: THE BUG THE TESTS MISSED (Meet)
+
+  Google login failed in production with:
+
+      ModuleNotFoundError: No module named 'jwt'
+
+  raised from allauth/socialaccount/internal/jwtkit.py while decoding the
+  id_token Google returns.
+
+  Cause: requirements.txt pinned plain django-allauth. PyJWT is an optional
+  extra, so pip installed allauth happily and the site worked right up to
+  the point Google redirected back. Fixed by pinning
+  django-allauth[socialaccount], which pulls PyJWT and cryptography.
+
+  WHY THE SUITE DID NOT CATCH IT
+
+  The 13 OAuth tests all assert on the request we SEND: the button renders,
+  the redirect goes to accounts.google.com, the client_id and redirect_uri
+  are right. That was deliberate, so the suite never touches the network.
+
+  But it left the return half of the handshake entirely uncovered, and the
+  missing dependency lives exactly there. Everything observable before the
+  user clicks through Google was green.
+
+  Three tests added that cover it without a network call: jwt imports,
+  allauth's deferred jwtkit.jwt attribute resolves, and requirements.txt
+  actually contains the [socialaccount] extra. The last one matters because
+  nothing else in the suite reads requirements.txt, so a fresh machine
+  would have reproduced the same failure.
+
+  General lesson: "we mock the external service" is right, but it means the
+  code path after the external service answers is untested by construction.
+  Worth asking what runs only on the way back.
+
+  DEPLOYMENT NOTES WORTH KEEPING
+
+  - PythonAnywhere free tier has a 512MB quota. pip install of cryptography
+    failed twice on it. What freed space: rm -rf ~/.cache/pip, and removing
+    ~/.local/lib/python3*/site-packages left behind by an earlier pip run
+    that happened outside the virtualenv.
+  - Install into the virtualenv. A console that has not activated it
+    installs to ~/.local and silently duplicates ~250MB.
+  - The web app does not pick up new code until Reload. Static files update
+    immediately because the web server serves them off disk, so a half
+    deployed site shows new CSS with old templates, which is confusing.
+  - Free accounts have no Environment variables section on the Web tab.
+    The vars go in /var/www/<domain>_wsgi.py, and they must be set BEFORE
+    get_wsgi_application() or Django reads them too late.
+  - git pull overwrites db.sqlite3, because A4 requires committing it. Every
+    deploy therefore replaces production data with the repo snapshot.
+
+
 REMINDERS / TODO
 
   [ ] Assignment 4 asks for db.sqlite3 to be committed, but .gitignore still
