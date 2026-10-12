@@ -16,6 +16,7 @@ from unittest import mock
 
 import requests
 from django.core.cache import cache
+from django.shortcuts import resolve_url
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -63,8 +64,10 @@ class GradedViewsTests(TestCase):
     def setUp(self):
         # Create and log in a test user for template tests
         self.user = User.objects.create_user("templateuser", password="test-only-pw")
-        self.client.login(username="templateuser", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="templateuser", password="test-only-pw"))
     def test_fbv_httpresponse_renders_skill_list(self):
         """View 1: FBV built by hand out of loader.get_template + HttpResponse."""
         response = self.client.get(reverse("preparation:skill_catalog_manual"))
@@ -101,8 +104,10 @@ class TemplateBehaviourTests(TestCase):
     def setUp(self):
         # Create and log in a test user for template tests
         self.user = User.objects.create_user("templateuser", password="test-only-pw")
-        self.client.login(username="templateuser", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="templateuser", password="test-only-pw"))
     def test_every_page_extends_base_and_shows_the_nav(self):
         response = self.client.get(reverse("preparation:skill_catalog_render"))
         self.assertContains(response, "Team Career Coaches (Group 11)")
@@ -159,8 +164,10 @@ class UrlsAndNavigationTests(TestCase):
 
     def setUp(self):
         # Log in before each test
-        self.client.login(username="bpatel", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="bpatel", password="test-only-pw"))
     def test_root_url_is_not_a_404(self):
         self.assertEqual(self.client.get("/").status_code, 200)
 
@@ -217,8 +224,10 @@ class OrmQueryTests(TestCase):
 
     def setUp(self):
         # Log in before each test
-        self.client.login(username="ekim", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="ekim", password="test-only-pw"))
     # --- GET search -----------------------------------------------------
     def test_get_search_filters_by_name(self):
         r = self.client.get(reverse("preparation:skill_search"), {"q": "SQL"})
@@ -331,8 +340,10 @@ class StaticFilesTests(TestCase):
     def setUp(self):
         # Create and log in a test user for static files tests
         self.user = User.objects.create_user("staticuser", password="test-only-pw")
-        self.client.login(username="staticuser", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="staticuser", password="test-only-pw"))
     def test_static_dir_is_on_the_search_path(self):
         from django.conf import settings
         from pathlib import Path
@@ -401,8 +412,10 @@ class ChartTests(TestCase):
 
     def setUp(self):
         # Log in before each test
-        self.client.login(username="dokafor", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="dokafor", password="test-only-pw"))
     CHART_ROUTES = [
         "preparation:chart_skills_by_category",
         "preparation:chart_plan_progress",
@@ -561,8 +574,10 @@ class InternalApiTests(TestCase):
 
     def setUp(self):
         # Log in before each test
-        self.client.login(username="bpatel", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
     def test_skill_summary_is_a_flat_list_aggregated_per_skill(self):
         r = self.client.get(reverse("preparation:api_skill_summary"))
         self.assertEqual(r.status_code, 200)
@@ -623,8 +638,10 @@ class VegaLiteTests(TestCase):
         _a4_fixture(cls)
 
     def setUp(self):
-        self.client.login(username="eunji", password="test-only-pw")
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
     def test_specs_load_data_by_url_and_never_inline(self):
         from . import vega
 
@@ -703,6 +720,12 @@ class MarketDemandTests(TestCase):
 
     def setUp(self):
         cache.clear()
+        # /market/ became login-protected in A5. The JSON endpoint beneath it
+        # stays open on purpose, but the page itself is part of the site, so
+        # these tests sign in like any other visitor would.
+        self.assertTrue(
+            self.client.login(username="tquant", password="test-only-pw")
+        )
 
     def _get(self, q="data analyst"):
         return self.client.get(reverse("preparation:api_market_demand"), {"q": q})
@@ -849,9 +872,10 @@ class ExportAndReportTests(TestCase):
 
     def setUp(self):
         # Log in before each test
-        self.client.login(username="bpatel", password="test-only-pw")
-
-
+        # assertTrue, not a bare call: Client.login() returns False on a bad
+        # username and the test then runs anonymous. Against a public route
+        # that still passes, which is how five of these were silently broken.
+        self.assertTrue(self.client.login(username="bpatel", password="test-only-pw"))
     CSV_URL = "preparation:export_candidates_csv"
     JSON_URL = "preparation:export_candidates_json"
     FILENAME = re.compile(r'filename="candidates_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.(csv|json)"')
@@ -973,3 +997,181 @@ class ExportAndReportTests(TestCase):
         payload = json.loads(self.client.get(reverse(self.JSON_URL)).content)
         self.assertEqual(payload["record_count"], 0)
         self.assertEqual(payload["candidates"], [])
+
+
+class AuthenticationTests(TestCase):
+    """Assignment 5, Part 1: login, signup, logout, and what they protect.
+
+    Part 1 shipped without tests of its own. These cover the behaviour the
+    brief asks for, and the two things that are easy to get wrong and silent
+    when you do: the redirect settings, and an open redirect on ?next=.
+    """
+
+    PASSWORD = "Str0ngPass!2026"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user("areader", password=cls.PASSWORD)
+
+    # --- 1.1 login and signup pages -------------------------------------
+    def test_login_page_renders_a_form(self):
+        r = self.client.get(reverse("preparation:login"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "registration/login.html")
+        self.assertContains(r, "csrfmiddlewaretoken")
+        self.assertContains(r, 'name="username"')
+        self.assertContains(r, 'name="password"')
+
+    def test_signup_page_renders_a_form(self):
+        r = self.client.get(reverse("preparation:signup"))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, "registration/signup.html")
+        self.assertContains(r, "csrfmiddlewaretoken")
+
+    def test_login_with_good_credentials(self):
+        r = self.client.post(reverse("preparation:login"),
+                             {"username": "areader", "password": self.PASSWORD})
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_login_with_bad_credentials_re_renders_with_an_error(self):
+        r = self.client.post(reverse("preparation:login"),
+                             {"username": "areader", "password": "wrong"})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.context["form"].is_valid())
+        # Still anonymous.
+        self.assertEqual(self.client.get("/").status_code, 302)
+
+    def test_signup_creates_the_account_and_signs_them_in(self):
+        r = self.client.post(reverse("preparation:signup"),
+                             {"username": "brandnew",
+                              "password1": self.PASSWORD,
+                              "password2": self.PASSWORD})
+        self.assertEqual(r.status_code, 302)
+        self.assertTrue(User.objects.filter(username="brandnew").exists())
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_signup_applies_the_password_validators(self):
+        """AUTH_PASSWORD_VALIDATORS from base.py should reject '12345'."""
+        r = self.client.post(reverse("preparation:signup"),
+                             {"username": "weakling",
+                              "password1": "12345", "password2": "12345"})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(User.objects.filter(username="weakling").exists())
+
+    # --- 1.2 logout ------------------------------------------------------
+    def test_logout_requires_post(self):
+        """GET logout is reachable by any <img src>, so Django 5 refuses it."""
+        self.client.login(username="areader", password=self.PASSWORD)
+        self.assertEqual(self.client.get(reverse("preparation:logout")).status_code, 405)
+        # still signed in
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+    def test_logout_via_post_ends_the_session(self):
+        self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
+        r = self.client.post(reverse("preparation:logout"))
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(self.client.get("/").status_code, 302)
+
+    # --- 1.3 the three settings -----------------------------------------
+    def test_the_three_auth_settings_are_configured(self):
+        """In base.py, not production.py: defined only in production,
+        development falls back to Django's /accounts/profile/ default."""
+        from django.conf import settings
+        self.assertEqual(resolve_url(settings.LOGIN_URL), reverse("preparation:login"))
+        self.assertEqual(resolve_url(settings.LOGIN_REDIRECT_URL),
+                         reverse("preparation:dashboard"))
+        self.assertEqual(resolve_url(settings.LOGOUT_REDIRECT_URL),
+                         reverse("preparation:login"))
+
+    def test_login_redirect_target_actually_exists(self):
+        from django.conf import settings
+        self.client.login(username="areader", password=self.PASSWORD)
+        self.assertEqual(
+            self.client.get(resolve_url(settings.LOGIN_REDIRECT_URL)).status_code, 200)
+
+    def test_login_honours_next_then_lands_on_the_configured_page(self):
+        r = self.client.post(reverse("preparation:login"),
+                             {"username": "areader", "password": self.PASSWORD,
+                              "next": reverse("preparation:reports")})
+        self.assertRedirects(r, reverse("preparation:reports"))
+
+    def test_next_cannot_be_used_as_an_open_redirect(self):
+        """?next=https://evil.example.com must not send the user off-site.
+
+        Without url_has_allowed_host_and_scheme our own login form becomes a
+        credible-looking redirector for phishing.
+        """
+        r = self.client.post(reverse("preparation:login"),
+                             {"username": "areader", "password": self.PASSWORD,
+                              "next": "https://evil.example.com/steal"})
+        self.assertEqual(r.status_code, 302)
+        self.assertNotIn("evil.example.com", r["Location"])
+
+    # --- 1.4 protected sections and APIs ---------------------------------
+    PROTECTED_PAGES = ["/", "/skills/", "/candidates/", "/tasks/", "/insights/",
+                       "/charts/", "/vega-lite/", "/market/", "/reports/",
+                       "/reports/candidates.csv", "/reports/candidates.json",
+                       "/api/skills/"]
+
+    def test_anonymous_users_are_sent_to_login(self):
+        for url in self.PROTECTED_PAGES:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertEqual(r.status_code, 302, f"{url} is not protected")
+                self.assertIn(reverse("preparation:login"), r["Location"])
+
+    def test_signed_in_users_can_reach_every_protected_page(self):
+        self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
+        for url in self.PROTECTED_PAGES:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_protected_json_api_answers_401_not_a_redirect(self):
+        """A JSON client cannot do anything with a 302 to an HTML page."""
+        r = self.client.get(reverse("preparation:api_whoami"))
+        self.assertEqual(r.status_code, 401)
+        self.assertEqual(r["Content-Type"], "application/json")
+        self.assertIn("error", json.loads(r.content))
+
+    def test_protected_json_api_answers_when_signed_in(self):
+        self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
+        r = self.client.get(reverse("preparation:api_whoami"))
+        self.assertEqual(r.status_code, 200)
+        body = json.loads(r.content)
+        self.assertTrue(body["authenticated"])
+        self.assertEqual(body["username"], "areader")
+
+    def test_login_and_signup_stay_reachable_while_anonymous(self):
+        """Protecting everything else must not lock people out of the door."""
+        for name in ("preparation:login", "preparation:signup"):
+            with self.subTest(route=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 200)
+
+    # --- 1.5 navigation ---------------------------------------------------
+    def test_nav_hides_protected_links_before_login(self):
+        body = self.client.get(reverse("preparation:login")).content.decode()
+        nav = body.split("<nav")[1].split("</nav>")[0]
+        for hidden in (reverse("preparation:reports"), reverse("preparation:insights"),
+                       reverse("preparation:charts")):
+            self.assertNotIn(hidden, nav)
+        self.assertIn(reverse("preparation:login"), nav)
+        self.assertIn(reverse("preparation:signup"), nav)
+
+    def test_nav_shows_protected_links_after_login(self):
+        self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
+        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        for shown in (reverse("preparation:reports"), reverse("preparation:insights"),
+                      reverse("preparation:charts")):
+            self.assertIn(shown, nav)
+        self.assertIn("Log Out", nav)
+        self.assertNotIn(reverse("preparation:signup"), nav)
+
+    def test_logout_control_is_a_post_form_not_a_link(self):
+        """It has to be a form, because the view is POST-only. This is why
+        the nav needs a button styled to match the links beside it."""
+        self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
+        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        self.assertIn(f'action="{reverse("preparation:logout")}"', nav)
+        self.assertIn('method="post"', nav)
+        self.assertIn("csrfmiddlewaretoken", nav)

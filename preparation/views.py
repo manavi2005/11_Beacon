@@ -18,10 +18,12 @@ exercise, and it is also what Section 3 means by "template reuse".
 
 from functools import wraps
 
+from django.conf import settings
 from django.db.models import Avg, Count, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.template import loader
 from django.urls import reverse
 from django.contrib.auth import login, logout
@@ -801,6 +803,7 @@ def api_market_demand(request):
 
 
 @require_safe
+@login_required
 def market_page(request):
     """/market/?q=data analyst"""
     query = request.GET.get("q", "").strip()
@@ -912,34 +915,67 @@ def reports_page(request):
 # ---------------------------------------------------------------------------
 
 def login_view(request):
+    """Custom login page.
+
+    Uses Django's AuthenticationForm, which does the real work: it checks the
+    credentials against the configured auth backends, rejects inactive users,
+    and returns the usual "please enter a correct username and password"
+    rather than saying which half was wrong. Writing that by hand is how
+    timing and enumeration leaks get introduced.
+
+    Redirect targets come from settings rather than being written here, so
+    LOGIN_REDIRECT_URL is actually the thing that controls where a successful
+    login lands.
+    """
     if request.user.is_authenticated:
-        return redirect("/")
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             login(request, form.get_user())
-            return redirect(request.POST.get("next") or "/")
+            # ?next= is how @login_required sends somebody back to the page
+            # they were trying to reach. url_has_allowed_host_and_scheme is
+            # not optional: without it, /accounts/login/?next=https://evil
+            # turns our own login form into an open redirect that phishing
+            # can point at.
+            destination = request.POST.get("next") or request.GET.get("next")
+            if destination and url_has_allowed_host_and_scheme(
+                destination,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return redirect(destination)
+            return redirect(settings.LOGIN_REDIRECT_URL)
     else:
         form = AuthenticationForm(request)
 
     return render(
         request,
         "registration/login.html",
-        {"form": form},
+        {"form": form, "next": request.GET.get("next", "")},
     )
 
 
 def signup_view(request):
+    """Custom signup page.
+
+    UserCreationForm applies the AUTH_PASSWORD_VALIDATORS configured in
+    base.py, so the minimum length, common-password and numeric-only rules
+    all apply here without being restated.
+
+    The new account is logged in straight away: making somebody who just
+    chose a password type it again is friction with nothing behind it.
+    """
     if request.user.is_authenticated:
-        return redirect("/")
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect("/")
+            return redirect(settings.LOGIN_REDIRECT_URL)
     else:
         form = UserCreationForm()
 
@@ -952,15 +988,47 @@ def signup_view(request):
 
 @require_POST
 def logout_view(request):
+    """Log out, then send the user to LOGOUT_REDIRECT_URL.
+
+    POST only, and that is deliberate rather than awkward. A logout reachable
+    by GET can be triggered by anything that makes the browser fetch a URL,
+    including an <img src="/accounts/logout/"> on another site, which logs
+    the user out without them doing anything. Django dropped GET support for
+    LogoutView in 5.0 for this reason.
+
+    The cost is that the nav needs a form rather than a link, which is why
+    base.html has one with a button styled to match the links around it.
+    """
     logout(request)
-    return redirect("/")
+    return redirect(settings.LOGOUT_REDIRECT_URL)
+
 
 @require_GET
-def private_api(request):
+def api_whoami(request):
+    """A protected JSON endpoint: who is this request authenticated as?
+
+    URL: /api/whoami/
+
+    Assignment 5 asks for at least one protected API. This returns 401 with a
+    JSON body rather than using @login_required, because that decorator
+    answers with a 302 to an HTML login page: fine for a browser, useless to
+    anything parsing JSON, which sees a redirect to markup instead of an
+    error it can act on.
+
+    /api/skills/ and /reports/candidates.json are protected too, but those
+    are browser-facing, so a redirect to the login page is the right answer
+    there.
+    """
     if not request.user.is_authenticated:
         return JsonResponse(
-            {"error": "Authentication required"},
+            {"error": "Authentication required", "login_url": reverse(settings.LOGIN_URL)},
             status=401,
         )
 
-    return JsonResponse({"message": "Authenticated"})
+    return JsonResponse(
+        {
+            "authenticated": True,
+            "username": request.user.username,
+            "is_staff": request.user.is_staff,
+        }
+    )

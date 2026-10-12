@@ -96,4 +96,9 @@ urlpatterns = [
     path("accounts/login/", views.login_view, name="login"),
     path("accounts/signup/", views.signup_view, name="signup"),
     path("accounts/logout/", views.logout_view, name="logout"),
+    # A protected JSON endpoint. Unlike the browser-facing views above it
+    # answers 401 with a JSON body rather than redirecting to the HTML login
+    # page, because a JSON client cannot do anything useful with a redirect
+    # to markup.
+    path("api/whoami/", views.api_whoami, name="api_whoami"),
 ]

@@ -218,3 +218,18 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | One totals line | `report_totals()`, rendered as stat tiles plus a sentence |
 | Tables with headers and `{% empty %}` | all four tables in `reports.html` |
 | Screenshot | [reports page](screenshots/a4-part3-reports-page.png) |
+
+## Assignment 5, Part 1 - Internal Django authentication
+
+| Requirement | Where to look |
+|---|---|
+| 1.1 Custom login page | `/accounts/login/`, `login_view` in [views.py](../preparation/views.py), [`registration/login.html`](../templates/registration/login.html) |
+| 1.1 Custom signup page | `/accounts/signup/`, `signup_view`, [`registration/signup.html`](../templates/registration/signup.html) |
+| 1.2 Logout | `/accounts/logout/`, POST-only; the nav carries a form, not a link |
+| 1.3 `LOGIN_URL` | [`base.py`](../beacon_core/settings/base.py), so dev and prod agree |
+| 1.3 `LOGIN_REDIRECT_URL` | `base.py`, pointing at a route that exists |
+| 1.3 `LOGOUT_REDIRECT_URL` | `base.py` |
+| 1.4 Protected sections | every page except login and signup; anonymous users get 302 to the login form |
+| 1.4 Protected API | `/api/whoami/` answers 401 JSON; `/api/skills/` and `/reports/candidates.json` redirect |
+| 1.5 Nav hidden before login | `{% if user.is_authenticated %}` in [`base.html`](../templates/base.html) |
+| 1.5 Nav visible after login | same block, plus the logout form |

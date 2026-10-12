@@ -68,9 +68,25 @@ The six seeded candidates are ordinary non-staff users and share the password
 
 **Running the production settings**
 
+Production is not just `DEBUG = False`. Two things differ, and both bite if
+you skip them:
+
 ```bash
-python manage.py runserver --settings=beacon_core.settings.production
+python manage.py collectstatic --noinput --settings=beacon_core.settings.production
+python manage.py runserver --settings=beacon_core.settings.production --insecure
 ```
+
+`collectstatic` is required, not optional. Production serves static files
+through `ManifestStaticFilesStorage`, which reads `staticfiles.json` to map
+`beacon.css` to its content-hashed name. Without that file `{% static %}`
+raises `ValueError: Missing staticfiles manifest entry` and every page
+returns 500.
+
+`--insecure` is required too, because `runserver` deliberately refuses to
+serve static files when `DEBUG = False`. Without it the pages load but
+arrive unstyled, which looks like a CSS bug and is not one. On a real
+deployment the web server serves `STATIC_ROOT` instead, so `--insecure` is
+only for checking production settings locally.
 
 `manage.py` defaults to `beacon_core.settings.development`, so no flag is needed
 for everyday work. `wsgi.py` and `asgi.py` default to production, which is what a
@@ -144,6 +160,24 @@ In production, `ManifestStaticFilesStorage` serves the stylesheet under a
 content-hashed name such as `beacon.a0c1fb82e482.css`, so it can be cached
 indefinitely and a change to the file changes the URL. The reasoning is in
 [`docs/notes/notes.txt`](docs/notes/notes.txt).
+
+**Authentication.** Every page except the login and signup forms requires a
+signed-in user. `/accounts/login/` and `/accounts/signup/` are custom pages
+built on Django's `AuthenticationForm` and `UserCreationForm`, so the
+credential checking and the password validators in `base.py` are Django's
+rather than ours. Logout is POST-only, which is why the navigation carries a
+small form rather than a link: a logout reachable by GET can be fired by any
+`<img src>` on another site.
+
+`LOGIN_URL`, `LOGIN_REDIRECT_URL` and `LOGOUT_REDIRECT_URL` are set in
+`base.py` so development and production agree. The navigation hides every
+protected link until you are signed in.
+
+`/api/whoami/` is a protected JSON endpoint: it answers `401` with a JSON
+body rather than redirecting to the HTML login page, because a JSON client
+cannot act on a redirect to markup. The browser-facing protected routes
+(`/api/skills/`, `/reports/candidates.json`) do redirect, which is right for
+a browser.
 
 **Reports and exports.** `/reports/` is the page a user goes to when they
 want the data out of Beacon rather than on screen. It carries three grouped

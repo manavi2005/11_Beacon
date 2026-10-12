@@ -31,9 +31,10 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = "DENY"
 
-LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/"
+# LOGIN_URL, LOGIN_REDIRECT_URL and LOGOUT_REDIRECT_URL moved to base.py, so
+# development gets them too. Defined only here, development fell back to
+# Django's default LOGIN_REDIRECT_URL of "/accounts/profile/", which this
+# project does not route.
 
 # ---------------------------------------------------------------------------
 # Static files: cache busting

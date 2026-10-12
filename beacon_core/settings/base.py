@@ -112,6 +112,23 @@ DATABASES = {
 
 
 # ---------------------------------------------------------------------------
+# Authentication (Assignment 5, Part 1)
+# ---------------------------------------------------------------------------
+# These live in base.py rather than production.py so development and
+# production behave the same way. Defined only in production, Django falls
+# back to its own defaults everywhere else, and the default
+# LOGIN_REDIRECT_URL is "/accounts/profile/", a route this project does not
+# have: a successful login in development would land on a 404.
+#
+# @login_required and LoginRequiredMixin read LOGIN_URL to build the redirect,
+# so naming the route here is what keeps "/accounts/login/" out of the view
+# code.
+LOGIN_URL = "preparation:login"
+LOGIN_REDIRECT_URL = "preparation:dashboard"
+LOGOUT_REDIRECT_URL = "preparation:login"
+
+
+# ---------------------------------------------------------------------------
 # Password validation
 # ---------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
