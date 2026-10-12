@@ -974,7 +974,17 @@ def signup_view(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            # The backend has to be named explicitly. Part 2 added allauth's
+            # backend alongside ModelBackend, and with more than one
+            # configured Django cannot infer which authenticated a user that
+            # came from form.save() rather than from authenticate(), so
+            # login() raises ValueError. This account was created with a
+            # username and password, so it is ModelBackend's.
+            login(
+                request,
+                user,
+                backend="django.contrib.auth.backends.ModelBackend",
+            )
             return redirect(settings.LOGIN_REDIRECT_URL)
     else:
         form = UserCreationForm()

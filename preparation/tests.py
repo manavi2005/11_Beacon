@@ -15,9 +15,11 @@ from datetime import datetime
 from unittest import mock
 
 import requests
+from django.conf import settings
 from django.core.cache import cache
+from django.core.management import call_command
 from django.shortcuts import resolve_url
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -1175,3 +1177,135 @@ class AuthenticationTests(TestCase):
         self.assertIn(f'action="{reverse("preparation:logout")}"', nav)
         self.assertIn('method="post"', nav)
         self.assertIn("csrfmiddlewaretoken", nav)
+
+
+@override_settings(
+    SOCIALACCOUNT_PROVIDERS={
+        "google": {
+            "APP": {"client_id": "test-client-id", "secret": "test-secret", "key": ""},
+            "SCOPE": ["profile", "email"],
+            "AUTH_PARAMS": {"access_type": "online"},
+            "VERIFIED_EMAIL": True,
+        }
+    }
+)
+class GoogleOAuthConfiguredTests(TestCase):
+    """Assignment 5, Part 2: Google OAuth, with credentials present.
+
+    Fake credentials via override_settings. The real ones live in .env and
+    are absent in CI, so without this the button would never render here and
+    these tests would pass by testing nothing.
+
+    Nothing contacts Google: we assert on the redirect we build and send, not
+    on what Google would answer.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user("oauthy", password="Str0ngPass!2026")
+
+    def test_button_appears_on_both_pages(self):
+        for route in ("preparation:login", "preparation:signup"):
+            with self.subTest(page=route):
+                r = self.client.get(reverse(route))
+                self.assertContains(r, "Continue with Google")
+                self.assertContains(r, reverse("google_login"))
+
+    def test_button_posts_with_a_csrf_token(self):
+        """A GET-startable login flow can be triggered by any page that makes
+        the browser fetch a URL."""
+        body = self.client.get(reverse("preparation:login")).content.decode()
+        form = body.split('class="oauth__form"')[1].split("</form>")[0]
+        self.assertIn("csrfmiddlewaretoken", form)
+        self.assertIn('method="post"', body.split('class="oauth"')[1].split("</form>")[0])
+
+    def test_google_login_redirects_to_google_with_the_right_parameters(self):
+        """The actual OAuth handshake: we send the user to Google's consent
+        screen with our client id and a callback on our own domain."""
+        r = self.client.post(reverse("google_login"))
+        self.assertEqual(r.status_code, 302)
+        target = r["Location"]
+        self.assertTrue(target.startswith("https://accounts.google.com/"), target)
+
+        from urllib.parse import parse_qs, urlparse
+        params = parse_qs(urlparse(target).query)
+        self.assertEqual(params["client_id"], ["test-client-id"])
+        self.assertEqual(params["response_type"], ["code"])
+        self.assertIn("profile", params["scope"][0])
+        self.assertIn("email", params["scope"][0])
+        self.assertTrue(
+            params["redirect_uri"][0].endswith("/accounts/google/login/callback/"),
+            params["redirect_uri"][0],
+        )
+
+    def test_the_secret_never_reaches_the_browser(self):
+        """The client id is public by design; the secret must never be."""
+        for route in ("preparation:login", "preparation:signup"):
+            with self.subTest(page=route):
+                body = self.client.get(reverse(route)).content.decode()
+                self.assertNotIn("test-secret", body)
+        self.assertNotIn("test-secret", self.client.post(reverse("google_login"))["Location"])
+
+    def test_callback_route_exists(self):
+        """The URI registered with Google has to resolve, or every login
+        comes back to a 404 after the user has already consented."""
+        self.assertEqual(reverse("google_callback"), "/accounts/google/login/callback/")
+
+    def test_username_password_login_still_works(self):
+        """Adding allauth's backend must not displace ModelBackend, or every
+        account from Part 1, including the superuser, stops working."""
+        self.assertTrue(self.client.login(username="oauthy", password="Str0ngPass!2026"))
+        self.assertEqual(self.client.get("/").status_code, 200)
+
+
+class GoogleOAuthNotConfiguredTests(TestCase):
+    """The same site on a machine with no Google credentials.
+
+    This is CI, and any teammate who has not set up .env. The site has to
+    stay fully usable.
+    """
+
+    @override_settings(
+        SOCIALACCOUNT_PROVIDERS={
+            "google": {"APP": {"client_id": "", "secret": "", "key": ""}}
+        }
+    )
+    def test_button_is_hidden_when_credentials_are_absent(self):
+        """Better no button than one that sends the user to an error page."""
+        for route in ("preparation:login", "preparation:signup"):
+            with self.subTest(page=route):
+                r = self.client.get(reverse(route))
+                self.assertEqual(r.status_code, 200)
+                self.assertNotContains(r, "Continue with Google")
+
+    @override_settings(
+        SOCIALACCOUNT_PROVIDERS={
+            "google": {"APP": {"client_id": "id-but-no-secret", "secret": "", "key": ""}}
+        }
+    )
+    def test_half_configured_counts_as_not_configured(self):
+        """An id with no secret fails at the token exchange, which is a much
+        more confusing failure than the button being absent."""
+        r = self.client.get(reverse("preparation:login"))
+        self.assertNotContains(r, "Continue with Google")
+
+    def test_login_page_still_renders_without_credentials(self):
+        r = self.client.get(reverse("preparation:login"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'name="username"')
+
+
+class SiteDomainCommandTests(TestCase):
+    """set_site_domain: the deploy step that points allauth at the real host."""
+
+    def test_sets_the_domain(self):
+        from django.contrib.sites.models import Site
+        call_command("set_site_domain", "beacon.pythonanywhere.com", stdout=io.StringIO())
+        self.assertEqual(Site.objects.get(pk=settings.SITE_ID).domain,
+                         "beacon.pythonanywhere.com")
+
+    def test_rejects_a_full_url(self):
+        """Passing a URL fails later as a broken callback, so fail now."""
+        from django.core.management.base import CommandError
+        with self.assertRaises(CommandError):
+            call_command("set_site_domain", "https://example.com/", stdout=io.StringIO())

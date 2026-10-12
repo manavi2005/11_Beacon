@@ -233,3 +233,18 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | 1.4 Protected API | `/api/whoami/` answers 401 JSON; `/api/skills/` and `/reports/candidates.json` redirect |
 | 1.5 Nav hidden before login | `{% if user.is_authenticated %}` in [`base.html`](../templates/base.html) |
 | 1.5 Nav visible after login | same block, plus the logout form |
+
+## Assignment 5, Part 2 - Google OAuth
+
+| Requirement | Where to look |
+|---|---|
+| 2.1 Install and configure allauth | `django-allauth==65.19.7` in [requirements.txt](../requirements.txt); apps, `SITE_ID`, middleware and backends in [base.py](../beacon_core/settings/base.py) |
+| 2.2 Google Cloud credentials | read from `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`; names documented in [.env.example](../.env.example) |
+| 2.3 Localhost redirect URI | `http://127.0.0.1:8000/accounts/google/login/callback/` |
+| 2.3 Production redirect URI | `https://<domain>/accounts/google/login/callback/` |
+| 2.4 Button on login page | [`registration/login.html`](../templates/registration/login.html) includes `_google_button.html` |
+| 2.4 Button on signup page | [`registration/signup.html`](../templates/registration/signup.html), same include |
+| Both backends kept | `ModelBackend` + allauth's, so username/password still works |
+| Degrades without credentials | [`context_processors.py`](../preparation/context_processors.py) hides the button |
+| Deploy helper | `python manage.py set_site_domain <host>` |
+| Screenshots | [login](screenshots/a5-part2-google-login-button.png), [signup](screenshots/a5-part2-google-signup-button.png) |

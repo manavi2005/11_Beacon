@@ -980,6 +980,94 @@ ASSIGNMENT 5 PART 1 - AUTHENTICATION: COMPLETION AND FIXES (Meet)
   will 500 exactly as it did locally.
 
 
+ASSIGNMENT 5 PART 2 - GOOGLE OAUTH (Meet)
+
+  django-allauth 65.19.7. Login and signup both carry a "Continue with
+  Google" button; username and password still work beside it.
+
+  THE DECISIONS
+
+  Credentials come from the environment, not a SocialApp row. allauth can
+  store the client id and secret in the database, and that is the usual
+  tutorial route. We do not, because this project commits db.sqlite3 for
+  A4: a secret in there is a secret in the repository. They live in .env,
+  which is git-ignored, and SOCIALACCOUNT_PROVIDERS reads them.
+
+  Both auth backends stay. ModelBackend keeps every username/password
+  account working, including the superuser; allauth's handles the social
+  login. Replacing rather than appending is the easy mistake and it locks
+  everyone out.
+
+  allauth.urls is mounted AFTER preparation.urls. allauth also defines
+  accounts/login/ and accounts/signup/, and Django matches in order, so
+  ours win and allauth keeps everything under accounts/google/. The other
+  order silently replaces Part 1's custom pages with allauth's, which would
+  quietly undo a graded requirement.
+
+  The button hides itself when there are no credentials. CI has none, and
+  neither does a teammate who has not set up .env. A button that sends you
+  to Google and brings you back to an error page is worse than no button,
+  so a context processor checks for both halves of the credential pair.
+  Both, not one: an id with no secret fails at the token exchange, which is
+  a much more confusing failure than the button being absent.
+
+  The button posts rather than links. allauth accepts GET for provider
+  login, but a GET-startable flow can be triggered by anything that makes
+  the browser fetch a URL.
+
+  A BUG THE TESTS CAUGHT
+
+  Adding the second backend broke signup, and it would have broken it in
+  production. signup_view did:
+
+      user = form.save()
+      login(request, user)
+
+  With one backend Django infers which one authenticated the user. With
+  two it cannot, because this user came from form.save() rather than
+  authenticate(), and login() raises:
+
+      ValueError: You have multiple authentication backends configured and
+      therefore must provide the `backend` argument...
+
+  Fixed by naming ModelBackend explicitly. Worth remembering: adding an
+  auth backend is not an additive change, it changes the behaviour of every
+  existing login() call that passes a user Django did not authenticate.
+
+  Note manage.py check did NOT catch the bad backend path earlier either
+  (allauth.account.auth instead of auth_backends). Backends are imported
+  lazily on first authentication, so the only thing that finds a typo there
+  is actually logging somebody in.
+
+  MIGRATIONS AND THE COMMITTED DATABASE
+
+  allauth adds account, socialaccount and sites tables. db.sqlite3 is
+  committed for A4, so the migrated database is committed too. Anyone
+  pulling this gets the tables; a deploy still needs migrate in case the
+  live database is not the committed one.
+
+  django.contrib.sites starts as example.com. allauth reads that row, so
+  leaving it wrong means callbacks built for a domain nobody owns. Added
+  set_site_domain as a management command rather than leaving it as a
+  click in the admin, so the deploy step is repeatable and writable down.
+
+  Tests: 13 added. The button on both pages, the POST form and its CSRF
+  token, the redirect to Google carrying the right client_id, scope and a
+  callback on our own domain, the secret never reaching the browser, the
+  callback route resolving, username/password still working, the button
+  hidden with no credentials and with half of them, and the deploy command
+  including its rejection of a full URL. Nothing contacts Google: the tests
+  assert on the redirect we build, not on what Google would answer.
+  109 total, all passing.
+
+  WHAT ONLY A HUMAN CAN DO
+
+  Creating the Google Cloud OAuth client, and registering both redirect
+  URIs against it. Everything in the code is ready for the two values; the
+  values themselves have to be made by hand and pasted into .env locally
+  and into the environment on PythonAnywhere.
+
+
 REMINDERS / TODO
 
   [ ] Assignment 4 asks for db.sqlite3 to be committed, but .gitignore still
