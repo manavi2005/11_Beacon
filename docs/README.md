@@ -269,6 +269,17 @@ opening slide. [`a5/video/script.md`](a5/video/script.md) is the timed
 narration and click path, about 4:45. Before recording, update production
 with [`a5/DEPLOY.md`](a5/DEPLOY.md).
 
+## Product features (final deployment stage)
+
+| Feature | Where to look |
+|---|---|
+| Start from scratch: onboarding, interests, flexible goals | `/welcome/`, [`preparation/onboarding.py`](../preparation/onboarding.py) |
+| Resume / LinkedIn PDF import | [`preparation/resume.py`](../preparation/resume.py), sample in [`a5/demo/`](a5/demo/) |
+| Tasks done on the platform, graded, ratings follow evidence | `/me/tasks/<id>/`, [`preparation/practice.py`](../preparation/practice.py) |
+| AI coach (free open model; any OpenAI-compatible API) | [`preparation/coach.py`](../preparation/coach.py), settings in `.env.example` |
+| Students see only their own data; staff see the cohort | [`preparation/visibility.py`](../preparation/visibility.py) |
+| Menu defined as data | [`preparation/navigation.py`](../preparation/navigation.py) |
+
 ## UI polish (final deployment stage)
 
 Lighthouse login and signup pages, a dashboard with readiness rings and

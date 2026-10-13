@@ -23,7 +23,6 @@ from functools import wraps
 from django.conf import settings
 from django.db.models import Avg, Count, Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.template import loader
@@ -1235,7 +1234,7 @@ def api_palette(request):
 #
 #   /welcome/                    onboarding: goal + self-rating per skill
 #   /me/                         your readiness, gaps and week-by-week plan
-#   /me/tasks/<pk>/toggle/       POST: mark one of your tasks done / not done
+#   /me/tasks/<pk>/              do a task: quiz or explain-it-back, graded
 #
 # The rules that turn ratings into a plan live in preparation/onboarding.py.
 # ---------------------------------------------------------------------------
@@ -1492,29 +1491,3 @@ def task_workspace(request, pk):
         "assessment": profile.assessments.filter(skill=task.skill).first() if task.skill else None,
     }
     return render(request, "preparation/task_workspace.html", context)
-
-
-@require_POST
-@login_required
-def toggle_task(request, pk):
-    """Mark one of *your own* tasks done, or back to to-do.
-
-    The queryset is filtered by owner before the lookup, so a guessed pk
-    for someone else's task is a 404, not a quiet edit.
-    """
-    task = get_object_or_404(
-        PlanTask.objects.select_related("plan__candidate"),
-        pk=pk, plan__candidate__user=request.user,
-    )
-    if task.status == PlanTask.Status.DONE:
-        task.status, task.completed_on = PlanTask.Status.TODO, None
-    else:
-        task.status, task.completed_on = PlanTask.Status.DONE, timezone.localdate()
-    task.save(update_fields=["status", "completed_on"])
-
-    if request.headers.get("Accept") == "application/json":
-        return JsonResponse({
-            "done": task.status == PlanTask.Status.DONE,
-            "completion_percent": task.plan.completion_percent,
-        })
-    return redirect(reverse("preparation:my_plan") + f"#task-{task.pk}")

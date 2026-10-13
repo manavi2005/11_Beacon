@@ -103,7 +103,7 @@ urlpatterns = [
     path("api/whoami/", views.api_whoami, name="api_whoami"),
     # Command palette entries (Ctrl/Cmd+K). Protected: it lists candidates.
     path("api/palette/", views.api_palette, name="api_palette"),
-    # Start-from-scratch journey: onboarding, your plan, ticking tasks off.
+    # Start-from-scratch journey: onboarding, your plan, doing tasks.
     path("welcome/", views.onboarding_view, name="onboarding"),
     path("welcome/resume/", views.resume_parse, name="resume_parse"),
     path("me/", views.my_plan, name="my_plan"),
@@ -111,5 +111,4 @@ urlpatterns = [
     path("me/coach/", views.coach_advice, name="coach_advice"),
     path("me/coach/ask/", views.coach_ask, name="coach_ask"),
     path("me/tasks/<int:pk>/", views.task_workspace, name="task_workspace"),
-    path("me/tasks/<int:pk>/toggle/", views.toggle_task, name="toggle_task"),
 ]

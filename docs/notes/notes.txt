@@ -1166,9 +1166,44 @@ UI polish: lighthouse auth pages, dashboard rings and gap bars, Cmd+K
 palette. No new dependencies; reduced-motion respected.
 
 
+Later the same week - from prototype to a product someone could use:
+
+  Onboarding: a new account (signup or first Google sign-in) goes to
+  /welcome/: interests, up to three roles or "General interview
+  readiness", an interview date or an open-ended 4-12 week plan, and a
+  self-rating per skill. A resume or LinkedIn "Save to PDF" can pre-fill
+  it (rule-based parser, read in memory, never stored). LinkedIn itself
+  has no public profile API and scraping breaks its terms, hence the PDF.
+
+  Evidence over self-report: tasks are done in a workspace (quiz for
+  technical skills, explain-it-back otherwise). A pass (60+) completes the
+  task, and each attempt moves the skill rating 40% toward the score shown.
+
+  AI coach: any OpenAI-compatible API from .env. With no key it uses
+  Pollinations' free anonymous tier (open-weight gpt-oss-20b); a free Groq
+  key gives Llama 3.3 70B. Rules fallback when slow, busy or malformed.
+  Never sends name, email or resume text. Fine for our ~5 users; a paid
+  API is a config swap later.
+
+  Privacy: students see only their own data (visibility.py); staff see
+  the cohort. Anonymous aggregates stay visible to all.
+
+  Nav: built from navigation.py; course labels ("FBV", "CBV") are hidden
+  behind "Show how pages are built" in the account menu.
+
+  Lesson: restoring db.sqlite3 after local testing also rolled back the
+  new migrations, and the next run 500'd with "no such column". Always run
+  migrate after switching databases - and on PythonAnywhere after a pull.
+
+
 REMINDERS / TODO
 
-  [ ] Redeploy on PythonAnywhere, including collectstatic (docs/a5/DEPLOY.md).
+  [ ] Redeploy on PythonAnywhere: pip install, migrate (0003, 0004),
+      collectstatic, reload. See docs/a5/DEPLOY.md.
+  [ ] Create a staff "coach" account on production for the cohort view.
+  [ ] Google OAuth: if sign-in says "app is in testing", add test users
+      under OAuth consent screen.
+  [ ] Optional: free Groq key in production .env for a faster AI coach.
   [ ] Fill in the three @illinois.edu emails in docs/a5/video/opening-slide.html.
   [ ] Google Sheets screenshot for alternative use 2 (needs the redeploy
       first, for ?format=csv).

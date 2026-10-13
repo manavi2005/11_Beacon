@@ -505,12 +505,15 @@ stale: `CandidateProfile.readiness_percent` (Screen 3's Overall Readiness),
 python manage.py test preparation
 ```
 
-41 tests, no fixtures needed. They load every page and assert the right
-template and data came back, check that `{% empty %}` fires, exercise both
-search forms, the aggregations and the chart endpoints, and guard against the
-multi-line `{# #}` comment bug that once printed template notes onto every
-page. Not an assignment requirement - they are there so a later change cannot
-quietly break an earlier deliverable.
+196 tests, no fixtures needed, and no network: every external call (the
+job boards, the LLM) is mocked, and CI runs with `LLM_ENABLED=false`. They
+load every page and assert the right template and data came back, check that
+`{% empty %}` fires, and exercise the search forms, aggregations, charts,
+public and protected APIs, authentication and Google OAuth, onboarding,
+resume parsing, the AI coach, graded task attempts and who-sees-what privacy.
+They also guard against the multi-line `{# #}` comment bug that once printed
+template notes onto every page. Not an assignment requirement - they are
+there so a later change cannot quietly break an earlier deliverable.
 
 ### Constraints
 

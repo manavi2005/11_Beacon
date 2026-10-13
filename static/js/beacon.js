@@ -9,7 +9,6 @@
      3. Command palette        Ctrl/Cmd+K, or any [data-palette-open]
      4. Interactive lighthouse beam follows the mouse
      5. Onboarding stepper     live sliders and projected readiness
-     6. Task checkboxes        tick off without a reload
      7. Menus                  one open at a time, close on outside click
      8. Developer notes        "Show how pages are built" switch
      9. AI coach               advice swap-in and the question box
@@ -531,39 +530,6 @@
   }
 
   /* -------------------------------------------------------------------------
-     6. Tick a task off without a page reload. The form still works on its
-        own; this only sends the same POST with fetch and updates in place.
-     ------------------------------------------------------------------------- */
-  function taskToggle(form) {
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var item = form.closest(".task");
-      var button = form.querySelector(".task__check");
-      fetch(form.action, {
-        method: "POST",
-        body: new FormData(form),
-        headers: { "Accept": "application/json" },
-        credentials: "same-origin",
-      })
-        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function (data) {
-          item.classList.toggle("task--done", data.done);
-          button.setAttribute("aria-checked", data.done ? "true" : "false");
-          var bar = document.querySelector("[data-plan-progress]");
-          var label = document.querySelector("[data-plan-percent]");
-          if (bar) bar.style.setProperty("--w", data.completion_percent + "%");
-          if (label) label.textContent = data.completion_percent;
-          var week = item.closest(".week");
-          if (week) {
-            week.classList.toggle("week--done",
-              week.querySelectorAll(".task").length === week.querySelectorAll(".task--done").length);
-          }
-        })
-        .catch(function () { form.submit(); });  // fall back to a normal POST
-    });
-  }
-
-  /* -------------------------------------------------------------------------
      7. Menus. They are <details>, so they work with no JavaScript; this only
         keeps one open at a time and closes it on an outside click or Esc.
      ------------------------------------------------------------------------- */
@@ -738,7 +704,6 @@
 
   document.querySelectorAll("[data-lighthouse]").forEach(lighthouse);
   document.querySelectorAll("[data-onboarding]").forEach(onboarding);
-  document.querySelectorAll("[data-task-toggle]").forEach(taskToggle);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", reveal);

@@ -1651,43 +1651,6 @@ class FromScratchJourneyTests(TestCase):
         self.assertContains(r, "Pick a date in the future")
         self.assertFalse(CandidateProfile.objects.filter(user__username="newbie").exists())
 
-    def test_ticking_a_task_updates_progress(self):
-        self._sign_up()
-        self._onboard()
-        task = PlanTask.objects.filter(plan__candidate__user__username="newbie").first()
-        url = reverse("preparation:toggle_task", args=[task.pk])
-
-        r = self.client.post(url, headers={"Accept": "application/json"})
-        self.assertTrue(r.json()["done"])
-        self.assertGreater(r.json()["completion_percent"], 0)
-        task.refresh_from_db()
-        self.assertEqual(task.status, PlanTask.Status.DONE)
-        self.assertIsNotNone(task.completed_on)
-
-        self.client.post(url)  # plain form post toggles it back, then redirects
-        task.refresh_from_db()
-        self.assertEqual(task.status, PlanTask.Status.TODO)
-
-    def test_cannot_tick_someone_elses_task(self):
-        self._sign_up("owner")
-        self._onboard()
-        task = PlanTask.objects.filter(plan__candidate__user__username="owner").first()
-        self.client.logout()
-        self._sign_up("intruder")
-        r = self.client.post(reverse("preparation:toggle_task", args=[task.pk]))
-        self.assertEqual(r.status_code, 404)
-        task.refresh_from_db()
-        self.assertEqual(task.status, PlanTask.Status.TODO)
-
-    def test_toggle_is_post_only_and_needs_login(self):
-        self._sign_up()
-        self._onboard()
-        task = PlanTask.objects.filter(plan__candidate__user__username="newbie").first()
-        url = reverse("preparation:toggle_task", args=[task.pk])
-        self.assertEqual(self.client.get(url).status_code, 405)
-        self.client.logout()
-        self.assertEqual(self.client.post(url).status_code, 302)
-
     def test_onboarding_and_my_plan_need_login(self):
         for name in ("preparation:onboarding", "preparation:my_plan"):
             with self.subTest(page=name):
