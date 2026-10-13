@@ -1204,9 +1204,9 @@ REMINDERS / TODO
   [ ] Google OAuth: if sign-in says "app is in testing", add test users
       under OAuth consent screen.
   [ ] Optional: free Groq key in production .env for a faster AI coach.
-  [ ] Fill in the three @illinois.edu emails in docs/a5/video/opening-slide.html.
+  [ ] Fill in the three @illinois.edu emails on the video's opening slide.
   [ ] Google Sheets screenshot for alternative use 2 (needs the redeploy
       first, for ?format=csv).
   [ ] Terminal screenshot of use1_python_report.py, and a notebook screenshot
       from Jupyter or VS Code.
-  [ ] Record the video from docs/a5/video/script.md.
+  [ ] Record the demo video (materials kept locally, not in the repo).
