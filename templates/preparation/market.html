@@ -13,7 +13,8 @@
 {% block heading %}Job market vs skill gaps{% endblock %}
 
 {% block content %}
-  <p class="tag">External API (Jobicy, falling back to Remotive) triangulated with Beacon's own data</p>
+  <p class="tag">Live job postings, compared with your cohort's skill gaps</p>
+  <p class="tag devnote">External API (Jobicy, falling back to Remotive) triangulated with Beacon's own data</p>
   <p>
     Enter a target role. Beacon pulls live remote job postings for it, counts
     how many mention each skill in the catalog, and sets that beside how far
@@ -40,7 +41,7 @@
       <li class="stat"><span class="stat__value">{{ report.skills|length }}</span>
           <span class="stat__label">Skills measured</span></li>
     </ul>
-    <p class="tag">Internal cohort: {{ report.cohort.description }}.
+    <p class="tag devnote">Internal cohort: {{ report.cohort.description }}.
       Same result as JSON:
       <a href="{% url 'preparation:api_market_demand' %}?q={{ query|urlencode }}"><code>/api/market-demand/?q={{ query }}</code></a></p>
 

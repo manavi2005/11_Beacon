@@ -111,6 +111,8 @@ TEMPLATES = [
                 # Tells the templates whether Google credentials exist on
                 # this machine, so the button is only shown when it works.
                 "preparation.context_processors.google_oauth",
+                # The site menu, built from preparation/navigation.py.
+                "preparation.navigation.navigation",
             ],
         },
     },

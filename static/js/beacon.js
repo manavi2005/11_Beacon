@@ -10,6 +10,8 @@
      4. Interactive lighthouse beam follows the mouse
      5. Onboarding stepper     live sliders and projected readiness
      6. Task checkboxes        tick off without a reload
+     7. Menus                  one open at a time, close on outside click
+     8. Developer notes        "Show how pages are built" switch
 
    Motion is skipped entirely for readers who ask their OS for less of it.
    =========================================================================== */
@@ -555,6 +557,36 @@
         .catch(function () { form.submit(); });  // fall back to a normal POST
     });
   }
+
+  /* -------------------------------------------------------------------------
+     7. Menus. They are <details>, so they work with no JavaScript; this only
+        keeps one open at a time and closes it on an outside click or Esc.
+     ------------------------------------------------------------------------- */
+  var menus = document.querySelectorAll(".nav details.menu");
+  menus.forEach(function (menu) {
+    menu.addEventListener("toggle", function () {
+      if (menu.open) menus.forEach(function (m) { if (m !== menu) m.open = false; });
+    });
+  });
+  document.addEventListener("click", function (e) {
+    menus.forEach(function (m) { if (m.open && !m.contains(e.target)) m.open = false; });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") menus.forEach(function (m) { m.open = false; });
+  });
+
+  /* -------------------------------------------------------------------------
+     8. "Show how pages are built": reveals the .devnote course notes.
+     ------------------------------------------------------------------------- */
+  document.querySelectorAll("[data-dev-toggle]").forEach(function (btn) {
+    var root = document.documentElement;
+    btn.setAttribute("aria-pressed", root.classList.contains("show-dev") ? "true" : "false");
+    btn.addEventListener("click", function () {
+      var on = root.classList.toggle("show-dev");
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      try { localStorage.setItem("beacon-dev-notes", on ? "1" : "0"); } catch (e) { /* private mode */ }
+    });
+  });
 
   document.querySelectorAll("[data-lighthouse]").forEach(lighthouse);
   document.querySelectorAll("[data-onboarding]").forEach(onboarding);

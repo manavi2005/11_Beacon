@@ -208,6 +208,94 @@ body {
   outline-offset: 2px;
 }
 
+/* Data-driven menu (preparation/navigation.py). A row of top-level items
+   on the left, the palette button and account menu on the right. Groups
+   are <details> dropdowns. */
+.nav { align-items: center; justify-content: space-between; position: relative; z-index: 20; }
+.nav__list { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1);
+  margin: 0; padding: 0; list-style: none; }
+.nav__right { display: flex; align-items: center; gap: var(--s2); }
+
+.nav .nav__link, .nav summary.nav__link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: .4rem .8rem; font-size: .9rem; font-weight: 500;
+  color: rgba(255, 255, 255, .88); border-radius: 99px; cursor: pointer;
+  list-style: none; user-select: none;
+}
+.nav summary.nav__link::-webkit-details-marker { display: none; }
+.nav .menu > summary.nav__link::after {
+  content: ""; width: 6px; height: 6px; margin-left: 2px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg); opacity: .7; transition: transform .15s ease;
+}
+.nav .menu[open] > summary.nav__link::after { transform: translateY(1px) rotate(-135deg); }
+.nav .nav__link:hover, .nav summary.nav__link:hover, .nav .menu[open] > summary { background: rgba(255, 255, 255, .14); color: #fff; }
+.nav .nav__link.is-active, .nav .menu.is-active > summary.nav__link {
+  color: #fff; background: rgba(255, 255, 255, .16); box-shadow: inset 0 -2px 0 #ffd27a;
+}
+
+.menu { position: relative; }
+.menu__panel {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 50;
+  min-width: 250px; margin: 0; padding: 6px; list-style: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(10, 23, 48, .18);
+  animation: palette-in .14s cubic-bezier(.2, .8, .2, 1);
+}
+.menu__panel--right { left: auto; right: 0; min-width: 210px; }
+/* Undo the bar's white link style inside the white panel. */
+.nav .menu__panel a.menu__link {
+  display: flex; flex-direction: column; gap: 1px; padding: .5rem .7rem;
+  color: var(--ink); border-radius: 8px; font-size: .9rem;
+}
+.nav .menu__panel a.menu__link:hover, .nav .menu__panel a.menu__link:focus-visible { background: var(--navy-100); color: var(--navy); }
+.nav .menu__panel a.menu__link.is-active { background: var(--orange-50); color: var(--orange-700); }
+.menu__label { font-weight: 600; }
+.menu__hint { font-size: .76rem; color: var(--ink-muted); font-weight: 400; }
+.menu__divider { height: 1px; margin: 4px 6px; background: var(--line); }
+.nav .menu__panel .nav-logout { display: block; width: 100%; }
+.nav .menu__panel .nav-logout__button {
+  display: block; width: 100%; padding: .5rem .7rem; text-align: left;
+  font-size: .9rem; font-weight: 600; color: var(--orange-700); border-radius: 8px;
+}
+.nav .menu__panel .nav-logout__button:hover { background: var(--orange-50); color: var(--orange-700); }
+
+.avatar { display: inline-grid; place-items: center; width: 26px; height: 26px;
+  font-size: .8rem; font-weight: 700; color: var(--navy); background: #ffd27a; border-radius: 50%; }
+.nav__username { max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .nav { padding: var(--s2) var(--s3); }
+  .nav__username { display: none; }
+  .menu__panel { position: fixed; left: var(--s3); right: var(--s3); top: auto; min-width: 0; }
+}
+
+/* Developer notes: course explanations of how each page is built. Hidden
+   in the product; "Show how pages are built" in the account menu reveals
+   them, tagged so they read as notes rather than content. */
+/* html:not(.show-dev) outranks .tag (which sets its own display and comes
+   later in this file), so a note that is also a .tag stays hidden. */
+html:not(.show-dev) .devnote { display: none; }
+.show-dev .devnote {
+  display: block; position: relative; padding: .45rem .7rem .45rem 3.4rem;
+  color: #3d4a5c; background: #f1f4fa; border-left: 3px solid var(--navy-700); border-radius: var(--radius-sm);
+}
+.show-dev .devnote::before {
+  content: "DEV"; position: absolute; left: .6rem; top: .5rem; padding: 0 5px;
+  font-size: .62rem; font-weight: 700; letter-spacing: .06em; color: #fff; background: var(--navy-700); border-radius: 4px;
+}
+.nav .menu__toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3); width: 100%;
+  padding: .5rem .7rem; font-size: .9rem; font-weight: 400; text-align: left;
+  color: var(--ink); background: none; border-radius: 8px;
+}
+.nav .menu__toggle:hover { background: var(--navy-100); color: var(--navy); }
+.switch { position: relative; flex: 0 0 auto; width: 30px; height: 17px; background: #c9d1dd; border-radius: 99px; transition: background-color .15s ease; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px;
+  background: #fff; border-radius: 50%; transition: transform .15s ease; }
+.show-dev .switch { background: var(--ok); }
+.show-dev .switch::after { transform: translateX(13px); }
+
 /* ---------------------------------------------------------------------------
    5. Content surface and typography
    --------------------------------------------------------------------------- */
@@ -1149,7 +1237,6 @@ html.palette-open { overflow: hidden; }
   font-weight: 600; font-size: .9rem; text-decoration: none; }
 .hero-strip__action--primary { color: #fff; background: var(--orange); box-shadow: 0 6px 18px rgba(232, 74, 39, .35); }
 .hero-strip__action--primary:hover { color: #fff; background: var(--orange-700); }
-.nav a.nav-mine { color: #ffd27a; }
 
 /* ---------------------------------------------------------------------------
    Onboarding

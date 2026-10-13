@@ -9,8 +9,8 @@ that changes between them is view_label / explainer.
 {% block heading %}Skill catalog{% endblock %}
 
 {% block content %}
-  <p class="tag">{{ view_label }}</p>
-  <p>{{ explainer }}</p>
+  <p class="tag devnote">{{ view_label }}</p>
+  <p class="devnote">{{ explainer }}</p>
 
   <form method="get">
     <input type="text" name="q" value="{{ query }}" placeholder="Filter by skill name">

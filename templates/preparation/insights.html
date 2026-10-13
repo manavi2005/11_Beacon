@@ -8,7 +8,7 @@
 {% block heading %}Insights{% endblock %}
 
 {% block content %}
-  <p class="tag">Every number on this page is computed by the database.
+  <p class="tag devnote">Every number on this page is computed by the database.
   None of it is a Python loop over a queryset.</p>
 
   <h2>Totals</h2>
@@ -28,7 +28,7 @@
   </ul>
 
   <h2>Skills by category</h2>
-  <p class="tag">Grouped with <code>values("category").annotate(Count("id"))</code>
+  <p class="tag devnote">Grouped with <code>values("category").annotate(Count("id"))</code>
   - one row per category, not one per skill.</p>
   <div class="table-scroll">
   <table>
@@ -42,7 +42,7 @@
   </div>
 
   <h2>Plan progress</h2>
-  <p class="tag">Each plan carries a filtered count: total tasks, and how many
+  <p class="tag devnote">Each plan carries a filtered count: total tasks, and how many
   of those tasks have status DONE.</p>
   <div class="table-scroll">
   <table>
@@ -82,7 +82,7 @@
   </div>
 
   <h2>Tasks by target role</h2>
-  <p class="tag">Relationship spanning:
+  <p class="tag devnote">Relationship spanning:
   <code>PlanTask.objects.filter(plan__candidate__target_role__icontains=...)</code>
   reaches across three tables in one query.</p>
 

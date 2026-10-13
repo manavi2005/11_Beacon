@@ -9,7 +9,7 @@
 {% block heading %}Candidate lookup{% endblock %}
 
 {% block content %}
-  <p class="tag">Submitted with <strong>POST</strong>. The search term travels in
+  <p class="tag devnote">Submitted with <strong>POST</strong>. The search term travels in
   the request body, so it never lands in the address bar, the browser history,
   or a link somebody might paste into a group chat.</p>
 
@@ -54,7 +54,7 @@
        repeat the search on its own.</p>
   {% endif %}
 
-  <p class="tag">Compare with the
+  <p class="tag devnote">Compare with the
     <a href="{% url 'preparation:skill_search' %}">skill catalog search</a>,
     which uses GET for the opposite reason.</p>
 {% endblock %}

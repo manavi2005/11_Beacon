@@ -113,7 +113,7 @@ class TemplateBehaviourTests(TestCase):
     def test_every_page_extends_base_and_shows_the_nav(self):
         response = self.client.get(reverse("preparation:skill_catalog_render"))
         self.assertContains(response, "Team Career Coaches (Group 11)")
-        self.assertContains(response, "Tasks (generic CBV)")
+        self.assertContains(response, f'href="{reverse("preparation:task_list")}"')
 
     def test_empty_branch_fires_when_the_filter_matches_nothing(self):
         Skill.objects.create(name="Python fundamentals", category=Skill.Category.TECHNICAL)
@@ -1851,3 +1851,54 @@ class ResumeImportTests(TestCase):
         r = self.client.get(reverse("preparation:onboarding"))
         self.assertContains(r, "data-resume-import")
         self.assertContains(r, "Save to PDF")
+
+
+class ProductNavigationTests(TestCase):
+    """The menu is data (navigation.py): clean labels, active state, staff-only."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.staff = User.objects.create_user("coach", password="test-only-pw", is_staff=True)
+
+    def _nav(self, url="/"):
+        body = self.client.get(url).content.decode()
+        return body.split("<nav")[1].split("</nav>")[0]
+
+    def test_no_course_jargon_in_the_menu(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        nav = self._nav()
+        for jargon in ("FBV", "CBV", "HttpResponse", "render()", "generic"):
+            self.assertNotIn(jargon, nav)
+
+    def test_every_entry_is_a_reversed_url_name(self):
+        from .navigation import ACCOUNT_MENU, NAV
+        names = [c["name"] for i in NAV for c in i.get("children", [i])] + \
+                [i["name"] for i in ACCOUNT_MENU]
+        for name in names:
+            with self.subTest(name=name):
+                reverse(name)   # raises if a route was renamed
+
+    def test_current_page_and_its_group_are_marked_active(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        nav = self._nav(reverse("preparation:insights"))
+        self.assertRegex(nav, rf'href="{reverse("preparation:insights")}"\s+aria-current="page"')
+        self.assertIn('class="menu is-active"', nav)
+
+    def test_detail_pages_highlight_their_section(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        nav = self._nav(self.sql.get_absolute_url())
+        self.assertIn('aria-current="page"', nav)
+
+    def test_admin_only_for_staff(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.assertNotIn(reverse("admin:index"), self._nav())
+        self.client.logout()
+        self.assertTrue(self.client.login(username="coach", password="test-only-pw"))
+        self.assertIn(reverse("admin:index"), self._nav())
+
+    def test_course_notes_are_hidden_behind_the_switch(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        r = self.client.get(reverse("preparation:task_list"))
+        self.assertContains(r, 'class="tag devnote"')
+        self.assertContains(r, "data-dev-toggle")

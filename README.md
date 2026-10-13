@@ -911,6 +911,14 @@ back to Remotive, which is. The response says which source answered.
 - **Resume and LinkedIn PDF import** pre-fills onboarding from a resume or
   LinkedIn's *Save to PDF* export. It is rule-based, read in memory and
   never stored.
+- **Product navigation.** The menu is defined once as data in
+  `preparation/navigation.py`: grouped dropdowns (Coaching, Skills,
+  Insights), the current page highlighted, and Admin shown to staff only.
+  Every entry is a URL *name* reversed at request time, so no path is
+  hard-coded (the Assignment 3 rule still holds, enforced by a test). The
+  course explanations on each page ("View 4 - CBV, generic ListView", ORM
+  notes) are kept but hidden. *Account menu > Show how pages are built*
+  reveals them for grading.
 
 All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
 dependencies, and it respects `prefers-reduced-motion`.
