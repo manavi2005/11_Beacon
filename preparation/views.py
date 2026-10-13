@@ -17,6 +17,7 @@ exercise, and it is also what Section 3 means by "template reuse".
 """
 
 import csv
+import json
 from functools import wraps
 
 from django.conf import settings
@@ -51,6 +52,7 @@ from .models import (
 from .forms import OnboardingForm, PlanTaskForm
 from . import onboarding as onboarding_rules
 from . import resume as resume_parser
+from . import coach
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -1347,7 +1349,45 @@ def my_plan(request):
         "readiness": profile.readiness_percent,
         "days_left": days_left,
         "welcome": request.GET.get("welcome") == "1",
+        # Rendered straight away from the rules engine; beacon.js then asks
+        # /me/coach/ for the AI version and swaps it in when it arrives.
+        "advice": coach.rule_advice(coach.build_context(profile)),
+        "coach_engine": coach.engine_label(),
+        "coach_ai": coach.llm_enabled(),
     })
+
+
+@api_login_required
+def coach_advice(request):
+    """/me/coach/ - the AI coach's recommendations for the signed-in user.
+
+    Fetched by the My plan page after it loads, so a slow model never holds
+    up the page; the page renders the rule-based advice first and swaps this
+    in. ?refresh=1 skips the six-hour cache.
+    """
+    profile = CandidateProfile.objects.filter(user=request.user).first()
+    if profile is None:
+        return JsonResponse({"error": "Finish onboarding first."}, status=404)
+    return JsonResponse(coach.get_advice(profile, refresh=request.GET.get("refresh") == "1"))
+
+
+@require_POST
+def coach_ask(request):
+    """/me/coach/ask/ - one question to the coach, answered with your context.
+
+    POST {"question": "..."}; JSON in, JSON out. 401 when signed out, like
+    the other protected JSON endpoints.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    profile = CandidateProfile.objects.filter(user=request.user).first()
+    if profile is None:
+        return JsonResponse({"error": "Finish onboarding first."}, status=404)
+    try:
+        question = json.loads(request.body or b"{}").get("question", "")
+    except (ValueError, AttributeError):
+        question = request.POST.get("question", "")
+    return JsonResponse(coach.ask(profile, question))
 
 
 @require_POST

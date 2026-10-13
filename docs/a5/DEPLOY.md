@@ -103,6 +103,24 @@ Jobicy is not on it, so in production the job-market feature falls back to
 Remotive, which is. Locally both work, and Jobicy is tried first. The page
 and the JSON both say which source answered.
 
+## Turn on the AI coach (optional, free)
+
+Without a key the coach runs on Beacon's built-in rules, so nothing breaks.
+To switch on the LLM:
+
+1. Create a free key at <https://console.groq.com/keys> (Groq's free tier
+   serves open-weight models such as Meta's Llama 3.3 70B).
+2. Add it to `.env` on PythonAnywhere: `LLM_API_KEY=gsk_...`
+3. **Web tab > Reload.**
+
+`api.groq.com` is on PythonAnywhere's free-tier allowlist, so this works on
+the deployed site. Check it: on **My plan**, the coach's badge should read
+*AI · llama-3.3-70b-versatile via Groq*, not *Beacon rules*.
+
+To move to another provider later (Hugging Face, OpenRouter, Together, or a
+self-hosted model for many users), change `LLM_BASE_URL`, `LLM_MODEL` and
+`LLM_API_KEY`. `.env.example` lists ready-made values. No code changes.
+
 ## Google OAuth in production
 
 Nothing changes in this release. For reference, the Google client must keep

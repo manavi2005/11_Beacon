@@ -208,6 +208,19 @@ ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 
+# ---------------------------------------------------------------------------
+# AI coach (preparation/coach.py)
+# ---------------------------------------------------------------------------
+# Any OpenAI-compatible chat API. The default is Groq's free tier serving
+# Meta's open-weight Llama 3.3 70B: free, no local model, and on
+# PythonAnywhere's outbound allowlist. To switch provider, change these three
+# values in .env - no code changes. With no key, the coach uses its built-in
+# rules, so the site, the tests and CI all run without an AI account.
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+
 # A first-time Google sign-in creates an account with no profile, exactly
 # like the signup form. Send it to onboarding too, instead of the cohort
 # dashboard. Returning users still land on LOGIN_REDIRECT_URL.

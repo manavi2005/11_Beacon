@@ -20,6 +20,9 @@ Not Disturb.
       Otherwise you land on your existing account, not onboarding. For a
       guaranteed fresh start, use the username signup form.
 - [ ] Emails are filled in on `opening-slide.html`.
+- [ ] `LLM_API_KEY` is set on the server, so the coach shows *AI · ...*, not
+      *Beacon rules* (see `../DEPLOY.md`). Without it the demo still works,
+      but skip the "open-source model" line.
 - [ ] The Vega-Lite spec is ready to paste, and a terminal is open in
       `docs/a5/alt_uses/`.
 - [ ] Do one full rehearsal on production (see `../DEPLOY.md`). Delete the
@@ -73,7 +76,7 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | **Next.** Point at a *from resume* tag, then drag STAR storytelling down to 30. The ring moves. | "Her resume gave her a head start on these sliders, but a resume shows you used a skill, not how good you are. So she adjusts honestly, and the ring projects her readiness live." |
 | **Light my beacon.** | "Submit, and Beacon builds her profile and her plan." |
 
-## 2:25 to 3:05 · Her plan (narrator B)
+## 2:25 to 3:25 · Her plan and her AI coach (narrator B)
 
 | Do | Say |
 |---|---|
@@ -81,8 +84,10 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | Point at **Your widest gaps**. | "Her widest gaps are the ones her resume couldn't show, like storytelling and product sense, so that's where the plan starts." |
 | Scroll to **Week by week**. Read one task's *why* line. | "Every task says why it's there: what she rated herself, and what the tougher of her roles expects." |
 | **Tick the two week-1 tasks.** The progress bar moves and week 1 turns green. | "As she practises, she ticks tasks off and her progress updates instantly." |
+| Scroll up to **Your coach**. Point at the badge (*AI · Llama 3.3 70B via Groq*). | "And because Beacon is an AI coach: an open-source model reads her scores and plan, never her name, and tells her what to focus on this week." |
+| Click **Answer it and get feedback**, type a 2-line answer, and press **Ask**. | "She can practise right here. The coach gives feedback on her answer, including whether it follows the STAR structure." |
 
-## 3:05 to 3:35 · The coach's view (narrator C)
+## 3:25 to 3:45 · The coach's view (narrator C)
 
 | Do | Say |
 |---|---|
@@ -90,7 +95,7 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | Press **⌘K**, type `maya`, Enter. | "And can jump to any student, skill or page in one shortcut." |
 | Open **Job market**, search `analyst`. | "Beacon also pulls live job postings from a public jobs API, and ranks skills by how often employers ask for them times how far our students are behind." |
 
-## 3:35 to 4:30 · APIs and data (narrator C)
+## 3:45 to 4:35 · APIs and data (narrator C)
 
 | Do | Say |
 |---|---|
@@ -101,7 +106,7 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | The Google Sheet with `IMPORTDATA`. | "Imported live into Google Sheets with one formula." |
 | The notebook chart. | "And analysed in a notebook. That found three skills with wide gaps but few practice tasks, which is our next content to write." |
 
-## 4:30 to 4:45 · Close (narrator C)
+## 4:35 to 4:50 · Close (narrator C)
 
 | Do | Say |
 |---|---|
@@ -110,5 +115,6 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 ---
 
 **If you run long:** trim the coach's view first (skip the job market, about
-15 s), then the Sheets and notebook lines (about 10 s). Keep the
+15 s), then the Sheets and notebook lines (about 10 s). The cohort
+dashboard can go entirely if needed; the AI coach should stay. Keep the
 from-scratch story intact; it is the heart of the demo.

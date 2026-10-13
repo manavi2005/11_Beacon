@@ -1902,3 +1902,169 @@ class ProductNavigationTests(TestCase):
         r = self.client.get(reverse("preparation:task_list"))
         self.assertContains(r, 'class="tag devnote"')
         self.assertContains(r, "data-dev-toggle")
+
+
+LLM_ON = dict(LLM_BASE_URL="https://llm.example/v1", LLM_MODEL="open-model",
+              LLM_API_KEY="test-key", LLM_PROVIDER="TestProvider")
+LLM_OFF = dict(LLM_API_KEY="")
+
+
+def _llm_reply(content, status=200):
+    response = mock.Mock(status_code=status)
+    response.json.return_value = {"choices": [{"message": {"content": content}}]}
+    if status >= 400:
+        response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    else:
+        response.raise_for_status.return_value = None
+    return response
+
+
+GOOD_ADVICE = json.dumps({
+    "headline": "Spend this week on SQL.",
+    "focus_skill": "SQL & relational modeling",
+    "why": "You rated it 40 against 85.",
+    "actions": ["Do 5 JOIN drills", "Model one schema", "Time yourself on 2 queries"],
+    "practice_question": "Return each customer's latest order.",
+    "encouragement": "You have 4 weeks - plenty of time.",
+})
+
+
+class CoachTests(TestCase):
+    """The AI coach: rules by default, any OpenAI-compatible LLM when keyed."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.user = User.objects.create_user("coached", first_name="Priya",
+                                            email="priya@example.edu", password="test-only-pw")
+        from .onboarding import complete_onboarding
+        complete_onboarding(
+            cls.user, target_roles=["Data Analyst"], target_company="", experience_level="NEW",
+            target_interview_date=None, prep_weeks="4", primary_concern="TECH",
+            ratings={cls.sql.pk: 40, cls.python.pk: 70, cls.pitch.pk: 60},
+            interests=["data"], about="Priya Sharma, 555-0100, my resume text",
+        )
+
+    def setUp(self):
+        cache.clear()
+        self.assertTrue(self.client.login(username="coached", password="test-only-pw"))
+
+    @override_settings(**LLM_OFF)
+    def test_without_a_key_the_rules_coach_answers(self):
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "rules")
+        self.assertIn("SQL & relational modeling", data["advice"]["headline"])
+        self.assertIn("not configured", data["engine"])
+        self.assertEqual(len(data["advice"]["actions"]), 3)
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_with_a_key_the_llm_answers_through_the_openai_api(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "llm")
+        self.assertEqual(data["advice"]["headline"], "Spend this week on SQL.")
+        self.assertIn("open-model via TestProvider", data["engine"])
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://llm.example/v1/chat/completions")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
+        self.assertEqual(kwargs["json"]["model"], "open-model")
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_nothing_identifying_is_sent_to_the_model(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        self.client.get(reverse("preparation:coach_advice"))
+        sent = json.dumps(post.call_args.kwargs["json"])
+        for private in ("coached", "Priya", "priya@example.edu", "555-0100", "resume text"):
+            self.assertNotIn(private, sent)
+        self.assertIn("SQL & relational modeling", sent)   # the scores do go
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_bad_model_output_falls_back_to_rules(self, post):
+        for reply in (_llm_reply("not json at all"),
+                      _llm_reply(json.dumps({"headline": "only this"})),
+                      _llm_reply("", status=503)):
+            with self.subTest(reply=reply):
+                cache.clear()
+                post.return_value = reply
+                data = self.client.get(reverse("preparation:coach_advice")).json()
+                self.assertEqual(data["source"], "rules")
+                self.assertIn("rule-based advice instead", data["note"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post", side_effect=requests.Timeout())
+    def test_slow_model_falls_back_to_rules(self, post):
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "rules")
+        self.assertIn("too long", data["note"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_advice_is_cached_until_refresh(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        self.client.get(reverse("preparation:coach_advice"))
+        self.client.get(reverse("preparation:coach_advice"))
+        self.assertEqual(post.call_count, 1)
+        self.client.get(reverse("preparation:coach_advice"), {"refresh": "1"})
+        self.assertEqual(post.call_count, 2)
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_model_cannot_invent_a_focus_skill(self, post):
+        bad = json.loads(GOOD_ADVICE); bad["focus_skill"] = "Juggling"
+        post.return_value = _llm_reply(json.dumps(bad))
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertIsNone(data["advice"]["focus_skill"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_ask_answers_with_context(self, post):
+        post.return_value = _llm_reply("Do 20 minutes of JOIN practice.")
+        r = self.client.post(reverse("preparation:coach_ask"),
+                             data=json.dumps({"question": "What now?"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["answer"], "Do 20 minutes of JOIN practice.")
+        user_msg = post.call_args.kwargs["json"]["messages"][1]["content"]
+        self.assertIn("What now?", user_msg)
+        self.assertIn("SQL & relational modeling", user_msg)
+
+    @override_settings(**LLM_OFF)
+    def test_ask_without_a_key_explains_and_uses_the_plan(self):
+        r = self.client.post(reverse("preparation:coach_ask"),
+                             data=json.dumps({"question": "What now?"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["source"], "rules")
+        self.assertIn("isn't switched on", r.json()["answer"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_questions_are_rate_limited(self, post):
+        post.return_value = _llm_reply("ok")
+        from .coach import ASKS_PER_HOUR
+        for _ in range(ASKS_PER_HOUR):
+            self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        r = self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["source"], "limit")
+        self.assertEqual(post.call_count, ASKS_PER_HOUR)
+
+    def test_endpoints_are_protected(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("preparation:coach_advice")).status_code, 401)
+        self.assertEqual(self.client.post(reverse("preparation:coach_ask")).status_code, 401)
+
+    def test_user_without_a_profile_is_told_to_onboard(self):
+        self.client.logout()
+        User.objects.create_user("fresh", password="test-only-pw")
+        self.assertTrue(self.client.login(username="fresh", password="test-only-pw"))
+        self.assertEqual(self.client.get(reverse("preparation:coach_advice")).status_code, 404)
+
+    @override_settings(**LLM_OFF)
+    def test_my_plan_renders_the_coach_panel(self):
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, "data-coach")
+        self.assertContains(r, "Your coach")
+        self.assertContains(r, "Never your name, email or resume")

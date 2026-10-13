@@ -1467,6 +1467,56 @@ html.palette-open { overflow: hidden; }
 }
 
 /* ---------------------------------------------------------------------------
+   AI coach (My plan)
+   --------------------------------------------------------------------------- */
+.coach {
+  margin: 0 0 var(--s5); padding: var(--s4) var(--s5) var(--s5);
+  background: linear-gradient(135deg, #fffaf3 0%, #fff 45%, #f4f7fd 100%);
+  border: 1px solid #f0dcc8; border-radius: 14px; box-shadow: var(--shadow);
+}
+.coach__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.coach__title { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.coach__title h2 { margin: 0; }
+.coach__spark { display: inline-grid; place-items: center; width: 30px; height: 30px; font-size: 1rem;
+  color: #fff; background: linear-gradient(135deg, var(--orange), #ffb347); border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(232, 74, 39, .12); }
+.coach__engine { padding: 1px 9px; font-size: .72rem; font-weight: 600; color: var(--ink-muted);
+  background: var(--surface-sunken); border: 1px solid var(--line); border-radius: 999px; }
+.coach__engine.is-ai { color: #5b3cc4; background: #f1edff; border-color: #ddd3ff; }
+.coach__refresh { padding: .35rem .9rem; font-size: .8rem; color: var(--navy); background: var(--navy-100); }
+.coach__refresh:hover { background: #d9e1ee; }
+.coach__body { margin-top: var(--s3); transition: opacity .2s ease; }
+.coach__body.is-thinking { opacity: .45; }
+.coach__headline { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--navy); }
+.coach__why { margin: var(--s1) 0 var(--s3); color: var(--ink); }
+.coach__actions { margin: 0 0 var(--s3); padding-left: 1.3em; }
+.coach__actions li { margin-bottom: var(--s1); }
+.coach__practice { padding: var(--s3) var(--s4); background: var(--surface); border: 1px dashed #e7b9a6; border-radius: var(--radius); }
+.coach__label { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--orange-700); }
+.coach__question { margin: var(--s1) 0 var(--s2); font-style: italic; }
+.coach__practice-btn { padding: .35rem .9rem; font-size: .82rem; background: var(--orange); }
+.coach__practice-btn:hover { background: var(--orange-700); }
+.coach__cheer { margin: var(--s3) 0 0; color: var(--ok); font-weight: 600; }
+.coach__note { margin: var(--s2) 0 0; font-size: .8rem; color: var(--warn); }
+.coach__chat { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.coach__thread { display: flex; flex-direction: column; gap: var(--s2); max-height: 340px; margin: 0 0 var(--s3);
+  padding: 0; overflow-y: auto; list-style: none; }
+.coach__thread:empty { display: none; }
+.coach__msg { max-width: 85%; padding: .55rem .8rem; font-size: .9rem; white-space: pre-wrap; border-radius: 12px; }
+.coach__msg--me { align-self: flex-end; color: #fff; background: var(--navy); border-bottom-right-radius: 4px; }
+.coach__msg--coach { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.coach__msg.is-typing { color: var(--ink-muted); animation: twinkle 1.2s ease-in-out infinite; }
+.coach__ask { display: flex; gap: var(--s2); margin: 0; padding: 0; background: none; border: 0; align-items: stretch; }
+.coach__ask textarea { flex: 1; padding: .6rem .75rem; font: inherit; font-size: .92rem; resize: vertical;
+  border: 1px solid #ccd3dd; border-radius: var(--radius-sm); }
+.coach__ask textarea:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(232, 74, 39, .15); }
+.coach__chips { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+.coach__chips button { padding: .3rem .75rem; font-size: .78rem; font-weight: 500; color: var(--navy);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+.coach__chips button:hover { border-color: var(--orange); background: var(--orange-50); }
+.coach__privacy { margin: var(--s3) 0 0; font-size: .74rem; color: var(--ink-faint); }
+
+/* ---------------------------------------------------------------------------
    Reduced motion: keep every final state, drop every movement.
    --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
@@ -1480,6 +1530,7 @@ html.palette-open { overflow: hidden; }
   .plan-hero--welcome .plan-hero__lede { animation: none; }
   .ring__value,
   .gapbar__fill { transition: none; }
+  .coach__msg.is-typing { animation: none; }
   .js:not(.is-ready) .ring__value { stroke-dashoffset: calc(226.19 * (1 - var(--p) / 100)); }
   .js:not(.is-ready) .gapbar__fill { width: var(--w); }
 }

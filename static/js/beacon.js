@@ -12,6 +12,7 @@
      6. Task checkboxes        tick off without a reload
      7. Menus                  one open at a time, close on outside click
      8. Developer notes        "Show how pages are built" switch
+     9. AI coach               advice swap-in and the question box
 
    Motion is skipped entirely for readers who ask their OS for less of it.
    =========================================================================== */
@@ -587,6 +588,99 @@
       try { localStorage.setItem("beacon-dev-notes", on ? "1" : "0"); } catch (e) { /* private mode */ }
     });
   });
+
+  /* -------------------------------------------------------------------------
+     9. AI coach on My plan. The panel is rendered with the rule-based advice;
+        this fetches the AI version and swaps it in, and runs the question
+        box. All model text goes through textContent, never innerHTML.
+     ------------------------------------------------------------------------- */
+  function coachPanel(panel) {
+    var ai = panel.getAttribute("data-ai") === "1";
+    var body = panel.querySelector("[data-coach-body]");
+    var engine = panel.querySelector("[data-coach-engine]");
+    var note = panel.querySelector("[data-coach-note]");
+    var thread = panel.querySelector("[data-coach-thread]");
+    var form = panel.querySelector("[data-coach-ask]");
+    var input = panel.querySelector("[data-coach-input]");
+    var csrf = form.querySelector("[name=csrfmiddlewaretoken]").value;
+
+    function render(result) {
+      var a = result.advice;
+      ["headline", "why", "practice_question", "encouragement"].forEach(function (k) {
+        var el = panel.querySelector('[data-coach-field="' + k + '"]');
+        if (el && a[k]) el.textContent = a[k];
+      });
+      var list = panel.querySelector("[data-coach-actions]");
+      list.innerHTML = "";
+      (a.actions || []).forEach(function (t) {
+        var li = document.createElement("li");
+        li.textContent = t;
+        list.appendChild(li);
+      });
+      engine.textContent = result.engine;
+      engine.classList.toggle("is-ai", result.source === "llm");
+      note.hidden = !result.note;
+      note.textContent = result.note || "";
+    }
+
+    function load(refresh) {
+      if (!ai) return;
+      body.classList.add("is-thinking");
+      engine.textContent = "Thinking…";
+      fetch(panel.getAttribute("data-advice-url") + (refresh ? "?refresh=1" : ""),
+            { credentials: "same-origin", headers: { "Accept": "application/json" } })
+        .then(function (r) { return r.json(); })
+        .then(render)
+        .catch(function () { engine.textContent = "Beacon rules (AI unavailable)"; })
+        .then(function () { body.classList.remove("is-thinking"); });
+    }
+
+    function bubble(text, who) {
+      var li = document.createElement("li");
+      li.className = "coach__msg coach__msg--" + who;
+      li.textContent = text;
+      thread.appendChild(li);
+      li.scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
+      return li;
+    }
+
+    function send(question) {
+      question = (question || "").trim();
+      if (!question) return;
+      bubble(question, "me");
+      input.value = "";
+      var pending = bubble("…", "coach");
+      pending.classList.add("is-typing");
+      fetch(panel.getAttribute("data-ask-url"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+        body: JSON.stringify({ question: question }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { pending.textContent = d.answer || d.error || "No answer."; })
+        .catch(function () { pending.textContent = "The coach could not be reached. Try again."; })
+        .then(function () { pending.classList.remove("is-typing"); });
+    }
+
+    form.addEventListener("submit", function (e) { e.preventDefault(); send(input.value); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input.value); }
+    });
+    panel.querySelectorAll("[data-coach-suggest]").forEach(function (b) {
+      b.addEventListener("click", function () { send(b.getAttribute("data-coach-suggest")); });
+    });
+    panel.querySelector("[data-coach-practice]").addEventListener("click", function () {
+      var q = panel.querySelector('[data-coach-field="practice_question"]').textContent;
+      input.value = 'Feedback on my answer to "' + q + '":\n';
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+    var refresh = panel.querySelector("[data-coach-refresh]");
+    if (refresh) refresh.addEventListener("click", function () { load(true); });
+    load(false);
+  }
+  document.querySelectorAll("[data-coach]").forEach(coachPanel);
 
   document.querySelectorAll("[data-lighthouse]").forEach(lighthouse);
   document.querySelectorAll("[data-onboarding]").forEach(onboarding);

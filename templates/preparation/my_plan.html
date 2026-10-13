@@ -51,6 +51,54 @@
 {% endblock %}
 
 {% block content %}
+  {% comment %}
+  The AI coach. Rendered here from the rules engine so it is never empty;
+  beacon.js then fetches /me/coach/ and swaps in the AI version (or keeps
+  this one if no model is configured). Text is set with textContent, never
+  innerHTML, so model output cannot inject markup.
+  {% endcomment %}
+  <section class="coach" data-coach data-advice-url="{% url 'preparation:coach_advice' %}"
+           data-ask-url="{% url 'preparation:coach_ask' %}" data-ai="{{ coach_ai|yesno:'1,0' }}">
+    <header class="coach__head">
+      <div class="coach__title">
+        <span class="coach__spark" aria-hidden="true">&#10022;</span>
+        <h2>Your coach</h2>
+        <span class="coach__engine" data-coach-engine>{{ coach_engine }}</span>
+      </div>
+      <button type="button" class="coach__refresh" data-coach-refresh {% if not coach_ai %}hidden{% endif %}>Refresh advice</button>
+    </header>
+
+    <div class="coach__body" data-coach-body>
+      <p class="coach__headline" data-coach-field="headline">{{ advice.headline }}</p>
+      <p class="coach__why" data-coach-field="why">{{ advice.why }}</p>
+      <ol class="coach__actions" data-coach-actions>
+        {% for action in advice.actions %}<li>{{ action }}</li>{% endfor %}
+      </ol>
+      <div class="coach__practice">
+        <p class="coach__label">Practice question</p>
+        <p class="coach__question" data-coach-field="practice_question">{{ advice.practice_question }}</p>
+        <button type="button" class="coach__practice-btn" data-coach-practice>Answer it and get feedback</button>
+      </div>
+      <p class="coach__cheer" data-coach-field="encouragement">{{ advice.encouragement }}</p>
+      <p class="coach__note" data-coach-note hidden></p>
+    </div>
+
+    <div class="coach__chat">
+      <ul class="coach__thread" data-coach-thread aria-live="polite"></ul>
+      <form class="coach__ask" data-coach-ask>
+        {% csrf_token %}
+        <textarea name="question" rows="2" maxlength="600" placeholder="Ask your coach anything about your preparation&hellip;" data-coach-input></textarea>
+        <button type="submit">Ask</button>
+      </form>
+      <div class="coach__chips">
+        <button type="button" data-coach-suggest="What should I do today with 30 minutes?">30 minutes today?</button>
+        <button type="button" data-coach-suggest="Which of my target roles am I closest to, and why?">Closest role?</button>
+        <button type="button" data-coach-suggest="How should I talk about my weakest skill in an interview?">Talking about my weakest skill</button>
+      </div>
+      <p class="coach__privacy">Shared with the coach: your target roles, timeline, skill scores and plan. Never your name, email or resume.</p>
+    </div>
+  </section>
+
   <div class="dash-grid">
     <section class="panel">
       <h2 class="panel__title">Your widest gaps</h2>

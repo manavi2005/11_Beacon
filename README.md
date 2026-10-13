@@ -911,6 +911,16 @@ back to Remotive, which is. The response says which source answered.
 - **Resume and LinkedIn PDF import** pre-fills onboarding from a resume or
   LinkedIn's *Save to PDF* export. It is rule-based, read in memory and
   never stored.
+- **AI coach** on *My plan*: personal recommendations (this week's focus,
+  three concrete actions, a practice question) and a question box that
+  also gives feedback on practice answers. `preparation/coach.py` talks to
+  any OpenAI-compatible API. The default is Groq's free tier with the
+  open-weight Llama 3.3 70B, set entirely from `.env` (`LLM_BASE_URL`,
+  `LLM_MODEL`, `LLM_API_KEY`), so swapping provider later is a config
+  change. With no key, or if the model is slow, down or returns malformed
+  output, a rule-based coach answers instead. The model gets roles, scores
+  and the plan, never name, email or resume text. Advice is cached for 6
+  hours; questions are limited to 20 an hour per user.
 - **Product navigation.** The menu is defined once as data in
   `preparation/navigation.py`: grouped dropdowns (Coaching, Skills,
   Insights), the current page highlighted, and Admin shown to staff only.
