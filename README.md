@@ -24,6 +24,7 @@ everything they could do, it tells them what to do next.
 11. [Forms & User Input](#11-forms--user-input)
 12. [Creating APIs](#12-creating-apis)
 13. [Vega-Lite charts and an external API](#13-vega-lite-charts-and-an-external-api)
+14. [Assignment 5: public API, alternative uses, UI polish](#14-assignment-5-public-api-alternative-uses-ui-polish)
 
 ---
 
@@ -874,3 +875,34 @@ the page instead of failing.
 anonymity of `/api/assessments/`, CORS, the specs having no inline data, the
 PNG endpoints, and every Jobicy failure path. `requests.get` is mocked in
 every test, so the suite never calls Jobicy.
+
+---
+
+## 14. Assignment 5: public API, alternative uses, UI polish
+
+**One public API.** `/api/skills/summary/` answers without a login. It holds
+only per-skill aggregates, so nobody can be identified, and `?format=csv`
+returns the same rows for spreadsheets. Every other JSON API
+(`/api/assessments/`, `/api/market-demand/`, `/api/whoami/`, `/api/palette/`,
+`/vega-lite/chart<N>.json`) returns `401` with a JSON error when signed out.
+See [`docs/a5/README.md`](docs/a5/README.md) for the full table, the Vega-Lite
+spec that reads the production URL, and three alternative uses of the API
+(a Python report, a Google Sheets/Excel import, and a pandas notebook).
+
+**Production and external APIs.** PythonAnywhere's free tier can only reach
+hosts on its allowlist. Jobicy is not on it, so the job-market feature falls
+back to Remotive, which is. The response says which source answered.
+
+**UI.**
+- Login and signup open on an animated lighthouse (its beam sweeps the sea)
+  beside a styled form.
+- The dashboard greets the signed-in user, counts up the totals, draws a
+  readiness ring per candidate, and shows the five widest gaps as bars.
+- **Ctrl/Cmd+K** opens a command palette that jumps to any page, candidate,
+  skill or plan.
+
+All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
+dependencies, and it respects `prefers-reduced-motion`.
+
+**Deploying.** [`docs/a5/DEPLOY.md`](docs/a5/DEPLOY.md). This release adds a
+static file, so `collectstatic` must run before the reload.

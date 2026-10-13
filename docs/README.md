@@ -248,3 +248,29 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Degrades without credentials | [`context_processors.py`](../preparation/context_processors.py) hides the button |
 | Deploy helper | `python manage.py set_site_domain <host>` |
 | Screenshots | [login](screenshots/a5-part2-google-login-button.png), [signup](screenshots/a5-part2-google-signup-button.png) |
+
+---
+
+## Assignment 5, Part 3 - One public API, Vega-Lite, three alternative uses
+
+Full write-up: [`a5/README.md`](a5/README.md).
+
+| Requirement | Where to look |
+|---|---|
+| One public API; all others protected | `/api/skills/summary/` is public. Every other JSON API returns 401 when signed out (`api_login_required` in `preparation/views.py`, tests in `PublicVsProtectedApiTests`) |
+| Vega-Lite chart on the deployed public API | [`a5/group-11-vega-lite-API-demo.txt`](a5/group-11-vega-lite-API-demo.txt) |
+| Editor screenshot | [`screenshots/a5-part3-vega-lite-editor.png`](screenshots/a5-part3-vega-lite-editor.png) |
+| Three alternative uses, with code and output | [`a5/alt_uses/`](a5/alt_uses/): Python report, spreadsheet import, notebook |
+
+## Assignment 5, Part 4 - Demo video
+
+[`a5/video/opening-slide.html`](a5/video/opening-slide.html) is the required
+opening slide. [`a5/video/script.md`](a5/video/script.md) is the timed
+narration and click path, about 4:45. Before recording, update production
+with [`a5/DEPLOY.md`](a5/DEPLOY.md).
+
+## UI polish (final deployment stage)
+
+Lighthouse login and signup pages, a dashboard with readiness rings and
+widest-gap bars, and a Ctrl/Cmd+K command palette. Screenshots:
+`screenshots/a5-ui-*.jpg`.
