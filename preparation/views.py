@@ -16,6 +16,7 @@ between them is how the response is plumbed - that is the whole point of the
 exercise, and it is also what Section 3 means by "template reuse".
 """
 
+import csv
 from functools import wraps
 
 from django.conf import settings
@@ -727,16 +728,81 @@ def public_api(view):
     return wrapper
 
 
+def api_login_required(view):
+    """A protected JSON endpoint: 401 with a JSON body when signed out.
+
+    Assignment 5 allows exactly one public API. Every other JSON endpoint
+    sits behind this. @login_required would not do here: it answers with a
+    302 to the HTML login page, which a script, a spreadsheet or Vega-Lite
+    would try to parse as data. A 401 says plainly what is wrong.
+
+    Only GET and HEAD are accepted, and no CORS header is sent: these
+    endpoints are for this site's own signed-in pages, which are same-origin.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {
+                    "error": "Authentication required",
+                    "login_url": reverse(settings.LOGIN_URL),
+                    "public_api": reverse("preparation:api_skill_summary"),
+                },
+                status=401,
+            )
+        return view(request, *args, **kwargs)
+
+    return require_safe(wrapper)
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5, PART 3 - THE ONE PUBLIC API
+#
+# /api/skills/summary/ is the only endpoint that answers without a login.
+# It is the safe one to publish: every row is an aggregate over a skill
+# (counts and averages), so no individual candidate can be picked out of it.
+# The per-candidate data behind it (/api/assessments/, the reports, the
+# exports) stays protected.
+#
+#   GET /api/skills/summary/              JSON array (the default)
+#   GET /api/skills/summary/?format=csv   the same rows as CSV
+#
+# The CSV form exists for spreadsheets: Google Sheets' IMPORTDATA() and
+# Excel's "From Text/CSV" read CSV from a URL directly, but not JSON.
+# ---------------------------------------------------------------------------
+SKILL_SUMMARY_FIELDS = [
+    "skill", "category", "learners", "avg_proficiency", "avg_required",
+    "avg_gap", "tasks",
+]
+
+
 @public_api
 def api_skill_summary(request):
-    """/api/skills/summary/ - one aggregated row per skill."""
-    return _api_response(vega.skill_summary_rows())
+    """/api/skills/summary/ - one aggregated row per skill. Public."""
+    rows = vega.skill_summary_rows()
+    if request.GET.get("format", "").lower() == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Access-Control-Allow-Origin"] = "*"
+        # inline, not attachment: IMPORTDATA and curl want the text, and a
+        # browser showing it is fine. The JSON form is the primary one.
+        response["Content-Disposition"] = 'inline; filename="beacon-skill-summary.csv"'
+        writer = csv.DictWriter(response, fieldnames=SKILL_SUMMARY_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+        return response
+    return _api_response(rows)
 
 
-@public_api
+@api_login_required
 def api_assessments(request):
-    """/api/assessments/ - one anonymous row per skill assessment."""
-    return _api_response(vega.assessment_rows())
+    """/api/assessments/ - one row per skill assessment. Protected.
+
+    Anonymous rows (no names), but still one row per person per skill, so it
+    stays behind login: Assignment 5 allows one public API, and the
+    aggregated summary is the one to publish.
+    """
+    return JsonResponse(vega.assessment_rows(), safe=False)
 
 
 # ---------------------------------------------------------------------------
@@ -764,14 +830,15 @@ def vega_lite_page(request):
     return render(request, "preparation/vega_lite.html", {"charts": charts_info})
 
 
-@public_api
+@api_login_required
 def vega_lite_spec(request, number):
-    """/vega-lite/chart<N>.json"""
+    """/vega-lite/chart<N>.json - protected, like every API but one."""
     _chart_or_404(number)
-    return _api_response(vega.spec_for_editor(number, request.build_absolute_uri))
+    return JsonResponse(vega.spec_for_editor(number, request.build_absolute_uri))
 
 
 @require_safe
+@login_required
 def vega_lite_png(request, number):
     """/vega-lite/chart<N>.png"""
     _chart_or_404(number)
@@ -787,19 +854,19 @@ def vega_lite_png(request, number):
 # The external call, the error handling and the analysis live in market.py,
 # so neither view knows anything about Jobicy.
 # ---------------------------------------------------------------------------
-@public_api
+@api_login_required
 def api_market_demand(request):
-    """/api/market-demand/?q=data analyst"""
+    """/api/market-demand/?q=data analyst - protected."""
     query = request.GET.get("q", "").strip()
     if not query:
-        return _api_response(
+        return JsonResponse(
             {"error": "Add a role to search for, e.g. ?q=data analyst"}, status=400
         )
     try:
         report = market.market_report(query)
     except market.MarketDataError as exc:
-        return _api_response({"error": exc.message, "query": query}, status=exc.status)
-    return _api_response(report)
+        return JsonResponse({"error": exc.message, "query": query}, status=exc.status)
+    return JsonResponse(report)
 
 
 @require_safe

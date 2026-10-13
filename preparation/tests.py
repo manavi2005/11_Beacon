@@ -609,16 +609,15 @@ class InternalApiTests(TestCase):
         for personal in ("Eunji", "eunji", "example.edu"):
             self.assertNotIn(personal, body)
 
-    def test_apis_allow_cross_origin_reads(self):
+    def test_public_api_allows_cross_origin_reads(self):
         """The Vega-Lite editor fetches from another origin."""
-        for name in ("api_skill_summary", "api_assessments"):
-            r = self.client.get(reverse(f"preparation:{name}"))
-            self.assertEqual(r["Access-Control-Allow-Origin"], "*")
+        r = self.client.get(reverse("preparation:api_skill_summary"))
+        self.assertEqual(r["Access-Control-Allow-Origin"], "*")
 
     def test_preflight_allows_public_site_to_read_localhost(self):
         """Chrome asks before vega.github.io may read from 127.0.0.1."""
         r = self.client.options(
-            reverse("preparation:api_assessments"),
+            reverse("preparation:api_skill_summary"),
             headers={"Origin": "https://vega.github.io",
                      "Access-Control-Request-Private-Network": "true"},
         )
@@ -1354,3 +1353,76 @@ class OAuthDependencyTests(TestCase):
 
         text = pathlib.Path("requirements.txt").read_text()
         self.assertIn("django-allauth[socialaccount]", text)
+
+
+# ===========================================================================
+# ASSIGNMENT 5, PART 3 - one public API, every other API protected
+# ===========================================================================
+class PublicVsProtectedApiTests(TestCase):
+    """Exactly one JSON API answers without a login: /api/skills/summary/."""
+
+    PROTECTED_APIS = [
+        "/api/assessments/",
+        "/api/market-demand/?q=analyst",
+        "/vega-lite/chart1.json",
+        "/vega-lite/chart2.json",
+        "/api/whoami/",
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def test_public_api_needs_no_login(self):
+        r = self.client.get(reverse("preparation:api_skill_summary"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/json")
+        self.assertIsInstance(r.json(), list)
+
+    def test_public_api_is_aggregates_only(self):
+        """Nothing in it identifies a person."""
+        body = self.client.get(reverse("preparation:api_skill_summary")).content.decode()
+        for personal in ("eunji", "tquant", "example.edu", "Eunji"):
+            self.assertNotIn(personal, body)
+        row = self.client.get(reverse("preparation:api_skill_summary")).json()[0]
+        self.assertEqual(
+            set(row),
+            {"skill", "category", "learners", "avg_proficiency", "avg_required",
+             "avg_gap", "tasks"},
+        )
+
+    def test_public_api_csv_form_matches_the_json(self):
+        r = self.client.get(reverse("preparation:api_skill_summary"), {"format": "csv"})
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r["Content-Type"].startswith("text/csv"))
+        lines = r.content.decode().strip().splitlines()
+        self.assertEqual(
+            lines[0], "skill,category,learners,avg_proficiency,avg_required,avg_gap,tasks"
+        )
+        json_rows = self.client.get(reverse("preparation:api_skill_summary")).json()
+        self.assertEqual(len(lines) - 1, len(json_rows))
+
+    def test_every_other_api_answers_401_json_when_signed_out(self):
+        for url in self.PROTECTED_APIS:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertEqual(r.status_code, 401, f"{url} is not protected")
+                self.assertEqual(r["Content-Type"], "application/json")
+                self.assertIn("error", r.json())
+
+    def test_protected_apis_send_no_cors_header(self):
+        """Only the public API invites other sites to read it."""
+        r = self.client.get("/api/assessments/")
+        self.assertNotIn("Access-Control-Allow-Origin", r)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_protected_apis_answer_once_signed_in(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        for url in self.PROTECTED_APIS:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_chart_png_needs_a_login(self):
+        r = self.client.get(reverse("preparation:vega_lite_png", args=[2]))
+        self.assertEqual(r.status_code, 302)
