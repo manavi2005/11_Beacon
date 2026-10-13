@@ -1,0 +1,145 @@
+model_id,model,method,format_ok,correct,latency_s
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,zero-shot,True,True,3.206244945526123
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,zero-shot,True,True,2.246061086654663
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,zero-shot,True,True,1.94861102104187
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,zero-shot,True,True,2.0562617778778076
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,zero-shot,True,True,2.0533511638641357
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,zero-shot,True,True,2.250476121902466
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,one-shot,True,True,1.6499290466308594
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,one-shot,True,True,1.6643121242523191
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,one-shot,True,True,1.477952003479004
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,one-shot,True,True,1.66566801071167
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,one-shot,True,True,1.684556007385254
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,one-shot,True,True,1.68815016746521
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,few-shot (3),True,True,1.9125168323516848
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,few-shot (3),True,True,1.8467769622802737
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,few-shot (3),True,True,1.8629140853881836
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,few-shot (3),True,True,1.9660611152648928
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,few-shot (3),True,True,1.80936336517334
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,few-shot (3),True,True,1.9817590713500977
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,many-shot (8),True,True,2.730321168899536
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,many-shot (8),True,True,2.747735023498535
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,many-shot (8),True,True,2.6761510372161865
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,many-shot (8),True,True,2.7637460231781006
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,many-shot (8),True,True,2.7041049003601074
+microsoft/Phi-3.5-mini-instruct,Phi-3.5-mini-instruct,many-shot (8),True,True,2.811882972717285
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,zero-shot,True,True,2.632685899734497
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,zero-shot,True,True,1.3945519924163818
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,zero-shot,True,True,1.4885916709899902
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,zero-shot,True,True,1.38411283493042
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,zero-shot,True,True,1.4293582439422607
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,zero-shot,True,True,1.38116192817688
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,one-shot,True,True,1.336721897125244
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,one-shot,True,True,1.2589819431304932
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,one-shot,True,True,1.31299090385437
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,one-shot,True,True,1.364380121231079
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,one-shot,True,True,1.1788086891174316
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,one-shot,True,True,1.164273977279663
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,few-shot (3),True,True,1.7744619846343994
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,few-shot (3),True,True,1.6602129936218262
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,few-shot (3),True,True,1.7358250617980957
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,few-shot (3),True,True,1.720630168914795
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,few-shot (3),True,True,1.8147850036621096
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,few-shot (3),True,True,1.5773789882659912
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,many-shot (8),True,True,2.061840772628784
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,many-shot (8),True,True,2.152622938156128
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,many-shot (8),True,True,2.0169777870178223
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,many-shot (8),True,True,2.1149790287017822
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,many-shot (8),True,True,2.286191701889038
+microsoft/Phi-4-mini-instruct,Phi-4-mini-instruct,many-shot (8),True,True,2.1398720741271973
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,zero-shot,True,True,2.479871988296509
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,zero-shot,True,True,1.5539720058441162
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,zero-shot,True,True,1.3981750011444092
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,zero-shot,True,True,1.5033893585205078
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,zero-shot,True,True,1.6102962493896484
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,zero-shot,True,True,1.571089267730713
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,one-shot,True,True,1.3800699710845947
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,one-shot,True,True,1.3666481971740725
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,one-shot,True,True,1.3659582138061523
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,one-shot,True,True,1.4463191032409668
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,one-shot,True,True,1.5487771034240725
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,one-shot,True,True,1.3682281970977783
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,few-shot (3),True,True,1.7367939949035645
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,few-shot (3),True,True,1.684492588043213
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,few-shot (3),True,True,1.6795027256011963
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,few-shot (3),True,True,1.72806715965271
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,few-shot (3),True,True,1.6312010288238523
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,few-shot (3),True,True,1.739305019378662
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,many-shot (8),True,True,2.3713648319244385
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,many-shot (8),True,True,2.468816041946411
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,many-shot (8),True,True,2.3858370780944824
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,many-shot (8),True,True,2.4943768978118896
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,many-shot (8),True,True,2.374659776687622
+Qwen/Qwen3-4B-Instruct-2507,Qwen3-4B-Instruct-2507,many-shot (8),True,True,2.543911933898926
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,zero-shot,True,True,0.6769602298736572
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,zero-shot,True,False,0.34914493560791016
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,zero-shot,True,True,0.2987539768218994
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,zero-shot,True,False,0.3224208354949951
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,zero-shot,True,True,0.28685688972473145
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,zero-shot,True,False,0.2900669574737549
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,one-shot,True,True,0.41921305656433105
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,one-shot,True,False,0.23926925659179688
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,one-shot,True,True,0.22114181518554688
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,one-shot,True,False,0.20688605308532715
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,one-shot,True,True,0.22173833847045898
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,one-shot,True,False,0.20488429069519043
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,few-shot (3),True,True,0.361220121383667
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,few-shot (3),True,False,0.34920382499694824
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,few-shot (3),True,True,0.24242377281188965
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,few-shot (3),True,False,0.2779569625854492
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,few-shot (3),True,True,0.2518038749694824
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,few-shot (3),True,False,0.24341917037963867
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,many-shot (8),True,True,0.433701753616333
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,many-shot (8),True,False,0.39154767990112305
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,many-shot (8),True,True,0.3254680633544922
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,many-shot (8),True,True,0.37049388885498047
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,many-shot (8),True,True,0.33933210372924805
+Qwen/Qwen2.5-0.5B-Instruct,Qwen2.5-0.5B-Instruct,many-shot (8),True,False,0.3087029457092285
+LiquidAI/LFM2-1.2B,LFM2-1.2B,zero-shot,True,True,0.5564718246459961
+LiquidAI/LFM2-1.2B,LFM2-1.2B,zero-shot,True,False,0.5276918411254883
+LiquidAI/LFM2-1.2B,LFM2-1.2B,zero-shot,True,True,0.44649195671081543
+LiquidAI/LFM2-1.2B,LFM2-1.2B,zero-shot,True,False,0.542510986328125
+LiquidAI/LFM2-1.2B,LFM2-1.2B,zero-shot,True,True,0.436154842376709
+LiquidAI/LFM2-1.2B,LFM2-1.2B,zero-shot,True,False,0.7208089828491211
+LiquidAI/LFM2-1.2B,LFM2-1.2B,one-shot,True,True,0.36028218269348145
+LiquidAI/LFM2-1.2B,LFM2-1.2B,one-shot,True,False,0.3690669536590576
+LiquidAI/LFM2-1.2B,LFM2-1.2B,one-shot,True,True,0.3817458152770996
+LiquidAI/LFM2-1.2B,LFM2-1.2B,one-shot,True,True,0.3859579563140869
+LiquidAI/LFM2-1.2B,LFM2-1.2B,one-shot,True,True,0.411632776260376
+LiquidAI/LFM2-1.2B,LFM2-1.2B,one-shot,True,False,0.37761735916137695
+LiquidAI/LFM2-1.2B,LFM2-1.2B,few-shot (3),True,True,0.47118306159973145
+LiquidAI/LFM2-1.2B,LFM2-1.2B,few-shot (3),True,False,0.5977070331573486
+LiquidAI/LFM2-1.2B,LFM2-1.2B,few-shot (3),True,True,0.4377710819244385
+LiquidAI/LFM2-1.2B,LFM2-1.2B,few-shot (3),True,True,0.48136401176452637
+LiquidAI/LFM2-1.2B,LFM2-1.2B,few-shot (3),True,True,0.5072431564331055
+LiquidAI/LFM2-1.2B,LFM2-1.2B,few-shot (3),True,True,0.49086594581604004
+LiquidAI/LFM2-1.2B,LFM2-1.2B,many-shot (8),True,True,0.7314450740814209
+LiquidAI/LFM2-1.2B,LFM2-1.2B,many-shot (8),True,False,0.6756889820098877
+LiquidAI/LFM2-1.2B,LFM2-1.2B,many-shot (8),True,True,0.6760129928588867
+LiquidAI/LFM2-1.2B,LFM2-1.2B,many-shot (8),True,True,0.7049338817596436
+LiquidAI/LFM2-1.2B,LFM2-1.2B,many-shot (8),True,True,0.6960933208465576
+LiquidAI/LFM2-1.2B,LFM2-1.2B,many-shot (8),True,True,0.6650869846343994
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,zero-shot,True,True,1.0636160373687744
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,zero-shot,True,False,0.6559717655181885
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,zero-shot,True,True,0.855881929397583
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,zero-shot,True,False,1.1681151390075684
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,zero-shot,True,True,0.846872091293335
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,zero-shot,True,False,0.6338748931884766
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,one-shot,True,True,0.6062228679656982
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,one-shot,True,False,0.7007532119750977
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,one-shot,True,True,0.6082401275634766
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,one-shot,True,False,0.6894891262054443
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,one-shot,True,True,0.6079630851745605
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,one-shot,True,False,0.6978011131286621
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,few-shot (3),True,True,0.7483770847320557
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,few-shot (3),True,False,0.7828221321105957
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,few-shot (3),True,True,0.7656800746917725
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,few-shot (3),True,True,0.77433180809021
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,few-shot (3),True,True,0.7347002029418945
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,few-shot (3),True,True,0.7553541660308838
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,many-shot (8),True,True,1.083847999572754
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,many-shot (8),True,True,1.1347801685333252
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,many-shot (8),True,True,1.0761420726776123
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,many-shot (8),True,True,1.1678378582000732
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,many-shot (8),True,True,1.1096529960632324
+HuggingFaceTB/SmolLM2-1.7B-Instruct,SmolLM2-1.7B-Instruct,many-shot (8),True,True,1.161585807800293

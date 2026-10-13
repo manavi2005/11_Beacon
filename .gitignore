@@ -35,3 +35,14 @@ Thumbs.db
 # The opening slide and narration script are kept locally by whoever is
 # recording; the finished video is submitted separately, not committed.
 docs/a5/video/
+
+# --- A6: local LLM prototyping (llm-test/) ---
+# Model weights are downloaded by the notebook into the Hugging Face cache
+# and must never be committed.
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.gguf
+llm-test/.venv/
+llm-test/.ipynb_checkpoints/
