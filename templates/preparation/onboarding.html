@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% comment %}
+  Onboarding: the first page a brand-new account sees. Step 1 is the goal,
+  step 2 is a 0-100 self-rating per skill. Submitting builds the profile,
+  the assessments and a dated plan (preparation/onboarding.py), then lands
+  on /me/.
+
+  With JavaScript (beacon.js) the two steps show one at a time, each slider
+  shows the level the chosen role requires, and the ring at the top
+  projects readiness live using the same formula as
+  CandidateProfile.readiness_percent. Without it, both steps are simply one
+  long form, and everything still submits.
+{% endcomment %}
+
+{% block title %}Welcome - Beacon{% endblock %}
+{% block body_class %}page-onboarding{% endblock %}
+
+{% block page_header %}
+  <section class="hero-strip">
+    <div>
+      <p class="hero-strip__eyebrow">{% if is_retake %}Retake your diagnosis{% else %}Welcome to Beacon, {{ user.first_name|default:user.username }}{% endif %}</p>
+      <h1 class="page-title hero-strip__title">Two minutes to your personal plan.</h1>
+      <p class="hero-strip__lede">Tell us the role you are aiming for, then rate yourself honestly
+        on each skill. Beacon compares you to what that role requires and builds a
+        week-by-week plan around your widest gaps.</p>
+    </div>
+    <div class="onb-ring" aria-live="polite">
+      <a class="ring ring--low" style="--p: 0" data-onb-ring>
+        <svg viewBox="0 0 84 84" aria-hidden="true">
+          <circle class="ring__track" cx="42" cy="42" r="36"></circle>
+          <circle class="ring__value" cx="42" cy="42" r="36"></circle>
+        </svg>
+        <span class="ring__number" data-onb-readiness>&ndash;</span>
+        <span class="ring__name">Projected readiness</span>
+      </a>
+    </div>
+  </section>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="onb" data-onboarding data-default-required="{{ default_required }}" novalidate>
+  {% csrf_token %}
+
+  <ol class="onb-steps" aria-hidden="true">
+    <li class="is-current" data-step-dot="1"><span>1</span> Your goal</li>
+    <li data-step-dot="2"><span>2</span> Rate your skills</li>
+  </ol>
+
+  {% if form.non_field_errors %}
+    <div class="auth-card__alert" role="alert">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <fieldset class="onb-step" data-step="1">
+    <legend class="onb-step__title">What are you preparing for?</legend>
+    <div class="onb-grid">
+      {% for field in form %}
+        {% if not field.name|slice:":6" == "skill_" %}
+          <div class="field{% if field.errors %} field--error{% endif %}">
+            <label class="field__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="onb-actions">
+      <span></span>
+      <button type="button" class="onb-next" data-step-go="2">Next: rate your skills &rarr;</button>
+    </div>
+  </fieldset>
+
+  <fieldset class="onb-step" data-step="2">
+    <legend class="onb-step__title">How strong are you today?</legend>
+    <p class="muted onb-step__lede">0 = never practised, 100 = could teach it. The
+      <span class="onb-legend-mark"></span> marker is what your target role expects.</p>
+
+    {% for category, fields in skill_groups.items %}
+      <h3 class="onb-cat">{{ category }}</h3>
+      {% for field in fields %}
+        <div class="slider">
+          <label class="slider__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <div class="slider__track">
+            {{ field }}
+            <span class="slider__target" data-target-for="{{ field.id_for_label }}" hidden></span>
+          </div>
+          <output class="slider__value" for="{{ field.id_for_label }}">{{ field.value|default:50 }}</output>
+        </div>
+      {% endfor %}
+    {% empty %}
+      <p class="muted">The skill catalog is empty. Run <code>python manage.py seed_demo_data</code>.</p>
+    {% endfor %}
+
+    <div class="onb-actions">
+      <button type="button" class="onb-back" data-step-go="1">&larr; Back</button>
+      <button type="submit" class="onb-submit">Light my beacon &rarr;</button>
+    </div>
+  </fieldset>
+</form>
+
+{{ role_requirements|json_script:"role-requirements" }}
+{{ skill_names|json_script:"skill-names" }}
+{% endblock %}

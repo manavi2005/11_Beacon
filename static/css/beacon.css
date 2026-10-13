@@ -717,7 +717,7 @@ kbd {
   z-index: -1;
 }
 
-.auth-hero__beam {
+.lighthouse__beam {
   transform-origin: 300px 120px;
   transform-box: view-box;
   animation: beam-sweep 7s ease-in-out infinite alternate;
@@ -729,24 +729,24 @@ kbd {
   to   { transform: rotate(16deg); }
 }
 
-.auth-hero__glow { animation: glow-pulse 3.5s ease-in-out infinite; transform-origin: 300px 120px; transform-box: view-box; }
+.lighthouse__glow { animation: glow-pulse 3.5s ease-in-out infinite; transform-origin: 300px 120px; transform-box: view-box; }
 
 @keyframes glow-pulse {
   0%, 100% { opacity: .75; transform: scale(1); }
   50%      { opacity: 1;   transform: scale(1.15); }
 }
 
-.auth-hero__stars circle { animation: twinkle 4s ease-in-out infinite; }
-.auth-hero__stars circle:nth-child(3n)   { animation-delay: 1.3s; }
-.auth-hero__stars circle:nth-child(3n+1) { animation-delay: 2.6s; }
+.lighthouse__stars circle { animation: twinkle 4s ease-in-out infinite; }
+.lighthouse__stars circle:nth-child(3n)   { animation-delay: 1.3s; }
+.lighthouse__stars circle:nth-child(3n+1) { animation-delay: 2.6s; }
 
 @keyframes twinkle {
   0%, 100% { opacity: .9; }
   50%      { opacity: .25; }
 }
 
-.auth-hero__wave { animation: wave-drift 9s linear infinite; }
-.auth-hero__wave--back { animation-duration: 14s; animation-direction: reverse; opacity: .9; }
+.lighthouse__wave { animation: wave-drift 9s linear infinite; }
+.lighthouse__wave--back { animation-duration: 14s; animation-direction: reverse; opacity: .9; }
 
 @keyframes wave-drift {
   from { transform: translateX(0); }
@@ -1131,15 +1131,197 @@ kbd {
 html.palette-open { overflow: hidden; }
 
 /* ---------------------------------------------------------------------------
+   Interactive lighthouse (beacon.js, section 4). While the mouse steers the
+   beam, the automatic sweep has to stop: a running CSS animation would
+   override the inline rotate() every frame.
+   --------------------------------------------------------------------------- */
+.lighthouse.is-tracking .lighthouse__beam {
+  animation: none;
+  transition: transform .18s ease-out;
+}
+.auth-hero, .plan-hero { cursor: crosshair; }
+
+/* ---------------------------------------------------------------------------
+   Dashboard call to action
+   --------------------------------------------------------------------------- */
+.hero-strip__actions { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.hero-strip__action { display: inline-flex; align-items: center; padding: var(--s2) var(--s5);
+  font-weight: 600; font-size: .9rem; text-decoration: none; }
+.hero-strip__action--primary { color: #fff; background: var(--orange); box-shadow: 0 6px 18px rgba(232, 74, 39, .35); }
+.hero-strip__action--primary:hover { color: #fff; background: var(--orange-700); }
+.nav a.nav-mine { color: #ffd27a; }
+
+/* ---------------------------------------------------------------------------
+   Onboarding
+   --------------------------------------------------------------------------- */
+.onb-ring .ring { padding: 0; color: #fff; pointer-events: none; }
+.onb-ring .ring__number { top: 42px; color: #fff; }
+.onb-ring .ring__name { color: rgba(255, 255, 255, .8); }
+.onb-ring .ring__track { stroke: rgba(255, 255, 255, .18); }
+.onb-ring .ring__value { transition: stroke-dashoffset .35s ease, stroke .35s ease; }
+
+.onb { display: block; margin: 0; padding: 0; background: none; border: 0; }
+
+.onb-steps { display: flex; gap: var(--s5); margin: 0 0 var(--s5); padding: 0; list-style: none;
+  font-size: .9rem; font-weight: 600; color: var(--ink-faint); }
+.onb-steps li { display: flex; align-items: center; gap: var(--s2); }
+.onb-steps span { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem;
+  border-radius: 50%; border: 2px solid currentColor; font-size: .8rem; }
+.onb-steps .is-current { color: var(--navy); }
+.onb-steps .is-current span { color: #fff; background: var(--orange); border-color: var(--orange); }
+.onb-steps .is-done { color: var(--ok); }
+
+.onb-step { margin: 0; padding: 0; border: 0; }
+.onb-step[hidden] { display: none; }
+.onb-step__title { margin: 0 0 var(--s4); padding: 0; font-size: 1.2rem; font-weight: 700; color: var(--navy); }
+.onb-step__lede { margin-top: calc(-1 * var(--s2)); }
+
+.onb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 var(--s5); }
+.onb-grid select, .onb-grid input { display: block; width: 100%; padding: .65rem .75rem; font: inherit;
+  border: 1px solid #ccd3dd; border-radius: var(--radius-sm); background: var(--surface); }
+
+.onb-actions { display: flex; justify-content: space-between; align-items: center;
+  margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.onb-back { color: var(--navy); background: var(--navy-100); }
+.onb-back:hover { background: #d9e1ee; }
+.onb-next, .onb-submit { padding: .75rem 1.4rem; font-size: .98rem; }
+.onb-submit { background: linear-gradient(135deg, var(--orange) 0%, var(--orange-700) 100%);
+  box-shadow: 0 8px 20px rgba(232, 74, 39, .3); }
+.onb-submit:hover { background: var(--orange-700); }
+
+.onb-cat { margin: var(--s5) 0 var(--s2); font-size: .78rem; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-muted); }
+
+.slider { display: grid; grid-template-columns: minmax(0, 1.1fr) 1.6fr 3rem; align-items: center;
+  gap: var(--s4); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.slider__label { font-size: .92rem; font-weight: 600; }
+.slider__track { position: relative; }
+.slider__value { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ok); text-align: right; }
+.slider__value.is-below { color: var(--orange-700); }
+
+.slider input[type="range"] {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 8px; margin: 0;
+  border-radius: 999px; cursor: pointer;
+  background: linear-gradient(90deg, var(--orange) 0 var(--fill, 50%), var(--navy-100) var(--fill, 50%) 100%);
+}
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--orange); box-shadow: 0 2px 6px rgba(19, 41, 75, .25);
+}
+.slider input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid var(--orange);
+}
+.slider input[type="range"]:focus-visible { outline: 2px solid var(--orange); outline-offset: 4px; }
+
+/* What the chosen role requires, as a tick on the track. */
+.slider__target { position: absolute; top: -6px; width: 3px; height: 20px; margin-left: -1.5px;
+  background: var(--navy); border-radius: 2px; pointer-events: none; transition: left .3s ease; }
+.onb-legend-mark { display: inline-block; width: 3px; height: 12px; vertical-align: -1px;
+  background: var(--navy); border-radius: 2px; }
+
+@media (max-width: 640px) {
+  .slider { grid-template-columns: 1fr 3rem; }
+  .slider__label { grid-column: 1 / -1; }
+}
+
+/* ---------------------------------------------------------------------------
+   My plan
+   --------------------------------------------------------------------------- */
+.plan-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s5);
+  min-height: 300px;
+  margin: calc(-1 * var(--s5)) calc(-1 * var(--s5)) var(--s5);
+  padding: var(--s6) var(--s5) var(--s5);
+  color: #fff;
+  background: radial-gradient(120% 90% at 80% 20%, #22477a 0%, #13294b 55%, #0a1730 100%);
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Pinned right at the drawing's own 4:3 shape so the lighthouse is never
+   cropped, with the left edge faded into the sky so there is no seam. */
+.plan-hero__scene { position: absolute; top: 0; right: 0; bottom: 0; height: 100%; width: auto;
+  aspect-ratio: 4 / 3; z-index: -1;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 35%);
+          mask-image: linear-gradient(to right, transparent 0, #000 35%); }
+.plan-hero__copy { max-width: 46ch; padding-bottom: var(--s6); }
+.plan-hero__title { margin: var(--s1) 0 var(--s2); color: #fff; font-size: 1.9rem; }
+.plan-hero__meta { margin: 0; color: rgba(255, 255, 255, .85); }
+.plan-hero__meta strong { color: #ffd27a; font-size: 1.15rem; }
+.plan-hero__lede { margin: var(--s3) 0 0; color: rgba(255, 255, 255, .85); }
+
+.plan-hero__ring { padding: var(--s3); margin-right: 170px; margin-bottom: var(--s5);
+  background: rgba(10, 23, 48, .55); border-radius: 50%; backdrop-filter: blur(4px); }
+.ring--hero { padding: 0; color: #fff; }
+.ring--hero svg { width: 132px; height: 132px; }
+.ring--hero .ring__track { stroke: rgba(255, 255, 255, .15); }
+.ring--hero .ring__number { top: 66px; font-size: 1.8rem; color: #fff; }
+.ring--hero .ring__name { margin-top: 0; position: absolute; top: 88px; font-size: .75rem;
+  font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .75); }
+
+.plan-hero--welcome .plan-hero__title { animation: rise .7s cubic-bezier(.2, .8, .2, 1) both; }
+.plan-hero--welcome .plan-hero__lede { animation: rise .7s .15s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+
+.progress { height: 14px; margin-top: var(--s2); background: var(--navy-100); border-radius: 999px; overflow: hidden; }
+.progress__fill { display: block; height: 100%; width: var(--w); border-radius: 999px;
+  background: linear-gradient(90deg, var(--ok) 0%, #36b37e 100%); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+.progress__label { margin: var(--s2) 0 0; font-size: .9rem; color: var(--ink-muted); }
+.progress__label strong { color: var(--ok); font-size: 1.1rem; }
+
+.weeks { margin: 0; padding: 0; list-style: none; border-left: 3px solid var(--navy-100); }
+.week { position: relative; margin: 0 0 var(--s5); padding-left: var(--s5); }
+.week::before { content: ""; position: absolute; left: -9px; top: .35rem; width: 15px; height: 15px;
+  border-radius: 50%; background: var(--surface); border: 3px solid var(--navy-100); }
+.week--current::before { border-color: var(--orange); box-shadow: 0 0 0 5px rgba(232, 74, 39, .15); }
+.week--done::before { background: var(--ok); border-color: var(--ok); }
+.week__label { margin: 0 0 var(--s2); font-weight: 700; color: var(--navy); }
+
+.tasks { margin: 0; padding: 0; list-style: none; }
+.task { display: flex; gap: var(--s3); align-items: flex-start; margin-bottom: var(--s2);
+  padding: var(--s3) var(--s4); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); transition: background-color .2s ease, opacity .2s ease; }
+.task__form { margin: 0; padding: 0; background: none; border: 0; display: block; }
+.task__check { display: grid; place-items: center; width: 26px; height: 26px; padding: 0;
+  background: var(--surface); border: 2px solid #b8c2d1; border-radius: 7px; }
+.task__check:hover { background: var(--surface); border-color: var(--ok); }
+.task__check svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.6;
+  stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16;
+  transition: stroke-dashoffset .25s ease .05s; }
+.task--done { background: #f3faf6; }
+.task--done .task__check { background: var(--ok); border-color: var(--ok); }
+.task--done .task__check svg { stroke-dashoffset: 0; }
+.task--done .task__title { color: var(--ink-muted); text-decoration: line-through; }
+.task__body { min-width: 0; }
+.task__title { margin: 0; font-weight: 600; }
+.task__meta { margin: 2px 0 0; font-size: .8rem; color: var(--ink-muted); }
+.task__why { margin: var(--s1) 0 0; font-size: .82rem; color: var(--ink-muted); }
+.task__priority--high { color: var(--orange-700); font-weight: 600; }
+.task__priority--medium { color: var(--warn); }
+
+@media (max-width: 760px) {
+  .plan-hero { flex-direction: column; align-items: flex-start; }
+  .plan-hero__ring { margin: 0; }
+  .plan-hero__scene { opacity: .45; }
+  .plan-hero__copy { padding-bottom: 0; }
+}
+
+/* ---------------------------------------------------------------------------
    Reduced motion: keep every final state, drop every movement.
    --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  .auth-hero__beam,
-  .auth-hero__glow,
-  .auth-hero__stars circle,
-  .auth-hero__wave,
+  .lighthouse__beam,
+  .lighthouse__glow,
+  .lighthouse__stars circle,
+  .lighthouse__wave,
   .palette__panel,
-  .palette__backdrop { animation: none; }
+  .palette__backdrop,
+  .plan-hero--welcome .plan-hero__title,
+  .plan-hero--welcome .plan-hero__lede { animation: none; }
   .ring__value,
   .gapbar__fill { transition: none; }
   .js:not(.is-ready) .ring__value { stroke-dashoffset: calc(226.19 * (1 - var(--p) / 100)); }

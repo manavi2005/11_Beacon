@@ -206,6 +206,11 @@ ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 
+# A first-time Google sign-in creates an account with no profile, exactly
+# like the signup form. Send it to onboarding too, instead of the cohort
+# dashboard. Returning users still land on LOGIN_REDIRECT_URL.
+ACCOUNT_SIGNUP_REDIRECT_URL = "preparation:onboarding"
+
 
 # ---------------------------------------------------------------------------
 # Password validation

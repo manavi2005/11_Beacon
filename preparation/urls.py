@@ -103,4 +103,8 @@ urlpatterns = [
     path("api/whoami/", views.api_whoami, name="api_whoami"),
     # Command palette entries (Ctrl/Cmd+K). Protected: it lists candidates.
     path("api/palette/", views.api_palette, name="api_palette"),
+    # Start-from-scratch journey: onboarding, your plan, ticking tasks off.
+    path("welcome/", views.onboarding_view, name="onboarding"),
+    path("me/", views.my_plan, name="my_plan"),
+    path("me/tasks/<int:pk>/toggle/", views.toggle_task, name="toggle_task"),
 ]

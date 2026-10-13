@@ -89,6 +89,22 @@ structures, and failure questions.
 Chart: [`a5-part3-use3-notebook-chart.png`](../screenshots/a5-part3-use3-notebook-chart.png).
 An HTML copy with all outputs is next to the notebook.
 
+## The start-from-scratch journey (for the demo)
+
+A brand-new user (username signup, or a first Google sign-in) goes straight
+to **`/welcome/`**. They pick a target role and interview date, then rate
+themselves 0-100 on each skill. Each slider shows what that role requires,
+and a ring projects their readiness live. Submitting creates their
+`CandidateProfile`, one `SkillAssessment` per skill, and a dated
+`PreparationPlan`. The plan's tasks come from the widest gaps first, spread
+across the weeks (rule-based, `preparation/onboarding.py`; this is the seam
+the AI coach will replace). **`/me/`** then shows their readiness, gaps and
+week-by-week plan. Tasks can be ticked off in place, and only by their owner.
+Tests: `FromScratchJourneyTests`.
+
+On the login page the lighthouse beam follows the mouse. The video script
+(`video/script.md`) is built around this journey.
+
 ## Submission checklist
 
 1. Public API production URL: `https://simonhwang1998.pythonanywhere.com/api/skills/summary/`

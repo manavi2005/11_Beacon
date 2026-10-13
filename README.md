@@ -900,6 +900,11 @@ back to Remotive, which is. The response says which source answered.
   readiness ring per candidate, and shows the five widest gaps as bars.
 - **Ctrl/Cmd+K** opens a command palette that jumps to any page, candidate,
   skill or plan.
+- **Start from scratch.** A new account goes to `/welcome/` (target role,
+  interview date, a self-rating per skill, with a live readiness ring), and
+  Beacon builds the profile, scores and a dated plan aimed at the widest
+  gaps. `/me/` shows that plan; tasks tick off in place. On the login page,
+  the lighthouse beam follows the mouse.
 
 All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
 dependencies, and it respects `prefers-reduced-motion`.

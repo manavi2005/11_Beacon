@@ -18,14 +18,15 @@ Then **Web tab > Reload**.
 
 ## Why each step matters this time
 
-- **`collectstatic` is required.** This release adds `static/js/beacon.js`.
+- **`collectstatic` is required.** This release adds `static/js/beacon.js`
+  and changes `beacon.css`.
   Production uses `ManifestStaticFilesStorage`, which raises an error, and
   so returns a 500 on every page, when a template asks for a static file
   that was never collected.
 - **`pip install`:** no new packages in this release, but it is cheap
   insurance if the virtualenv has drifted from `requirements.txt`.
-- **`migrate`:** no new migrations either. It is safe to run, and it
-  confirms the database is current.
+- **`migrate`:** no new migrations. Onboarding writes to the existing
+  models. It is safe to run, and it confirms the database is current.
 
 ## Check it worked
 
@@ -37,6 +38,28 @@ Then **Web tab > Reload**.
 | `/api/assessments/` (signed out) | `401` with a JSON error |
 | `/market/?q=analyst` (signed in) | Job postings, credited to **Remotive** |
 | Dashboard, press ⌘K | The command palette opens |
+| Login page, move the mouse over the lighthouse | The beam follows the pointer |
+
+## Rehearse the from-scratch demo on production
+
+Do this once after deploying, with a throwaway username such as
+`rehearsal1`. Every step writes to the production database, which is the
+point: it proves the journey works there, not just locally.
+
+1. Signed out, open the site. It redirects to the lighthouse login page.
+2. **Sign Up** with the new username. You land on `/welcome/`.
+3. Pick a role and date, then **Next**, then drag a few sliders. The ring updates.
+4. **Light my beacon**. `/me/` opens with "Your beacon is lit", gaps, and weeks.
+5. Tick a task. The progress bar moves without a reload.
+6. **Dashboard** now shows the new candidate's ring; ⌘K finds them by name.
+
+If step 4 errors, check that `collectstatic` ran (the page needs
+`beacon.js` and the new CSS) and that `git pull` brought in
+`preparation/onboarding.py`.
+
+Rehearsal accounts appear in the cohort like any other candidate. Delete
+them afterwards in **Django admin > Users**; deleting the user cascades to
+their profile, scores and plan.
 
 ## Known limitation: PythonAnywhere free tier and external APIs
 

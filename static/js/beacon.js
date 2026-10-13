@@ -7,6 +7,9 @@
      1. Count-up numbers       [data-count]
      2. Reveal-on-load         .js-reveal -> .is-ready (bars, rings)
      3. Command palette        Ctrl/Cmd+K, or any [data-palette-open]
+     4. Interactive lighthouse beam follows the mouse
+     5. Onboarding stepper     live sliders and projected readiness
+     6. Task checkboxes        tick off without a reload
 
    Motion is skipped entirely for readers who ask their OS for less of it.
    =========================================================================== */
@@ -182,6 +185,165 @@
       });
     }
   }
+
+  /* -------------------------------------------------------------------------
+     4. Interactive lighthouse. While the mouse is over a [data-lighthouse]
+        drawing, the beam turns to point at it; when the mouse leaves, the
+        beam eases back into its automatic sweep. The lamp sits at (300, 120)
+        in the drawing's own 400x300 coordinates, and the beam is drawn
+        pointing left, so the turn needed is the pointer's angle minus 180.
+     ------------------------------------------------------------------------- */
+  function lighthouse(svg) {
+    var beam = svg.querySelector(".lighthouse__beam");
+    var host = svg.parentElement;
+    if (!beam || !host || reduceMotion || !svg.getScreenCTM) return;
+    var raf = null, pending = null;
+
+    function aim() {
+      raf = null;
+      var ctm = svg.getScreenCTM();
+      if (!ctm || !pending) return;
+      var pt = svg.createSVGPoint();
+      pt.x = pending.x; pt.y = pending.y;
+      var p = pt.matrixTransform(ctm.inverse());
+      var angle = Math.atan2(p.y - 120, p.x - 300) * 180 / Math.PI;  // -180..180
+      var turn = angle < 0 ? angle + 180 : angle - 180;                // relative to pointing left
+      turn = Math.max(-55, Math.min(55, turn));
+      beam.style.transform = "rotate(" + turn.toFixed(1) + "deg)";
+    }
+
+    host.addEventListener("pointermove", function (e) {
+      pending = { x: e.clientX, y: e.clientY };
+      if (!svg.classList.contains("is-tracking")) svg.classList.add("is-tracking");
+      if (!raf) raf = requestAnimationFrame(aim);
+    });
+    host.addEventListener("pointerleave", function () {
+      pending = null;
+      beam.style.transform = "";
+      svg.classList.remove("is-tracking");
+    });
+  }
+
+  /* -------------------------------------------------------------------------
+     5. Onboarding: one step at a time, sliders with live values and role
+        targets, and a projected-readiness ring using the same formula as
+        CandidateProfile.readiness_percent: mean of min(rating/required, 1).
+     ------------------------------------------------------------------------- */
+  function onboarding(form) {
+    var steps = form.querySelectorAll("[data-step]");
+    var dots = form.querySelectorAll("[data-step-dot]");
+    var role = form.querySelector("[name=target_role]");
+    var sliders = form.querySelectorAll("input[type=range]");
+    var ring = document.querySelector("[data-onb-ring]");
+    var ringNumber = document.querySelector("[data-onb-readiness]");
+    var defaultRequired = parseInt(form.getAttribute("data-default-required"), 10) || 65;
+    var requirements = {}, names = {};
+    try {
+      requirements = JSON.parse(document.getElementById("role-requirements").textContent);
+      names = JSON.parse(document.getElementById("skill-names").textContent);
+    } catch (e) { /* no live targets; the form still submits */ }
+
+    function show(n) {
+      steps.forEach(function (s) { s.hidden = s.getAttribute("data-step") !== String(n); });
+      dots.forEach(function (d) {
+        var k = parseInt(d.getAttribute("data-step-dot"), 10);
+        d.classList.toggle("is-current", k === n);
+        d.classList.toggle("is-done", k < n);
+      });
+      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    }
+
+    function required(id) {
+      var table = requirements[role ? role.value : ""] || {};
+      return table[names[id]] || defaultRequired;
+    }
+
+    function update() {
+      var total = 0, n = 0;
+      sliders.forEach(function (s) {
+        var value = parseInt(s.value, 10);
+        var req = required(s.id);
+        var out = form.querySelector('output[for="' + s.id + '"]');
+        if (out) {
+          out.textContent = value;
+          out.classList.toggle("is-below", value < req);
+        }
+        var mark = form.querySelector('[data-target-for="' + s.id + '"]');
+        if (mark) {
+          mark.hidden = false;
+          mark.style.left = req + "%";
+          mark.title = "Your role expects " + req;
+        }
+        s.style.setProperty("--fill", value + "%");
+        total += Math.min(value / req, 1);
+        n += 1;
+      });
+      if (ring && n) {
+        var pct = Math.round(total / n * 100);
+        ring.style.setProperty("--p", pct);
+        ring.classList.toggle("ring--good", pct >= 75);
+        ring.classList.toggle("ring--mid", pct >= 50 && pct < 75);
+        ring.classList.toggle("ring--low", pct < 50);
+        ringNumber.textContent = pct + "%";
+      }
+    }
+
+    form.querySelectorAll("[data-step-go]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var target = parseInt(b.getAttribute("data-step-go"), 10);
+        if (target === 2) {
+          var date = form.querySelector("[name=target_interview_date]");
+          if (date && !date.reportValidity()) return;
+        }
+        show(target);
+      });
+    });
+    sliders.forEach(function (s) { s.addEventListener("input", update); });
+    if (role) role.addEventListener("change", update);
+
+    // After a failed submit, open the step that holds the first error.
+    var firstError = form.querySelector(".field--error");
+    var errorStep = firstError ? firstError.closest("[data-step]") : null;
+    show(errorStep ? parseInt(errorStep.getAttribute("data-step"), 10) : 1);
+    update();
+  }
+
+  /* -------------------------------------------------------------------------
+     6. Tick a task off without a page reload. The form still works on its
+        own; this only sends the same POST with fetch and updates in place.
+     ------------------------------------------------------------------------- */
+  function taskToggle(form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var item = form.closest(".task");
+      var button = form.querySelector(".task__check");
+      fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { "Accept": "application/json" },
+        credentials: "same-origin",
+      })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (data) {
+          item.classList.toggle("task--done", data.done);
+          button.setAttribute("aria-checked", data.done ? "true" : "false");
+          var bar = document.querySelector("[data-plan-progress]");
+          var label = document.querySelector("[data-plan-percent]");
+          if (bar) bar.style.setProperty("--w", data.completion_percent + "%");
+          if (label) label.textContent = data.completion_percent;
+          var week = item.closest(".week");
+          if (week) {
+            week.classList.toggle("week--done",
+              week.querySelectorAll(".task").length === week.querySelectorAll(".task--done").length);
+          }
+        })
+        .catch(function () { form.submit(); });  // fall back to a normal POST
+    });
+  }
+
+  document.querySelectorAll("[data-lighthouse]").forEach(lighthouse);
+  document.querySelectorAll("[data-onboarding]").forEach(onboarding);
+  document.querySelectorAll("[data-task-toggle]").forEach(taskToggle);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", reveal);

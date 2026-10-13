@@ -33,7 +33,7 @@ from django.contrib.auth.forms import (
     UserCreationForm,
 )
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views import View
 from django.views.decorators.http import require_safe, require_POST, require_GET
 from django.views.generic import CreateView, DetailView, ListView
@@ -48,7 +48,8 @@ from .models import (
     SkillAssessment,
 )
 
-from .forms import PlanTaskForm
+from .forms import OnboardingForm, PlanTaskForm
+from . import onboarding as onboarding_rules
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -230,8 +231,11 @@ def dashboard(request):
     hour = timezone.localtime().hour
     greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
 
+    my_profile = CandidateProfile.objects.filter(user=request.user).first()
+
     context = {
         "greeting": greeting,
+        "my_profile": my_profile,
         "skill_count": Skill.objects.count(),
         "candidate_count": len(readiness),
         "assessment_count": SkillAssessment.objects.count(),
@@ -1083,7 +1087,9 @@ def signup_view(request):
                 user,
                 backend="django.contrib.auth.backends.ModelBackend",
             )
-            return redirect(settings.LOGIN_REDIRECT_URL)
+            # A brand-new account has no profile yet, so the useful next
+            # page is onboarding, not the cohort dashboard.
+            return redirect("preparation:onboarding")
     else:
         form = UserCreationForm()
 
@@ -1150,6 +1156,8 @@ def api_whoami(request):
 # so ordinary page loads pay nothing for it.
 # ---------------------------------------------------------------------------
 PALETTE_PAGES = [
+    ("My plan", "preparation:my_plan", "Your readiness and week-by-week plan"),
+    ("Retake the diagnosis", "preparation:onboarding", "Rebuild your plan"),
     ("Dashboard", "preparation:dashboard", "Home, readiness and widest gaps"),
     ("Candidates", "preparation:candidate_list", "Every candidate with scores"),
     ("Find a candidate", "preparation:candidate_search", "POST search"),
@@ -1193,3 +1201,134 @@ def api_palette(request):
         for p in PreparationPlan.objects.order_by("title")
     ]
     return JsonResponse({"items": items})
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5 - the start-from-scratch journey
+#
+#   /welcome/                    onboarding: goal + self-rating per skill
+#   /me/                         your readiness, gaps and week-by-week plan
+#   /me/tasks/<pk>/toggle/       POST: mark one of your tasks done / not done
+#
+# The rules that turn ratings into a plan live in preparation/onboarding.py.
+# ---------------------------------------------------------------------------
+@login_required
+def onboarding_view(request):
+    profile = CandidateProfile.objects.filter(user=request.user).first()
+    if request.method == "POST":
+        form = OnboardingForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            onboarding_rules.complete_onboarding(
+                request.user,
+                target_role=data["target_role"],
+                target_company=data["target_company"],
+                experience_level=data["experience_level"],
+                target_interview_date=data["target_interview_date"],
+                primary_concern=data["primary_concern"],
+                ratings=form.ratings(),
+            )
+            return redirect(reverse("preparation:my_plan") + "?welcome=1")
+    else:
+        initial = {}
+        if profile:  # a retake starts from the previous answers
+            initial = {
+                "target_role": profile.target_role,
+                "target_company": profile.target_company,
+                "experience_level": profile.experience_level,
+                "target_interview_date": profile.target_interview_date,
+                "primary_concern": profile.primary_concern,
+            }
+            initial.update({
+                f"skill_{a.skill_id}": a.proficiency_score
+                for a in profile.assessments.all()
+            })
+        form = OnboardingForm(initial=initial)
+
+    groups = {}
+    for skill, field in form.skill_fields():
+        groups.setdefault(skill.get_category_display(), []).append(field)
+    return render(request, "preparation/onboarding.html", {
+        "form": form,
+        "skill_groups": groups,
+        "is_retake": profile is not None,
+        # The role -> required level table, so each slider can show its
+        # target live as the role changes.
+        "role_requirements": onboarding_rules.ROLE_REQUIREMENTS,
+        "default_required": onboarding_rules.DEFAULT_REQUIRED,
+        "skill_names": {f"id_skill_{s.pk}": s.name for s in form.skills},
+    })
+
+
+@login_required
+def my_plan(request):
+    profile = (
+        CandidateProfile.objects.filter(user=request.user)
+        .prefetch_related("assessments__skill")
+        .first()
+    )
+    if profile is None:
+        return redirect("preparation:onboarding")
+
+    plan = (
+        profile.plans.filter(status=PreparationPlan.Status.ACTIVE)
+        .order_by("-created_at").first()
+        or profile.plans.order_by("-created_at").first()
+    )
+    weeks = []
+    if plan:
+        tasks = list(plan.tasks.select_related("skill").order_by("week_number", "pk"))
+        for number in range(1, plan.total_weeks + 1):
+            week_tasks = [t for t in tasks if t.week_number == number]
+            if week_tasks:
+                weeks.append({
+                    "number": number,
+                    "tasks": week_tasks,
+                    "current": number == plan.current_week,
+                    "done": all(t.status == PlanTask.Status.DONE for t in week_tasks),
+                })
+
+    gaps = sorted(
+        (a for a in profile.assessments.all() if a.gap > 0),
+        key=lambda a: a.gap, reverse=True,
+    )
+    days_left = (
+        (profile.target_interview_date - timezone.localdate()).days
+        if profile.target_interview_date else None
+    )
+    return render(request, "preparation/my_plan.html", {
+        "profile": profile,
+        "plan": plan,
+        "weeks": weeks,
+        "gaps": gaps[:6],
+        "gap_max": gaps[0].gap if gaps else 0,
+        "readiness": profile.readiness_percent,
+        "days_left": days_left,
+        "welcome": request.GET.get("welcome") == "1",
+    })
+
+
+@require_POST
+@login_required
+def toggle_task(request, pk):
+    """Mark one of *your own* tasks done, or back to to-do.
+
+    The queryset is filtered by owner before the lookup, so a guessed pk
+    for someone else's task is a 404, not a quiet edit.
+    """
+    task = get_object_or_404(
+        PlanTask.objects.select_related("plan__candidate"),
+        pk=pk, plan__candidate__user=request.user,
+    )
+    if task.status == PlanTask.Status.DONE:
+        task.status, task.completed_on = PlanTask.Status.TODO, None
+    else:
+        task.status, task.completed_on = PlanTask.Status.DONE, timezone.localdate()
+    task.save(update_fields=["status", "completed_on"])
+
+    if request.headers.get("Accept") == "application/json":
+        return JsonResponse({
+            "done": task.status == PlanTask.Status.DONE,
+            "completion_percent": task.plan.completion_percent,
+        })
+    return redirect(reverse("preparation:my_plan") + f"#task-{task.pk}")

@@ -19,9 +19,20 @@
       <p class="hero-strip__lede">Readiness is measured against what each candidate's target role
         requires. The widest gaps are where the next week of preparation should go.</p>
     </div>
-    <button type="button" class="hero-strip__action" data-palette-open>
-      Jump to anything <kbd>&#8984;K</kbd>
-    </button>
+    <div class="hero-strip__actions">
+      {% if my_profile %}
+        <a class="hero-strip__action hero-strip__action--primary" href="{% url 'preparation:my_plan' %}">
+          My plan &middot; {{ my_profile.readiness_percent }}% ready &rarr;
+        </a>
+      {% else %}
+        <a class="hero-strip__action hero-strip__action--primary" href="{% url 'preparation:onboarding' %}">
+          Start your diagnosis &rarr;
+        </a>
+      {% endif %}
+      <button type="button" class="hero-strip__action" data-palette-open>
+        Jump to anything <kbd>&#8984;K</kbd>
+      </button>
+    </div>
   </section>
 {% endblock %}
 

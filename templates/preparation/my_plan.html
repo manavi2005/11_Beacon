@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% comment %}
+  "My plan": everything Beacon knows about the signed-in user. Readiness
+  ring, widest gaps, and the week-by-week plan built at onboarding.
+
+  Each task's checkbox is a POST form to /me/tasks/<pk>/toggle/, so it works
+  without JavaScript (full page reload). With it, beacon.js sends the same
+  POST with fetch and updates the progress bar in place.
+{% endcomment %}
+
+{% block title %}My plan - Beacon{% endblock %}
+{% block body_class %}page-my-plan{% endblock %}
+
+{% block page_header %}
+  <section class="plan-hero{% if welcome %} plan-hero--welcome{% endif %}">
+    {% include "preparation/_lighthouse.html" with scene_class="plan-hero__scene" %}
+    <div class="plan-hero__copy">
+      <p class="hero-strip__eyebrow">
+        {% if welcome %}Your beacon is lit{% else %}Your preparation{% endif %}
+      </p>
+      <h1 class="page-title plan-hero__title">
+        {{ profile.target_role }}{% if profile.target_company %} at {{ profile.target_company }}{% endif %}
+      </h1>
+      <p class="plan-hero__meta">
+        {% if days_left is not None %}
+          {% if days_left > 0 %}<strong data-count="{{ days_left }}">{{ days_left }}</strong> days to your interview{% elif days_left == 0 %}Interview day: good luck{% else %}Interview date has passed{% endif %}
+          &middot;
+        {% endif %}
+        {{ profile.get_experience_level_display }}
+      </p>
+      {% if welcome %}
+        <p class="plan-hero__lede">We compared your self-ratings with what {{ profile.target_role }} roles
+          require, and built your plan around the widest gaps. Start with week 1.</p>
+      {% endif %}
+    </div>
+    <div class="plan-hero__ring">
+      <div class="ring ring--hero {% if readiness >= 75 %}ring--good{% elif readiness >= 50 %}ring--mid{% else %}ring--low{% endif %}"
+           style="--p: {{ readiness }}">
+        <svg viewBox="0 0 84 84" aria-hidden="true">
+          <circle class="ring__track" cx="42" cy="42" r="36"></circle>
+          <circle class="ring__value" cx="42" cy="42" r="36"></circle>
+        </svg>
+        <span class="ring__number" data-count="{{ readiness }}" data-suffix="%">{{ readiness }}%</span>
+        <span class="ring__name">ready</span>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block content %}
+  <div class="dash-grid">
+    <section class="panel">
+      <h2 class="panel__title">Your widest gaps</h2>
+      <p class="panel__lede">Points between your rating and what the role requires.</p>
+      <ol class="gapbars">
+        {% for a in gaps %}
+          <li class="gapbar">
+            <span class="gapbar__label">{{ a.skill.name }}</span>
+            <span class="gapbar__track"><span class="gapbar__fill" style="--w: {% widthratio a.gap gap_max 100 %}%"></span></span>
+            <span class="gapbar__value">{{ a.gap }}</span>
+          </li>
+        {% empty %}
+          <li class="muted">No gaps: you meet the bar on every skill. Consider a harder target role.</li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel__title">Plan progress</h2>
+      {% if plan %}
+        <p class="panel__lede">{{ plan.title }} &middot; {{ plan.start_date }} to {{ plan.target_date }}</p>
+        <div class="progress" aria-label="Plan completion">
+          <span class="progress__fill" data-plan-progress style="--w: {{ plan.completion_percent }}%"></span>
+        </div>
+        <p class="progress__label"><strong data-plan-percent>{{ plan.completion_percent }}</strong>% of tasks done</p>
+      {% endif %}
+      <p class="panel__foot">
+        <a href="{% url 'preparation:onboarding' %}">Retake the diagnosis</a> to rebuild your plan.
+      </p>
+    </section>
+  </div>
+
+  {% if plan %}
+    <h2>Week by week</h2>
+    <ol class="weeks">
+      {% for week in weeks %}
+        <li class="week{% if week.current %} week--current{% endif %}{% if week.done %} week--done{% endif %}">
+          <p class="week__label">Week {{ week.number }}{% if week.current %} <span class="pill pill--doing">This week</span>{% endif %}</p>
+          <ul class="tasks">
+            {% for task in week.tasks %}
+              <li class="task{% if task.status == 'DONE' %} task--done{% endif %}" id="task-{{ task.pk }}">
+                <form method="post" action="{% url 'preparation:toggle_task' task.pk %}" class="task__form" data-task-toggle>
+                  {% csrf_token %}
+                  <button type="submit" class="task__check" role="checkbox"
+                          aria-checked="{% if task.status == 'DONE' %}true{% else %}false{% endif %}"
+                          aria-label="Mark {{ task.title }} {% if task.status == 'DONE' %}not done{% else %}done{% endif %}">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7" /></svg>
+                  </button>
+                </form>
+                <div class="task__body">
+                  <p class="task__title">{{ task.title }}</p>
+                  <p class="task__meta">
+                    {% if task.skill %}{{ task.skill.name }} &middot; {% endif %}{{ task.estimated_minutes }} min
+                    &middot; <span class="task__priority task__priority--{{ task.get_priority_display|lower }}">{{ task.get_priority_display }} priority</span>
+                  </p>
+                  <p class="task__why">{{ task.rationale }}</p>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+      {% empty %}
+        <li class="muted">Your plan has no tasks, because you are at or above the bar everywhere.</li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+{% endblock %}

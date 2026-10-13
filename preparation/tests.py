@@ -1547,3 +1547,136 @@ class PolishTests(TestCase):
         r = self.client.post(reverse("preparation:login"),
                              {"username": "tquant", "password": "wrong"})
         self.assertContains(r, "auth-card__alert")
+
+
+class FromScratchJourneyTests(TestCase):
+    """A brand-new user: sign up -> onboarding -> personal plan -> tick tasks."""
+
+    PASSWORD = "Lighthouse-test-2026"
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)   # three skills and two existing candidates
+
+    def _sign_up(self, username="newbie"):
+        return self.client.post(reverse("preparation:signup"), {
+            "username": username, "password1": self.PASSWORD, "password2": self.PASSWORD,
+        })
+
+    def _onboard(self, **overrides):
+        data = {
+            "target_role": "Data Analyst",
+            "target_company": "Spotify",
+            "experience_level": "NEW",
+            "target_interview_date": (timezone.localdate() + timezone.timedelta(weeks=4)).isoformat(),
+            "primary_concern": "TECH",
+            f"skill_{self.sql.pk}": 40,        # Data Analyst requires 85: gap 45
+            f"skill_{self.python.pk}": 70,     # requires 75: gap 5
+            f"skill_{self.pitch.pk}": 90,      # default 65: no gap
+        }
+        data.update(overrides)
+        return self.client.post(reverse("preparation:onboarding"), data)
+
+    def test_signup_lands_on_onboarding(self):
+        r = self._sign_up()
+        self.assertRedirects(r, reverse("preparation:onboarding"))
+
+    def test_new_user_without_profile_is_sent_to_onboarding_from_my_plan(self):
+        self._sign_up()
+        self.assertRedirects(self.client.get(reverse("preparation:my_plan")),
+                             reverse("preparation:onboarding"))
+
+    def test_dashboard_offers_the_diagnosis_to_a_new_user(self):
+        self._sign_up()
+        self.assertContains(self.client.get("/"), "Start your diagnosis")
+
+    def test_onboarding_builds_profile_assessments_and_plan(self):
+        self._sign_up()
+        r = self._onboard()
+        self.assertRedirects(r, reverse("preparation:my_plan") + "?welcome=1",
+                             fetch_redirect_response=False)
+        profile = CandidateProfile.objects.get(user__username="newbie")
+        self.assertEqual(profile.target_role, "Data Analyst")
+        self.assertEqual(profile.preparation_timeline_weeks, 4)
+        sql = profile.assessments.get(skill=self.sql)
+        self.assertEqual((sql.proficiency_score, sql.required_level), (40, 85))
+
+        plan = profile.plans.get(status=PreparationPlan.Status.ACTIVE)
+        tasks = list(plan.tasks.order_by("week_number", "pk"))
+        # Widest gap first, and no tasks for a skill already above the bar.
+        self.assertEqual(tasks[0].skill, self.sql)
+        self.assertEqual(tasks[0].week_number, 1)
+        self.assertEqual(tasks[0].priority, PlanTask.Priority.HIGH)
+        self.assertNotIn(self.pitch, {t.skill for t in tasks})
+        self.assertTrue(all(1 <= t.week_number <= 4 for t in tasks))
+        self.assertIn("45-point gap", tasks[0].rationale)
+
+    def test_my_plan_shows_the_users_own_plan(self):
+        self._sign_up()
+        self._onboard()
+        r = self.client.get(reverse("preparation:my_plan") + "?welcome=1")
+        self.assertContains(r, "Your beacon is lit")
+        self.assertContains(r, "Data Analyst at Spotify")
+        self.assertContains(r, "Week 1")
+        self.assertContains(r, "data-lighthouse")
+        self.assertNotContains(r, "{%")
+
+    def test_retake_archives_the_old_plan_and_keeps_one_active(self):
+        self._sign_up()
+        self._onboard()
+        self._onboard(**{f"skill_{self.sql.pk}": 80})
+        profile = CandidateProfile.objects.get(user__username="newbie")
+        self.assertEqual(profile.plans.count(), 2)
+        self.assertEqual(profile.plans.filter(status=PreparationPlan.Status.ACTIVE).count(), 1)
+        self.assertEqual(profile.assessments.get(skill=self.sql).proficiency_score, 80)
+
+    def test_past_interview_date_is_rejected(self):
+        self._sign_up()
+        r = self._onboard(target_interview_date="2020-01-01")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Pick a date in the future")
+        self.assertFalse(CandidateProfile.objects.filter(user__username="newbie").exists())
+
+    def test_ticking_a_task_updates_progress(self):
+        self._sign_up()
+        self._onboard()
+        task = PlanTask.objects.filter(plan__candidate__user__username="newbie").first()
+        url = reverse("preparation:toggle_task", args=[task.pk])
+
+        r = self.client.post(url, headers={"Accept": "application/json"})
+        self.assertTrue(r.json()["done"])
+        self.assertGreater(r.json()["completion_percent"], 0)
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.DONE)
+        self.assertIsNotNone(task.completed_on)
+
+        self.client.post(url)  # plain form post toggles it back, then redirects
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.TODO)
+
+    def test_cannot_tick_someone_elses_task(self):
+        self._sign_up("owner")
+        self._onboard()
+        task = PlanTask.objects.filter(plan__candidate__user__username="owner").first()
+        self.client.logout()
+        self._sign_up("intruder")
+        r = self.client.post(reverse("preparation:toggle_task", args=[task.pk]))
+        self.assertEqual(r.status_code, 404)
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.TODO)
+
+    def test_toggle_is_post_only_and_needs_login(self):
+        self._sign_up()
+        self._onboard()
+        task = PlanTask.objects.filter(plan__candidate__user__username="newbie").first()
+        url = reverse("preparation:toggle_task", args=[task.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.client.post(url).status_code, 302)
+
+    def test_onboarding_and_my_plan_need_login(self):
+        for name in ("preparation:onboarding", "preparation:my_plan"):
+            with self.subTest(page=name):
+                r = self.client.get(reverse(name))
+                self.assertEqual(r.status_code, 302)
+                self.assertIn(reverse("preparation:login"), r["Location"])

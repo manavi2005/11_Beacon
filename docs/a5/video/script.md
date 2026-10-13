@@ -1,80 +1,109 @@
-# Demo video script: Beacon, Phase 1 (target 4:40, hard limit 5:00)
+# Demo video script: Beacon, Phase 1 (target 4:45, hard limit 5:00)
 
-Record on the **production** site, <https://simonhwang1998.pythonanywhere.com/>.
-Use a fresh incognito window so you start signed out. Record at 1920×1080
+The video follows **one brand-new user from scratch**: a student who has
+never used Beacon signs up, gets diagnosed, and gets a plan. Then it shows
+the coach's view and the APIs underneath.
+
+Record on the **production** site, <https://simonhwang1998.pythonanywhere.com/>,
+in a fresh incognito window so you start signed out. Record at 1920×1080
 (QuickTime: File > New Screen Recording). Close other tabs and turn on Do
-Not Disturb first.
+Not Disturb.
 
-**Before recording, check:**
-- The site has been redeployed with the latest `main` (see `../DEPLOY.md`),
-  and `/market/?q=analyst` loads postings.
-- You can log in with Google on production.
-- The emails in `opening-slide.html` are filled in.
-- `docs/a5/group-11-vega-lite-API-demo.txt` is ready to paste.
-- A terminal is open in `docs/a5/alt_uses/`.
+## Before you record
 
-Suggested split: **A** opening and auth, **B** product walkthrough,
-**C** APIs and data. Each narrator only needs their own section.
+- [ ] Production is updated to the latest `main` (`../DEPLOY.md`), and
+      `/welcome/` loads when signed in.
+- [ ] **Pick an unused username for the demo**, e.g. `maya_demo1`. A
+      username can only be signed up once; for a retake, use `maya_demo2`.
+- [ ] If you will show *Continue with Google* as the new user, use a Google
+      account that has **never** signed in to the production site.
+      Otherwise you land on your existing account, not onboarding. For a
+      guaranteed fresh start, use the username signup form.
+- [ ] Emails are filled in on `opening-slide.html`.
+- [ ] The Vega-Lite spec is ready to paste, and a terminal is open in
+      `docs/a5/alt_uses/`.
+- [ ] Do one full rehearsal. Dragging the sliders to sensible values is
+      what takes time.
+
+**Suggested ratings (Data Analyst at Spotify)** give a clear plan with SQL
+at the top: SQL 40, Python 55, STAR 35, data structures 45, system design
+30, product sense 70, Git 70, whiteboard 60, resume 65, everything else 50.
+
+Suggested split: **A** opening and sign-up, **B** onboarding and plan,
+**C** coach view and APIs.
 
 ---
 
 ## 0:00 to 0:30 · Opening slide (narrator A)
 
-Show `opening-slide.html` full screen.
+`opening-slide.html` full screen.
 
 > "Today is **[month day], 2026**. We are Team Career Coaches, Group 11:
 > Manavi Chaudhry, Chu-Yun Hwang, and Meet Kailash Mali. This is the first
 > prototype of our startup product, **Beacon**, that we are developing in
 > INFO 490 MG Fall 2026."
 
-## 0:30 to 0:55 · What Beacon is (narrator A, still on the slide)
+## 0:30 to 0:50 · The idea (narrator A, still on the slide)
 
 > "Students preparing for interviews are told everything they could
 > practise, but not what to practise next. Beacon diagnoses each skill
-> against what the student's target role actually requires. It turns the
-> widest gaps into a week-by-week preparation plan, and tracks readiness
-> until interview day. This phase is the full non-AI foundation: the data
-> model, authentication, and APIs that the AI coach will build on."
+> against what the student's target role requires, turns the widest gaps
+> into a week-by-week plan, and tracks readiness until interview day. Let us
+> show it from the very beginning, as a brand-new student."
 
-## 0:55 to 1:45 · Authentication (narrator A)
-
-| Do | Say |
-|---|---|
-| Open the production URL. You land on `/accounts/login/`. | "Everything is behind a login. Opening the site signed-out sends you to our login page." |
-| Point at the nav: only *Log In* and *Sign Up*. | "Before login, the navigation hides every protected page." |
-| Click **Sign Up**, show the form, then go back. | "We have our own signup and login pages, built on Django's auth forms with the password rules applied." |
-| Click **Continue with Google**, pick the account. | "And Google sign-in through django-allauth, working here on our deployed PythonAnywhere domain, not just locally." |
-| Land on the dashboard and point at the full nav. | "Once signed in, the full navigation appears." |
-
-## 1:45 to 2:55 · The product (narrator B)
+## 0:50 to 1:25 · Arriving and signing up (narrator A)
 
 | Do | Say |
 |---|---|
-| Dashboard: let the numbers and rings animate. | "The dashboard shows the cohort at a glance. Each ring is a candidate's readiness against their target role, and the bars on the right are the widest skill gaps across everyone." |
-| Click a low ring, e.g. **Bharat Patel**. | "Clicking a candidate shows their goal, every skill score, and their biggest gaps." |
-| Press **⌘K** (or Ctrl K), type `sql`, Enter. | "Anything in Beacon is one shortcut away: pages, candidates, skills and plans." |
-| On the skill page, show the assessments. | "Each skill page shows who has been assessed on it and which tasks target it." |
-| Open **Job market**, search `analyst`. | "Beacon pulls live remote job postings from a public jobs API and counts how often employers ask for each skill. It ranks skills by employer demand times our candidates' gap, so effort goes where it pays off." |
+| Open the production URL. It redirects to the login page. | "Everything in Beacon needs an account, so a new visitor lands here." |
+| **Move the mouse slowly across the lighthouse.** The beam follows it. | "That's our beacon. It follows you." (Pause one beat; it lands.) |
+| Point at the nav: only *Log In* and *Sign Up*. | "Signed out, the navigation hides every private page." |
+| Click **Sign Up**. Enter `maya_demo1` and a password. Submit. | "Sign-up is our own page, with Django's password rules. Google sign-in is right here too, through django-allauth, and it works on this deployed domain." |
 
-## 2:55 to 4:25 · APIs and data (narrator C)
-
-| Do | Say |
-|---|---|
-| Open `/api/skills/summary/` in the signed-in window. | "Beacon exposes exactly one public API: this skill summary. It is aggregates only, counts and averages per skill, so no individual can be identified." |
-| In the **incognito** window, open `/api/assessments/`. | "Every other API is protected. Signed out, it answers 401 with a JSON error instead of data." |
-| In incognito, open `/api/skills/summary/`. | "The public one still answers with no login at all." |
-| Vega-Lite editor: paste the spec and point at `data.url`. | "Here it is in the Vega-Lite editor. The chart reads our production URL directly, with no copied data, comparing current proficiency against what roles require." |
-| Terminal: `python use1_python_report.py` | "Three other ways to use the same API. First, a Python script that rolls it up by category: Technical is the weakest area, and SQL is the first thing to fix." |
-| Google Sheet with the `IMPORTDATA` formula and chart. | "Second, Google Sheets imports it live with one formula, through a CSV form of the same endpoint." |
-| Notebook chart. | "Third, a notebook analysis asks whether our coaching is aimed at the right skills. It found three skills with wide gaps but few preparation tasks, which is our next content priority." |
-
-## 4:25 to 4:45 · Close (narrator C)
+## 1:25 to 2:20 · Onboarding: from blank account to diagnosis (narrator B)
 
 | Do | Say |
 |---|---|
-| Click **Log Out**. You return to the login page. | "Logging out returns you to the login page and hides everything again. Next phase, the AI coach generates these plans automatically. Thank you." |
+| You land on **Welcome**. Choose *Data Analyst*, type *Spotify*, leave the date about 6 weeks out. | "A new account knows nothing about Maya yet, so Beacon asks two things. First, what she is aiming for and when." |
+| **Next: rate your skills.** Drag SQL down to 40, and watch the ring. | "Then an honest self-rating per skill. The dark tick on each slider is what a Data Analyst role actually expects, and the ring projects her readiness live as she answers." |
+| Set the rest quickly (ratings above), then click **Light my beacon**. | "Submit, and Beacon builds her profile, records every score, and generates a plan." |
+
+## 2:20 to 3:05 · Her plan (narrator B)
+
+| Do | Say |
+|---|---|
+| **My plan** loads with "Your beacon is lit". Pause on it. | "This page is now hers: target role, a countdown to her interview, and her readiness." |
+| Point at **Your widest gaps**. | "Her widest gap is SQL, 45 points below the bar, so that's where the plan starts." |
+| Scroll to **Week by week**. Read one task's *why* line. | "Every task says why it's there: she rated SQL at 40, and Data Analyst roles expect 85." |
+| **Tick the two week-1 tasks.** The progress bar moves and week 1 turns green. | "As she practises, she ticks tasks off and her progress updates instantly." |
+
+## 3:05 to 3:35 · The coach's view (narrator C)
+
+| Do | Say |
+|---|---|
+| Click **Dashboard**. Let the rings animate. | "A career coach sees the whole cohort: readiness for every candidate, and the widest gaps across everyone." |
+| Press **⌘K**, type `maya`, Enter. | "And can jump to any student, skill or page in one shortcut." |
+| Open **Job market**, search `analyst`. | "Beacon also pulls live job postings from a public jobs API, and ranks skills by how often employers ask for them times how far our students are behind." |
+
+## 3:35 to 4:30 · APIs and data (narrator C)
+
+| Do | Say |
+|---|---|
+| Open `/api/skills/summary/`. | "Beacon has exactly one public API: this skill summary. It is aggregates only, so no individual can be identified." |
+| In a signed-out window, open `/api/assessments/`. | "Every other API is protected. Signed out, it answers 401." |
+| Vega-Lite editor with the spec pasted; point at `data.url`. | "The Vega-Lite editor reads our production URL directly, with no copied data." |
+| Terminal: `python use1_python_report.py` | "The same API in a Python script, rolled up by category." |
+| The Google Sheet with `IMPORTDATA`. | "Imported live into Google Sheets with one formula." |
+| The notebook chart. | "And analysed in a notebook. That found three skills with wide gaps but few practice tasks, which is our next content to write." |
+
+## 4:30 to 4:45 · Close (narrator C)
+
+| Do | Say |
+|---|---|
+| Click **Log Out**. You return to the lighthouse. | "Logging out locks everything again. In the next phase, an AI coach replaces our rule-based planner, using the same diagnosis Maya just gave. Thank you." |
 
 ---
 
-**Timing check:** about 4:45. If you run long, cut the Sign Up detour
-(about 10 s) and the skill page (about 10 s) first.
+**If you run long:** trim the coach's view first (skip the job market, about
+15 s), then the Sheets and notebook lines (about 10 s). Keep the
+from-scratch story intact; it is the heart of the demo.
