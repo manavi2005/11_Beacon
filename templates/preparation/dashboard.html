@@ -1,26 +1,88 @@
 {% extends "base.html" %}
+{% comment %}
+  The signed-in home page. Three things a coach wants first thing: how big
+  the cohort is, how ready each candidate is, and where the gaps are widest.
 
-{% block title %}Beacon - data model status{% endblock %}
-{% block heading %}Data model status{% endblock %}
+  Numbers count up and rings and bars grow in on load (static/js/beacon.js).
+  The final values are always in the HTML, so without JavaScript, or with
+  reduced motion, everything is simply drawn in its final state.
+{% endcomment %}
+
+{% block title %}Beacon - dashboard{% endblock %}
+{% block body_class %}page-dashboard{% endblock %}
+
+{% block page_header %}
+  <section class="hero-strip">
+    <div>
+      <p class="hero-strip__eyebrow">{{ greeting }}, {{ user.first_name|default:user.username }}</p>
+      <h1 class="page-title hero-strip__title">Here is where your cohort stands.</h1>
+      <p class="hero-strip__lede">Readiness is measured against what each candidate's target role
+        requires. The widest gaps are where the next week of preparation should go.</p>
+    </div>
+    <button type="button" class="hero-strip__action" data-palette-open>
+      Jump to anything <kbd>&#8984;K</kbd>
+    </button>
+  </section>
+{% endblock %}
 
 {% block content %}
-  <p class="tag">FBV, render() - project overview</p>
-  <p>Row counts straight from the database, so this page doubles as proof the
-     models are wired up. Use the navigation above to reach the four graded
-     views, or manage the data in the <a href="{% url 'admin:index' %}">Django Admin</a>.</p>
-
-  <ul class="stats">
-    <li class="stat"><span class="stat__value">{{ skill_count }}</span>
-        <span class="stat__label">Skills</span></li>
-    <li class="stat"><span class="stat__value">{{ candidate_count }}</span>
+  <ul class="stats stats--hero">
+    <li class="stat"><span class="stat__value" data-count="{{ candidate_count }}">{{ candidate_count }}</span>
         <span class="stat__label">Candidates</span></li>
-    <li class="stat"><span class="stat__value">{{ assessment_count }}</span>
+    <li class="stat"><span class="stat__value" data-count="{{ skill_count }}">{{ skill_count }}</span>
+        <span class="stat__label">Skills tracked</span></li>
+    <li class="stat"><span class="stat__value" data-count="{{ assessment_count }}">{{ assessment_count }}</span>
         <span class="stat__label">Assessments</span></li>
-    <li class="stat"><span class="stat__value">{{ plan_count }}</span>
+    <li class="stat"><span class="stat__value" data-count="{{ plan_count }}">{{ plan_count }}</span>
         <span class="stat__label">Plans</span></li>
-    <li class="stat"><span class="stat__value">{{ task_count }}</span>
+    <li class="stat"><span class="stat__value" data-count="{{ task_count }}">{{ task_count }}</span>
         <span class="stat__label">Tasks</span></li>
   </ul>
+
+  <div class="dash-grid">
+    <section class="panel">
+      <h2 class="panel__title">Interview readiness</h2>
+      <p class="panel__lede">Average proficiency as a share of what the target role requires.</p>
+      <ul class="rings">
+        {% for row in readiness %}
+          <li>
+            <a class="ring {% if row.percent >= 75 %}ring--good{% elif row.percent >= 50 %}ring--mid{% else %}ring--low{% endif %}"
+               href="{{ row.candidate.get_absolute_url }}" style="--p: {{ row.percent }}">
+              <svg viewBox="0 0 84 84" aria-hidden="true">
+                <circle class="ring__track" cx="42" cy="42" r="36"></circle>
+                <circle class="ring__value" cx="42" cy="42" r="36"></circle>
+              </svg>
+              <span class="ring__number" data-count="{{ row.percent }}" data-suffix="%">{{ row.percent }}%</span>
+              <span class="ring__name">{{ row.name }}</span>
+              <span class="ring__role">{{ row.candidate.target_role }}</span>
+            </a>
+          </li>
+        {% empty %}
+          <li class="muted">No candidates yet. Run <code>python manage.py seed_demo_data</code>.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel__title">Widest skill gaps</h2>
+      <p class="panel__lede">Points below the required level, averaged over everyone assessed.</p>
+      <ol class="gapbars">
+        {% for gap in gaps %}
+          <li class="gapbar">
+            <span class="gapbar__label">{{ gap.skill }}</span>
+            <span class="gapbar__track">
+              <span class="gapbar__fill" style="--w: {% widthratio gap.avg_gap gap_max 100 %}%"></span>
+            </span>
+            <span class="gapbar__value">{{ gap.avg_gap }}</span>
+          </li>
+        {% empty %}
+          <li class="muted">No skill has been assessed yet.</li>
+        {% endfor %}
+      </ol>
+      <p class="panel__foot">Live from the public API:
+        <a href="{% url 'preparation:api_skill_summary' %}"><code>/api/skills/summary/</code></a></p>
+    </section>
+  </div>
 
   <h2>Preparation plans</h2>
   <div class="table-scroll">

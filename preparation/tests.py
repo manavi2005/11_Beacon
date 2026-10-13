@@ -1478,3 +1478,72 @@ class MarketSourceFallbackTests(TestCase):
         get.side_effect = [requests.ConnectionError(), remotive]
         r = self.client.get(reverse("preparation:market"), {"q": "data analyst"})
         self.assertContains(r, 'href="https://remotive.com"')
+
+
+class PolishTests(TestCase):
+    """Assignment 5 polish: palette data, dashboard panels, auth pages."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def test_palette_api_is_protected(self):
+        r = self.client.get(reverse("preparation:api_palette"))
+        self.assertEqual(r.status_code, 401)
+
+    def test_palette_lists_pages_candidates_and_skills(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        items = self.client.get(reverse("preparation:api_palette")).json()["items"]
+        groups = {i["group"] for i in items}
+        self.assertTrue({"Page", "Candidate", "Skill"} <= groups)
+        self.assertIn("Eunji", {i["label"] for i in items})
+        for item in items:
+            self.assertTrue(item["url"].startswith("/"))
+
+    def test_palette_markup_only_for_signed_in_users(self):
+        self.assertNotContains(self.client.get(reverse("preparation:login")), "data-palette")
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.assertContains(self.client.get("/"), "data-palette-open")
+
+    def test_dashboard_shows_readiness_and_widest_gaps(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.context["readiness"]), 2)
+        # SQL (gap 40) is wider than Python (gap 27.5), so it comes first.
+        self.assertEqual(r.context["gaps"][0]["skill"], "SQL & relational modeling")
+        self.assertContains(r, 'class="ring ')
+        self.assertContains(r, "gapbar__fill")
+
+    def test_dashboard_reads_readiness_without_a_query_per_candidate(self):
+        """Adding a candidate must not add a query (prefetch_related)."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.client.get("/")  # warm the session
+        with CaptureQueriesContext(connection) as before:
+            self.client.get("/")
+        extra = CandidateProfile.objects.create(
+            user=User.objects.create_user("extra", password="test-only-pw"),
+            target_role="Backend Engineer", preparation_timeline_weeks=4,
+        )
+        SkillAssessment.objects.create(
+            candidate=extra, skill=self.sql, proficiency_score=50, required_level=70
+        )
+        with CaptureQueriesContext(connection) as after:
+            self.client.get("/")
+        self.assertEqual(len(after), len(before))
+
+    def test_auth_pages_render_the_hero_and_styled_fields(self):
+        for name in ("preparation:login", "preparation:signup"):
+            with self.subTest(page=name):
+                r = self.client.get(reverse(name))
+                self.assertContains(r, "auth-hero")
+                self.assertContains(r, 'class="field__label"')
+                self.assertNotContains(r, "{%")
+
+    def test_login_errors_are_shown_on_the_redesigned_form(self):
+        r = self.client.post(reverse("preparation:login"),
+                             {"username": "tquant", "password": "wrong"})
+        self.assertContains(r, "auth-card__alert")

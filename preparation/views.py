@@ -202,13 +202,44 @@ class PlanTaskDetailView(DetailView):
 # ---------------------------------------------------------------------------
 @login_required
 def dashboard(request):
-    """Read-only summary of what is currently in the database."""
+    """The signed-in home page: counts, readiness per candidate, widest gaps.
+
+    Readiness is CandidateProfile.readiness_percent, which walks the
+    candidate's assessments; prefetching them makes that one query for the
+    whole list instead of one per candidate.
+    """
+    candidates = (
+        CandidateProfile.objects.select_related("user")
+        .prefetch_related("assessments")
+        .order_by("user__first_name", "user__username")
+    )
+    readiness = [
+        {
+            "candidate": c,
+            "name": c.user.get_full_name() or c.user.username,
+            "percent": c.readiness_percent,
+        }
+        for c in candidates
+    ]
+    gaps = sorted(
+        (row for row in vega.skill_summary_rows() if row["avg_gap"] is not None),
+        key=lambda row: row["avg_gap"],
+        reverse=True,
+    )[:5]
+
+    hour = timezone.localtime().hour
+    greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
+
     context = {
+        "greeting": greeting,
         "skill_count": Skill.objects.count(),
-        "candidate_count": CandidateProfile.objects.count(),
+        "candidate_count": len(readiness),
         "assessment_count": SkillAssessment.objects.count(),
         "plan_count": PreparationPlan.objects.count(),
         "task_count": PlanTask.objects.count(),
+        "readiness": readiness,
+        "gaps": gaps,
+        "gap_max": max((g["avg_gap"] for g in gaps), default=0),
         "plans": PreparationPlan.objects.select_related("candidate__user")[:10],
     }
     return render(request, "preparation/dashboard.html", context)
@@ -1109,3 +1140,56 @@ def api_whoami(request):
             "is_staff": request.user.is_staff,
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5 - command palette data (Ctrl/Cmd+K)
+#
+# Protected like every API except the one public summary: the list carries
+# candidate names. The palette fetches it once, the first time it is opened,
+# so ordinary page loads pay nothing for it.
+# ---------------------------------------------------------------------------
+PALETTE_PAGES = [
+    ("Dashboard", "preparation:dashboard", "Home, readiness and widest gaps"),
+    ("Candidates", "preparation:candidate_list", "Every candidate with scores"),
+    ("Find a candidate", "preparation:candidate_search", "POST search"),
+    ("Search skills", "preparation:skill_search", "GET search"),
+    ("Skill catalog", "preparation:skill_catalog_render", ""),
+    ("Plans", "preparation:plan_board", ""),
+    ("Tasks", "preparation:task_list", ""),
+    ("Create a task", "preparation:task_create", ""),
+    ("Insights", "preparation:insights", "Totals and grouped summaries"),
+    ("Charts", "preparation:charts", "Matplotlib"),
+    ("Vega-Lite charts", "preparation:vega_lite", ""),
+    ("Job market", "preparation:market", "Live postings vs skill gaps"),
+    ("Reports and exports", "preparation:reports", "CSV and JSON downloads"),
+    ("Public API: skill summary", "preparation:api_skill_summary", "JSON, no login"),
+]
+
+
+@api_login_required
+def api_palette(request):
+    """/api/palette/ - everything the command palette can jump to."""
+    items = [
+        {"label": label, "url": reverse(name), "group": "Page", "hint": hint}
+        for label, name, hint in PALETTE_PAGES
+    ]
+    items += [
+        {
+            "label": c.user.get_full_name() or c.user.username,
+            "url": c.get_absolute_url(),
+            "group": "Candidate",
+            "hint": c.target_role,
+        }
+        for c in CandidateProfile.objects.select_related("user").order_by("user__first_name")
+    ]
+    items += [
+        {"label": s.name, "url": s.get_absolute_url(), "group": "Skill",
+         "hint": s.get_category_display()}
+        for s in Skill.objects.order_by("name")
+    ]
+    items += [
+        {"label": p.title, "url": p.get_absolute_url(), "group": "Plan", "hint": p.focus_role}
+        for p in PreparationPlan.objects.order_by("title")
+    ]
+    return JsonResponse({"items": items})

@@ -24,10 +24,16 @@ Django prints it as page text.
   /static/. In production the staticfiles storage rewrites this to the
   content-hashed name, so the path is never written by hand anywhere.
   {% endcomment %}
+  {% comment %}
+  Marks the page as JavaScript-capable before first paint, so the
+  count-up and grow-in animations can start from zero. Without JavaScript
+  the class never appears and everything renders at its final value.
+  {% endcomment %}
+  <script>document.documentElement.classList.add("js");</script>
   <link rel="stylesheet" href="{% static 'css/beacon.css' %}">
   <link rel="icon" href="{% static 'img/beacon-logo.svg' %}" type="image/svg+xml">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <div class="page">
 
     <header class="masthead">
@@ -62,6 +68,14 @@ Django prints it as page text.
             <a href="{% url 'preparation:reports' %}">Reports</a>
             <a href="{% url 'admin:index' %}">Admin</a>
 
+            {% comment %}
+            Opens the command palette (beacon.js). Ctrl/Cmd+K does the same.
+            {% endcomment %}
+            <button type="button" class="nav-palette" data-palette-open
+                    aria-label="Search pages, candidates and skills">
+              Jump to&hellip; <kbd>&#8984;K</kbd>
+            </button>
+
             <form method="post"
                   action="{% url 'preparation:logout' %}"
                   class="nav-logout">
@@ -76,7 +90,9 @@ Django prints it as page text.
     </nav>
 
     <main class="content">
-      <h1 class="page-title">{% block heading %}Beacon{% endblock %}</h1>
+      {% block page_header %}
+        <h1 class="page-title">{% block heading %}Beacon{% endblock %}</h1>
+      {% endblock %}
       {% block content %}{% endblock %}
     </main>
 
@@ -85,5 +101,22 @@ Django prints it as page text.
     </footer>
 
   </div>
+  {% if user.is_authenticated %}
+    {% comment %}
+    Command palette (Assignment 5 polish). Empty until first opened; the
+    entries come from /api/palette/, a protected endpoint, so nothing about
+    candidates is in the page source for a signed-out visitor.
+    {% endcomment %}
+    <div class="palette" data-palette data-source="{% url 'preparation:api_palette' %}" hidden>
+      <div class="palette__backdrop" data-palette-close></div>
+      <div class="palette__panel" role="dialog" aria-modal="true" aria-label="Jump to">
+        <input class="palette__input" type="search" placeholder="Jump to a page, candidate or skill&hellip;"
+               autocomplete="off" spellcheck="false" aria-controls="palette-results">
+        <ul class="palette__results" id="palette-results" role="listbox"></ul>
+        <p class="palette__hint"><kbd>&uarr;</kbd><kbd>&darr;</kbd> to move &middot; <kbd>Enter</kbd> to open &middot; <kbd>Esc</kbd> to close</p>
+      </div>
+    </div>
+  {% endif %}
+  <script src="{% static 'js/beacon.js' %}" defer></script>
 </body>
 </html>

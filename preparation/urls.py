@@ -101,4 +101,6 @@ urlpatterns = [
     # page, because a JSON client cannot do anything useful with a redirect
     # to markup.
     path("api/whoami/", views.api_whoami, name="api_whoami"),
+    # Command palette entries (Ctrl/Cmd+K). Protected: it lists candidates.
+    path("api/palette/", views.api_palette, name="api_palette"),
 ]

@@ -1,16 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}Log In{% endblock %}
-{% block heading %}Log In{% endblock %}
+{% block title %}Log In - Beacon{% endblock %}
+{% block body_class %}page-auth{% endblock %}
+{% block page_header %}{% endblock %}
 
 {% block content %}
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Log In</button>
-</form>
+<div class="auth">
+  {% include "registration/_auth_hero.html" %}
 
-{% include "registration/_google_button.html" %}
+  <section class="auth-card">
+    <h1 class="auth-card__title">Welcome back</h1>
+    <p class="auth-card__lede">Log in to see your readiness and this week's plan.</p>
 
-<p>Need an account? <a href="{% url 'preparation:signup' %}">Sign up</a></p>
+    <form method="post" class="auth-card__form">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      {% include "registration/_auth_fields.html" %}
+      <button type="submit" class="auth-card__submit">Log In</button>
+    </form>
+
+    {% include "registration/_google_button.html" %}
+
+    <p class="auth-card__switch">Need an account? <a href="{% url 'preparation:signup' %}">Sign up</a></p>
+  </section>
+</div>
 {% endblock %}
