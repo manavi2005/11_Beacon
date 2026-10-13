@@ -22,4 +22,8 @@ def google_oauth(request):
     app = provider.get("APP", {})
     return {
         "google_oauth_configured": bool(app.get("client_id") and app.get("secret")),
+        # In development only, show a disabled placeholder when credentials
+        # are missing, so the login page still looks like the real thing and
+        # says how to switch Google on. Production keeps hiding it.
+        "google_oauth_placeholder": settings.DEBUG,
     }

@@ -668,6 +668,8 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
    --------------------------------------------------------------------------- */
 .oauth { margin: 0 0 var(--s4); }
 .oauth__hint { margin: var(--s2) 0 0; font-size: .78rem; color: var(--ink-muted); text-align: center; }
+.oauth--off .oauth__button { opacity: .55; cursor: not-allowed; box-shadow: none; }
+.oauth--off .oauth__hint code { font-size: .72rem; }
 
 /* A rule with the word "or" sitting in the gap, so the two ways of signing
    in read as alternatives rather than as two steps. */

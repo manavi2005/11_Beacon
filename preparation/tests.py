@@ -2361,3 +2361,19 @@ class StudentPrivacyTests(TestCase):
         self._as("tquant")
         self.assertEqual(self.client.get(reverse("preparation:insights")).status_code, 200)
         self.assertEqual(self.client.get(reverse("preparation:charts")).status_code, 200)
+
+
+class GooglePlaceholderTests(TestCase):
+    """Dev without credentials: a disabled button that explains itself."""
+
+    @override_settings(DEBUG=True, SOCIALACCOUNT_PROVIDERS={"google": {"APP": {"client_id": "", "secret": ""}}})
+    def test_development_shows_a_disabled_button_with_instructions(self):
+        r = self.client.get(reverse("preparation:login"))
+        self.assertContains(r, "Continue with Google")
+        self.assertContains(r, "disabled")
+        self.assertContains(r, "GOOGLE_OAUTH_CLIENT_ID")
+        self.assertNotContains(r, reverse("google_login"))
+
+    @override_settings(DEBUG=False, SOCIALACCOUNT_PROVIDERS={"google": {"APP": {"client_id": "", "secret": ""}}})
+    def test_production_without_credentials_still_hides_it(self):
+        self.assertNotContains(self.client.get(reverse("preparation:login")), "Continue with Google")
