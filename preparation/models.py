@@ -100,6 +100,22 @@ class CandidateProfile(models.Model):
     target_role = models.CharField(
         max_length=120, help_text="e.g. Software Engineer Intern"
     )
+    # Every role the candidate is preparing for at once, e.g. ["Data Analyst",
+    # "Product Manager"]. target_role above stays the human-readable label
+    # ("Data Analyst + Product Manager") so every page and export that already
+    # prints it keeps working.
+    target_roles = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="All target roles; requirements use the highest bar among them.",
+    )
+    # What kind of work the candidate enjoys, from onboarding. Used to suggest
+    # roles to someone who has not picked one yet.
+    interests = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Interest keys chosen at onboarding, e.g. ['data', 'product'].",
+    )
     target_company = models.CharField(max_length=120, blank=True)
     experience_level = models.CharField(
         max_length=5, choices=ExperienceLevel.choices, default=ExperienceLevel.STUDENT

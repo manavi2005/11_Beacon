@@ -69,7 +69,52 @@ ROLE_REQUIREMENTS = {
         "Version control with Git": 80,
     },
 }
+# For someone with no specific role in mind, or a mix of roles: a balanced
+# bar where the skills every interview tests (telling stories, explaining
+# your thinking, presenting yourself) matter most.
+GENERAL_ROLE = "General interview readiness"
+ROLE_REQUIREMENTS[GENERAL_ROLE] = {
+    "STAR-format storytelling": 75, "Handling failure questions": 75,
+    "Whiteboard communication": 70, "Resume & elevator pitch": 75,
+    "Negotiating an offer": 60, "Data structures & algorithms": 50,
+    "Python fundamentals": 50, "SQL & relational modeling": 50,
+    "System design basics": 45, "Version control with Git": 50,
+    "Product sense": 55, "Financial markets basics": 45,
+}
 ROLE_CHOICES = list(ROLE_REQUIREMENTS)
+MAX_ROLES = 3
+
+# What kind of work someone enjoys -> the roles that fit it. Onboarding asks
+# this first, so a user who does not know which role to aim for gets
+# suggestions instead of a blank dropdown.
+INTERESTS = {
+    "build": ("Building software", "Writing code, shipping features",
+              ["Software Engineer", "Backend Engineer"]),
+    "data": ("Working with data", "Finding answers in numbers",
+             ["Data Analyst", "Quantitative Trader"]),
+    "product": ("Shaping products", "Deciding what to build and why",
+                ["Product Manager", "UX Researcher"]),
+    "people": ("Understanding people", "Research, interviews, design",
+               ["UX Researcher", "Product Manager"]),
+    "markets": ("Finance and markets", "Trading, risk, the economy",
+                ["Quantitative Trader", "Data Analyst"]),
+    "unsure": ("Not sure yet", "Keep my options open",
+               [GENERAL_ROLE]),
+}
+INTEREST_CHOICES = [(key, label) for key, (label, _desc, _roles) in INTERESTS.items()]
+
+
+def suggested_roles(interest_keys):
+    """Roles that fit the chosen interests, most-matched first."""
+    counts = {}
+    for key in interest_keys:
+        for rank, role in enumerate(INTERESTS.get(key, ("", "", []))[2]):
+            counts[role] = counts.get(role, 0) + (2 - rank)
+    return sorted(counts, key=lambda r: (-counts[r], ROLE_CHOICES.index(r)))
+
+
+def roles_label(roles):
+    return " + ".join(roles) if roles else GENERAL_ROLE
 
 # Concrete practice per skill, hardest-hitting first. Minutes are estimates.
 TASKS_BY_SKILL = {
@@ -128,8 +173,16 @@ TASKS_BY_SKILL = {
 MAX_TASKS = 12
 
 
-def required_level(role, skill_name):
-    return ROLE_REQUIREMENTS.get(role, {}).get(skill_name, DEFAULT_REQUIRED)
+def required_level(roles, skill_name):
+    """The bar for one skill. With several roles it is the highest of them:
+    to be ready for all of them you have to clear the toughest one."""
+    if isinstance(roles, str):
+        roles = [roles]
+    levels = [
+        ROLE_REQUIREMENTS.get(role, {}).get(skill_name, DEFAULT_REQUIRED)
+        for role in roles or [GENERAL_ROLE]
+    ]
+    return max(levels)
 
 
 def _priority(gap):
@@ -158,7 +211,7 @@ def build_plan(profile):
     profile.plans.filter(status=PreparationPlan.Status.ACTIVE).update(
         status=PreparationPlan.Status.ARCHIVED
     )
-    base_title = f"{weeks}-week {profile.target_role} plan"
+    base_title = f"{weeks}-week {profile.target_role} plan"[:140]
     title, n = base_title, 2
     while profile.plans.filter(title=title).exists():
         title, n = f"{base_title} ({n})", n + 1
@@ -202,7 +255,7 @@ def build_plan(profile):
             priority=_priority(gap),
             rationale=(
                 f"You rated {assessment.skill.name} at {assessment.proficiency_score}; "
-                f"{profile.target_role} roles expect about {assessment.required_level}. "
+                f"{_who_expects(profile)} about {assessment.required_level}. "
                 f"Closing that {gap}-point gap is "
                 f"{'your top priority' if gap == gaps[0][0] else 'on the critical path'}."
             ),
@@ -210,27 +263,47 @@ def build_plan(profile):
     return plan
 
 
+def _who_expects(profile):
+    roles = profile.target_roles or [profile.target_role]
+    if roles == [GENERAL_ROLE]:
+        return "most interviews expect"
+    if len(roles) > 1:
+        return "the toughest of your target roles expects"
+    return f"{roles[0]} roles expect"
+
+
 @transaction.atomic
-def complete_onboarding(user, *, target_role, target_company, experience_level,
-                        target_interview_date, primary_concern, ratings):
+def complete_onboarding(user, *, target_roles, target_company, experience_level,
+                        target_interview_date, prep_weeks, primary_concern,
+                        ratings, interests=(), about=""):
     """Create or update the profile, record self-ratings, build the plan.
 
-    ratings maps Skill pk -> self-rating 0-100. Running it again (a retake)
-    updates the same rows and builds a fresh plan; the old one is archived.
+    target_roles is one or more role names; each skill's bar is the highest
+    among them. With no interview date, prep_weeks sets an open-ended plan
+    length instead and the date stays blank. ratings maps Skill pk ->
+    self-rating 0-100. Running it again (a retake) updates the same rows and
+    builds a fresh plan; the old one is archived.
     """
     today = timezone.localdate()
-    days = max((target_interview_date - today).days, 7)
-    weeks = max(1, min(52, -(-days // 7)))
+    if target_interview_date:
+        days = max((target_interview_date - today).days, 7)
+        weeks = max(1, min(52, -(-days // 7)))
+    else:
+        weeks = max(1, min(52, int(prep_weeks or 6)))
+    roles = list(target_roles) or [GENERAL_ROLE]
 
     profile, _ = CandidateProfile.objects.update_or_create(
         user=user,
         defaults={
-            "target_role": target_role,
+            "target_role": roles_label(roles)[:120],
+            "target_roles": roles,
+            "interests": list(interests),
             "target_company": target_company,
             "experience_level": experience_level,
             "target_interview_date": target_interview_date,
             "preparation_timeline_weeks": weeks,
             "primary_concern": primary_concern,
+            "resume_summary": about,
         },
     )
     for skill in Skill.objects.filter(pk__in=ratings):
@@ -239,7 +312,7 @@ def complete_onboarding(user, *, target_role, target_company, experience_level,
             skill=skill,
             defaults={
                 "proficiency_score": ratings[skill.pk],
-                "required_level": required_level(target_role, skill.name),
+                "required_level": required_level(roles, skill.name),
                 "assessed_on": today,
                 "notes": "Self-assessment during onboarding.",
             },

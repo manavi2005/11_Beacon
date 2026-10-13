@@ -225,23 +225,38 @@
   }
 
   /* -------------------------------------------------------------------------
-     5. Onboarding: one step at a time, sliders with live values and role
-        targets, and a projected-readiness ring using the same formula as
-        CandidateProfile.readiness_percent: mean of min(rating/required, 1).
+     5. Onboarding: three steps, one at a time.
+        - Interests mark matching roles "Suggested for you", and pre-select
+          the best match if no role has been picked yet.
+        - Up to three roles; "General interview readiness" is exclusive.
+        - "Interview booked?" swaps the date field for a plan length.
+        - Each slider shows the bar the chosen roles set (the highest among
+          them), and the ring projects readiness with the same formula as
+          CandidateProfile.readiness_percent: mean of min(rating/required, 1).
      ------------------------------------------------------------------------- */
   function onboarding(form) {
+    var GENERAL = "General interview readiness";
+    var MAX_ROLES = 3;
     var steps = form.querySelectorAll("[data-step]");
     var dots = form.querySelectorAll("[data-step-dot]");
-    var role = form.querySelector("[name=target_role]");
+    var roleBoxes = form.querySelectorAll("[name=target_roles]");
+    var interestBoxes = form.querySelectorAll("[name=interests]");
+    var timeline = form.querySelectorAll("[name=has_interview]");
     var sliders = form.querySelectorAll("input[type=range]");
     var ring = document.querySelector("[data-onb-ring]");
     var ringNumber = document.querySelector("[data-onb-readiness]");
     var defaultRequired = parseInt(form.getAttribute("data-default-required"), 10) || 65;
-    var requirements = {}, names = {};
+    var requirements = {}, names = {}, interestRoles = {};
     try {
       requirements = JSON.parse(document.getElementById("role-requirements").textContent);
       names = JSON.parse(document.getElementById("skill-names").textContent);
-    } catch (e) { /* no live targets; the form still submits */ }
+      interestRoles = JSON.parse(document.getElementById("interest-roles").textContent);
+    } catch (e) { /* no live hints; the form still submits */ }
+
+    function checkedValues(boxes) {
+      return Array.prototype.filter.call(boxes, function (b) { return b.checked; })
+        .map(function (b) { return b.value; });
+    }
 
     function show(n) {
       steps.forEach(function (s) { s.hidden = s.getAttribute("data-step") !== String(n); });
@@ -253,9 +268,65 @@
       window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     }
 
+    // --- interests -> suggested roles -------------------------------------
+    function suggestions() {
+      var score = {};
+      checkedValues(interestBoxes).forEach(function (key) {
+        (interestRoles[key] || []).forEach(function (role, rank) {
+          score[role] = (score[role] || 0) + (2 - rank);
+        });
+      });
+      return Object.keys(score).sort(function (a, b) { return score[b] - score[a]; });
+    }
+
+    function markSuggestions() {
+      var suggested = suggestions();
+      form.querySelectorAll("[data-role]").forEach(function (chip) {
+        var on = suggested.indexOf(chip.getAttribute("data-role")) !== -1;
+        chip.classList.toggle("is-suggested", on);
+        chip.querySelector(".chip__badge").hidden = !on;
+      });
+      return suggested;
+    }
+
+    // --- roles: max three, General is exclusive ------------------------------
+    function onRoleChange(e) {
+      var box = e.target;
+      if (box.checked && box.value === GENERAL) {
+        roleBoxes.forEach(function (b) { if (b !== box) b.checked = false; });
+      } else if (box.checked) {
+        roleBoxes.forEach(function (b) { if (b.value === GENERAL) b.checked = false; });
+        if (checkedValues(roleBoxes).length > MAX_ROLES) box.checked = false;
+      }
+      form.querySelector("[data-roles-error]").hidden = true;
+      syncChips();
+      update();
+    }
+
+    function syncChips() {
+      form.querySelectorAll(".chip").forEach(function (chip) {
+        var input = chip.querySelector("input");
+        if (input) chip.classList.toggle("is-checked", input.checked);
+      });
+    }
+
+    // --- timeline: date or plan length ---------------------------------------
+    function syncTimeline() {
+      var booked = checkedValues(timeline)[0] === "yes";
+      form.querySelectorAll("[data-when]").forEach(function (el) {
+        el.hidden = el.getAttribute("data-when") !== (booked ? "yes" : "no");
+      });
+      syncChips();
+    }
+
+    // --- sliders and projected readiness ------------------------------------
     function required(id) {
-      var table = requirements[role ? role.value : ""] || {};
-      return table[names[id]] || defaultRequired;
+      var roles = checkedValues(roleBoxes);
+      if (!roles.length) roles = [GENERAL];
+      return Math.max.apply(null, roles.map(function (r) {
+        var table = requirements[r] || {};
+        return table[names[id]] || defaultRequired;
+      }));
     }
 
     function update() {
@@ -272,7 +343,7 @@
         if (mark) {
           mark.hidden = false;
           mark.style.left = req + "%";
-          mark.title = "Your role expects " + req;
+          mark.title = "Your target expects " + req;
         }
         s.style.setProperty("--fill", value + "%");
         total += Math.min(value / req, 1);
@@ -288,22 +359,47 @@
       }
     }
 
+    // --- step navigation with light validation -------------------------------
     form.querySelectorAll("[data-step-go]").forEach(function (b) {
       b.addEventListener("click", function () {
         var target = parseInt(b.getAttribute("data-step-go"), 10);
         if (target === 2) {
-          var date = form.querySelector("[name=target_interview_date]");
-          if (date && !date.reportValidity()) return;
+          // Arriving at the goal step: pre-select the best-matching role if
+          // the user has not chosen any yet.
+          var suggested = markSuggestions();
+          if (!checkedValues(roleBoxes).length && suggested.length) {
+            roleBoxes.forEach(function (box) { box.checked = box.value === suggested[0]; });
+            syncChips();
+            update();
+          }
+        }
+        if (target === 3) {
+          if (!checkedValues(roleBoxes).length) {
+            form.querySelector("[data-roles-error]").hidden = false;
+            return;
+          }
+          if (checkedValues(timeline)[0] === "yes") {
+            var date = form.querySelector("[name=target_interview_date]");
+            if (!date.value) { date.focus(); return; }
+          }
         }
         show(target);
       });
     });
+
+    roleBoxes.forEach(function (b) { b.addEventListener("change", onRoleChange); });
+    interestBoxes.forEach(function (b) {
+      b.addEventListener("change", function () { syncChips(); markSuggestions(); });
+    });
+    timeline.forEach(function (b) { b.addEventListener("change", syncTimeline); });
     sliders.forEach(function (s) { s.addEventListener("input", update); });
-    if (role) role.addEventListener("change", update);
 
     // After a failed submit, open the step that holds the first error.
-    var firstError = form.querySelector(".field--error");
+    var firstError = form.querySelector(".field--error, .field__error:not([hidden])");
     var errorStep = firstError ? firstError.closest("[data-step]") : null;
+    markSuggestions();
+    syncTimeline();
+    syncChips();
     show(errorStep ? parseInt(errorStep.getAttribute("data-step"), 10) : 1);
     update();
   }

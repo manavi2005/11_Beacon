@@ -24,13 +24,16 @@
       <p class="plan-hero__meta">
         {% if days_left is not None %}
           {% if days_left > 0 %}<strong data-count="{{ days_left }}">{{ days_left }}</strong> days to your interview{% elif days_left == 0 %}Interview day: good luck{% else %}Interview date has passed{% endif %}
-          &middot;
+        {% else %}
+          No interview booked yet: <strong>{{ profile.preparation_timeline_weeks }}-week</strong> open-ended plan
         {% endif %}
+        &middot;
         {{ profile.get_experience_level_display }}
       </p>
       {% if welcome %}
-        <p class="plan-hero__lede">We compared your self-ratings with what {{ profile.target_role }} roles
-          require, and built your plan around the widest gaps. Start with week 1.</p>
+        <p class="plan-hero__lede">We compared your self-ratings with what
+          {% if profile.target_roles|length > 1 %}the toughest of your target roles{% else %}{{ profile.target_role }}{% endif %}
+          requires, and built your plan around the widest gaps. Start with week 1.</p>
       {% endif %}
     </div>
     <div class="plan-hero__ring">

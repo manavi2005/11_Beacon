@@ -1,15 +1,20 @@
 {% extends "base.html" %}
 {% comment %}
-  Onboarding: the first page a brand-new account sees. Step 1 is the goal,
-  step 2 is a 0-100 self-rating per skill. Submitting builds the profile,
-  the assessments and a dated plan (preparation/onboarding.py), then lands
-  on /me/.
+  Onboarding: the first page a brand-new account sees. Three steps:
 
-  With JavaScript (beacon.js) the two steps show one at a time, each slider
-  shows the level the chosen role requires, and the ring at the top
-  projects readiness live using the same formula as
-  CandidateProfile.readiness_percent. Without it, both steps are simply one
-  long form, and everything still submits.
+    1. About you   - what kind of work you enjoy, experience, biggest worry,
+                     and an optional line about yourself
+    2. Your goal   - one to three roles (or General interview readiness),
+                     and an interview date or, if none yet, a plan length
+    3. Your skills - a 0-100 self-rating per catalog skill
+
+  Submitting builds the profile, the assessments and a dated plan
+  (preparation/onboarding.py), then lands on /me/.
+
+  With JavaScript (beacon.js) the steps show one at a time, your interests
+  mark matching roles "Suggested for you", each slider shows the bar your
+  chosen roles set (the highest among them), and the ring projects
+  readiness live. Without it this is one long form and still submits.
 {% endcomment %}
 
 {% block title %}Welcome - Beacon{% endblock %}
@@ -20,9 +25,9 @@
     <div>
       <p class="hero-strip__eyebrow">{% if is_retake %}Retake your diagnosis{% else %}Welcome to Beacon, {{ user.first_name|default:user.username }}{% endif %}</p>
       <h1 class="page-title hero-strip__title">Two minutes to your personal plan.</h1>
-      <p class="hero-strip__lede">Tell us the role you are aiming for, then rate yourself honestly
-        on each skill. Beacon compares you to what that role requires and builds a
-        week-by-week plan around your widest gaps.</p>
+      <p class="hero-strip__lede">No interview booked yet, or not sure which role? That's fine.
+        Tell us what you enjoy and Beacon will suggest roles. Then rate yourself
+        honestly, and it builds a plan around your widest gaps.</p>
     </div>
     <div class="onb-ring" aria-live="polite">
       <a class="ring ring--low" style="--p: 0" data-onb-ring>
@@ -42,37 +47,102 @@
   {% csrf_token %}
 
   <ol class="onb-steps" aria-hidden="true">
-    <li class="is-current" data-step-dot="1"><span>1</span> Your goal</li>
-    <li data-step-dot="2"><span>2</span> Rate your skills</li>
+    <li class="is-current" data-step-dot="1"><span>1</span> About you</li>
+    <li data-step-dot="2"><span>2</span> Your goal</li>
+    <li data-step-dot="3"><span>3</span> Your skills</li>
   </ol>
 
   {% if form.non_field_errors %}
     <div class="auth-card__alert" role="alert">{{ form.non_field_errors }}</div>
   {% endif %}
 
+  {# ---------------- Step 1: about you ---------------- #}
   <fieldset class="onb-step" data-step="1">
-    <legend class="onb-step__title">What are you preparing for?</legend>
+    <legend class="onb-step__title">{{ form.interests.label }}</legend>
+    <p class="muted onb-step__lede">Pick any that fit. Beacon uses them to suggest roles in the next step.</p>
+    <div class="chips chips--cards{% if form.interests.errors %} field--error{% endif %}">
+      {% for card in interest_cards %}
+        <label class="chip chip--card">
+          {{ card.widget.tag }}
+          <span class="chip__label">{{ card.widget.choice_label }}</span>
+          <span class="chip__desc">{{ card.desc }}</span>
+        </label>
+      {% endfor %}
+    </div>
+
     <div class="onb-grid">
       {% for field in form %}
-        {% if not field.name|slice:":6" == "skill_" %}
-          <div class="field{% if field.errors %} field--error{% endif %}">
+        {% if field.name == "experience_level" or field.name == "primary_concern" %}
+          <div class="field">
             <label class="field__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
             {{ field }}
-            {% for error in field.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
           </div>
         {% endif %}
       {% endfor %}
     </div>
+    <div class="field">
+      <label class="field__label" for="{{ form.about.id_for_label }}">{{ form.about.label }}</label>
+      {{ form.about }}
+    </div>
+
     <div class="onb-actions">
       <span></span>
-      <button type="button" class="onb-next" data-step-go="2">Next: rate your skills &rarr;</button>
+      <button type="button" class="onb-next" data-step-go="2">Next: your goal &rarr;</button>
     </div>
   </fieldset>
 
+  {# ---------------- Step 2: your goal ---------------- #}
   <fieldset class="onb-step" data-step="2">
+    <legend class="onb-step__title">{{ form.target_roles.label }}</legend>
+    <p class="muted onb-step__lede">Choose up to three. Preparing for more than one? Beacon holds you
+      to the toughest bar among them. No idea yet? Pick <strong>General interview readiness</strong>.</p>
+    <div class="chips{% if form.target_roles.errors %} field--error{% endif %}" data-roles>
+      {% for choice in form.target_roles %}
+        <label class="chip chip--role" data-role="{{ choice.data.value }}">
+          {{ choice.tag }}
+          <span class="chip__label">{{ choice.choice_label }}</span>
+          <span class="chip__badge" hidden>Suggested for you</span>
+        </label>
+      {% endfor %}
+    </div>
+    {% for error in form.target_roles.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+    <p class="field__error" data-roles-error hidden>Pick at least one role, or General interview readiness.</p>
+
+    <div class="field onb-company">
+      <label class="field__label" for="{{ form.target_company.id_for_label }}">{{ form.target_company.label }}</label>
+      {{ form.target_company }}
+    </div>
+
+    <h3 class="onb-subtitle">{{ form.has_interview.label }}</h3>
+    <div class="chips chips--toggle" data-timeline>
+      {% for choice in form.has_interview %}
+        <label class="chip chip--toggle">{{ choice.tag }}<span class="chip__label">{{ choice.choice_label }}</span></label>
+      {% endfor %}
+    </div>
+    <div class="onb-grid">
+      <div class="field{% if form.target_interview_date.errors %} field--error{% endif %}" data-when="yes">
+        <label class="field__label" for="{{ form.target_interview_date.id_for_label }}">{{ form.target_interview_date.label }}</label>
+        {{ form.target_interview_date }}
+        {% for error in form.target_interview_date.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="field" data-when="no">
+        <label class="field__label" for="{{ form.prep_weeks.id_for_label }}">{{ form.prep_weeks.label }}</label>
+        {{ form.prep_weeks }}
+        <p class="muted field__note">An open-ended plan. Add a date any time with "Retake".</p>
+      </div>
+    </div>
+
+    <div class="onb-actions">
+      <button type="button" class="onb-back" data-step-go="1">&larr; Back</button>
+      <button type="button" class="onb-next" data-step-go="3">Next: rate your skills &rarr;</button>
+    </div>
+  </fieldset>
+
+  {# ---------------- Step 3: your skills ---------------- #}
+  <fieldset class="onb-step" data-step="3">
     <legend class="onb-step__title">How strong are you today?</legend>
     <p class="muted onb-step__lede">0 = never practised, 100 = could teach it. The
-      <span class="onb-legend-mark"></span> marker is what your target role expects.</p>
+      <span class="onb-legend-mark"></span> marker is the bar your chosen roles set.</p>
 
     {% for category, fields in skill_groups.items %}
       <h3 class="onb-cat">{{ category }}</h3>
@@ -91,7 +161,7 @@
     {% endfor %}
 
     <div class="onb-actions">
-      <button type="button" class="onb-back" data-step-go="1">&larr; Back</button>
+      <button type="button" class="onb-back" data-step-go="2">&larr; Back</button>
       <button type="submit" class="onb-submit">Light my beacon &rarr;</button>
     </div>
   </fieldset>
@@ -99,4 +169,5 @@
 
 {{ role_requirements|json_script:"role-requirements" }}
 {{ skill_names|json_script:"skill-names" }}
+{{ interest_roles|json_script:"interest-roles" }}
 {% endblock %}

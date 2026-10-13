@@ -1565,11 +1565,15 @@ class FromScratchJourneyTests(TestCase):
 
     def _onboard(self, **overrides):
         data = {
-            "target_role": "Data Analyst",
+            "interests": ["data"],
+            "target_roles": ["Data Analyst"],
             "target_company": "Spotify",
             "experience_level": "NEW",
+            "has_interview": "yes",
             "target_interview_date": (timezone.localdate() + timezone.timedelta(weeks=4)).isoformat(),
+            "prep_weeks": "6",
             "primary_concern": "TECH",
+            "about": "Stats major, two internships.",
             f"skill_{self.sql.pk}": 40,        # Data Analyst requires 85: gap 45
             f"skill_{self.python.pk}": 70,     # requires 75: gap 5
             f"skill_{self.pitch.pk}": 90,      # default 65: no gap
@@ -1680,3 +1684,95 @@ class FromScratchJourneyTests(TestCase):
                 r = self.client.get(reverse(name))
                 self.assertEqual(r.status_code, 302)
                 self.assertIn(reverse("preparation:login"), r["Location"])
+
+
+class FlexibleGoalsTests(TestCase):
+    """No interview yet, several roles at once, or no specific role at all."""
+
+    PASSWORD = "Lighthouse-test-2026"
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def setUp(self):
+        self.client.post(reverse("preparation:signup"), {
+            "username": "flex", "password1": self.PASSWORD, "password2": self.PASSWORD,
+        })
+
+    def _onboard(self, **overrides):
+        data = {
+            "interests": [], "target_roles": ["Data Analyst"], "target_company": "",
+            "experience_level": "STU", "has_interview": "no", "target_interview_date": "",
+            "prep_weeks": "8", "primary_concern": "", "about": "",
+            f"skill_{self.sql.pk}": 40, f"skill_{self.python.pk}": 70, f"skill_{self.pitch.pk}": 60,
+        }
+        data.update(overrides)
+        return self.client.post(reverse("preparation:onboarding"), data)
+
+    def _profile(self):
+        return CandidateProfile.objects.get(user__username="flex")
+
+    def test_no_interview_yet_builds_an_open_ended_plan(self):
+        self._onboard()
+        profile = self._profile()
+        self.assertIsNone(profile.target_interview_date)
+        self.assertEqual(profile.preparation_timeline_weeks, 8)
+        plan = profile.plans.get()
+        self.assertEqual(plan.target_date, timezone.localdate() + timezone.timedelta(weeks=8))
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, "No interview booked yet")
+
+    def test_interview_date_is_required_only_when_booked(self):
+        r = self._onboard(has_interview="yes", target_interview_date="")
+        self.assertContains(r, "Add the date")
+        self.assertFalse(CandidateProfile.objects.filter(user__username="flex").exists())
+
+    def test_several_roles_use_the_highest_bar(self):
+        # SQL: Data Analyst 85, Product Manager 55 -> 85.
+        # Resume & pitch: Data Analyst default 65, Product Manager 75 -> 75.
+        self._onboard(target_roles=["Data Analyst", "Product Manager"])
+        profile = self._profile()
+        self.assertEqual(profile.target_roles, ["Data Analyst", "Product Manager"])
+        self.assertEqual(profile.target_role, "Data Analyst + Product Manager")
+        self.assertEqual(profile.assessments.get(skill=self.sql).required_level, 85)
+        self.assertEqual(profile.assessments.get(skill=self.pitch).required_level, 75)
+        task = profile.plans.get().tasks.order_by("pk").first()
+        self.assertIn("toughest of your target roles", task.rationale)
+
+    def test_at_most_three_roles(self):
+        r = self._onboard(target_roles=["Data Analyst", "Product Manager",
+                                        "Software Engineer", "UX Researcher"])
+        self.assertContains(r, "Pick up to 3 roles")
+
+    def test_at_least_one_role(self):
+        r = self._onboard(target_roles=[])
+        self.assertContains(r, "Pick at least one role")
+
+    def test_general_readiness_for_no_specific_role(self):
+        self._onboard(target_roles=["General interview readiness"])
+        profile = self._profile()
+        self.assertEqual(profile.target_role, "General interview readiness")
+        self.assertEqual(profile.assessments.get(skill=self.pitch).required_level, 75)
+
+    def test_general_is_dropped_when_combined_with_a_real_role(self):
+        self._onboard(target_roles=["General interview readiness", "Data Analyst"])
+        self.assertEqual(self._profile().target_roles, ["Data Analyst"])
+
+    def test_interests_and_about_are_saved_and_prefill_a_retake(self):
+        self._onboard(interests=["data", "product"], about="Econ major.")
+        profile = self._profile()
+        self.assertEqual(profile.interests, ["data", "product"])
+        self.assertEqual(profile.resume_summary, "Econ major.")
+        r = self.client.get(reverse("preparation:onboarding"))
+        form = r.context["form"]
+        self.assertEqual(form.initial["interests"], ["data", "product"])
+        self.assertEqual(form.initial["has_interview"], "no")
+
+    def test_interest_suggestions(self):
+        from .onboarding import suggested_roles
+        self.assertEqual(suggested_roles(["data"])[0], "Data Analyst")
+        self.assertEqual(suggested_roles(["unsure"]), ["General interview readiness"])
+        # Product + people both point at PM and UXR; PM ranks first overall.
+        self.assertEqual(set(suggested_roles(["product", "people"])[:2]),
+                         {"Product Manager", "UX Researcher"})

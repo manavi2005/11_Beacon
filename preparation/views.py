@@ -1221,23 +1221,33 @@ def onboarding_view(request):
             data = form.cleaned_data
             onboarding_rules.complete_onboarding(
                 request.user,
-                target_role=data["target_role"],
+                target_roles=data["target_roles"],
                 target_company=data["target_company"],
                 experience_level=data["experience_level"],
                 target_interview_date=data["target_interview_date"],
+                prep_weeks=data["prep_weeks"],
                 primary_concern=data["primary_concern"],
                 ratings=form.ratings(),
+                interests=data["interests"],
+                about=data["about"],
             )
             return redirect(reverse("preparation:my_plan") + "?welcome=1")
     else:
         initial = {}
         if profile:  # a retake starts from the previous answers
             initial = {
-                "target_role": profile.target_role,
+                "interests": profile.interests,
+                "target_roles": [
+                    r for r in (profile.target_roles or [profile.target_role])
+                    if r in onboarding_rules.ROLE_REQUIREMENTS
+                ],
                 "target_company": profile.target_company,
                 "experience_level": profile.experience_level,
+                "has_interview": "yes" if profile.target_interview_date else "no",
                 "target_interview_date": profile.target_interview_date,
+                "prep_weeks": str(profile.preparation_timeline_weeks),
                 "primary_concern": profile.primary_concern,
+                "about": profile.resume_summary,
             }
             initial.update({
                 f"skill_{a.skill_id}": a.proficiency_score
@@ -1255,6 +1265,14 @@ def onboarding_view(request):
         # The role -> required level table, so each slider can show its
         # target live as the role changes.
         "role_requirements": onboarding_rules.ROLE_REQUIREMENTS,
+        # interest key -> suggested roles, for the "Suggested for you" badges.
+        "interest_roles": {
+            key: roles for key, (_label, _desc, roles) in onboarding_rules.INTERESTS.items()
+        },
+        "interest_cards": [
+            {"widget": w, "desc": onboarding_rules.INTERESTS[w.data["value"]][1]}
+            for w in form["interests"]
+        ],
         "default_required": onboarding_rules.DEFAULT_REQUIRED,
         "skill_names": {f"id_skill_{s.pk}": s.name for s in form.skills},
     })
