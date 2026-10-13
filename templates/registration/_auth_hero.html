@@ -1,0 +1,22 @@
+{% comment %}
+Shared left-hand panel for login.html and signup.html: the Beacon lighthouse,
+its beam sweeping across a night sea, and what the product does.
+
+All inline SVG and CSS (static/css/beacon.css, "Auth pages"): no images to
+fetch, and it scales with the panel. The beam, stars and waves are
+decorative, so the whole drawing is aria-hidden; the text beside it carries
+the meaning. Motion stops for prefers-reduced-motion.
+{% endcomment %}
+<aside class="auth-hero">
+  {% include "preparation/_lighthouse.html" with scene_class="auth-hero__scene" %}
+
+  <div class="auth-hero__copy">
+    <p class="auth-hero__brand">BEACON</p>
+    <h2 class="auth-hero__title">Know exactly what to practise next.</h2>
+    <ul class="auth-hero__points">
+      <li><strong>Diagnose</strong> every skill against what your target role requires.</li>
+      <li><strong>Plan</strong> week by week, aimed at the widest gaps first.</li>
+      <li><strong>Track</strong> readiness as it climbs, until interview day.</li>
+    </ul>
+  </div>
+</aside>

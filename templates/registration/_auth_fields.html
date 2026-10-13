@@ -1,0 +1,19 @@
+{% comment %}
+Field-by-field rendering for the auth forms, instead of form.as_p, so each
+input can be styled and its errors sit directly under it.
+{% endcomment %}
+{% if form.non_field_errors %}
+  <div class="auth-card__alert" role="alert">
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+{% for field in form %}
+  <div class="field{% if field.errors %} field--error{% endif %}">
+    <label class="field__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% for error in field.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+    {% if field.help_text and not field.errors %}
+      <details class="field__help"><summary>Requirements</summary>{{ field.help_text|safe }}</details>
+    {% endif %}
+  </div>
+{% endfor %}

@@ -1129,3 +1129,84 @@ REMINDERS / TODO
       a4-part1-editor-*.
   [ ] Screenshot of /market/?q=data analyst and the JSON endpoint, named
       a4-part2-*.
+
+
+
+--------------------------------------------------------------------------------
+WEEK 7 - PUBLIC API, ALTERNATIVE USES, UI POLISH (ASSIGNMENT 5, PARTS 3-4)
+--------------------------------------------------------------------------------
+
+Parts 1 and 2 (auth and Google OAuth) were already merged and live. This
+week closed the rest.
+
+Public vs protected:
+  The brief allows one public API. /api/skills/summary/ is the obvious
+  choice: aggregates only, already chart-ready. /api/assessments/ was public
+  in A4 and is now protected. It is anonymous, but it is still one row per
+  person per skill. Protected JSON endpoints return 401 JSON rather than a
+  302 to the HTML login page, because a script cannot use a redirect to
+  markup.
+
+Production finding:
+  /api/market-demand/ returned 502 on PythonAnywhere: "Could not reach
+  Jobicy". The free tier's outbound allowlist does not include jobicy.com.
+  Remotive is on it, so it is now the fallback (cached 6h, per Remotive's
+  terms). Local runs still prefer Jobicy, whose results are more relevant.
+
+Alternative uses (docs/a5/alt_uses/):
+  1. Python category report: weighted by learners, names one focus skill
+     per category.
+  2. Google Sheets IMPORTDATA via ?format=csv, plus a QUERY formula. The
+     script checks the CSV matches the JSON.
+  3. pandas notebook: found 3 skills with above-median gaps but below-median
+     task coverage (Git, data structures, failure questions). That is real
+     input for the plan generator.
+
+UI polish: lighthouse auth pages, dashboard rings and gap bars, Cmd+K
+palette. No new dependencies; reduced-motion respected.
+
+
+Later the same week - from prototype to a product someone could use:
+
+  Onboarding: a new account (signup or first Google sign-in) goes to
+  /welcome/: interests, up to three roles or "General interview
+  readiness", an interview date or an open-ended 4-12 week plan, and a
+  self-rating per skill. A resume or LinkedIn "Save to PDF" can pre-fill
+  it (rule-based parser, read in memory, never stored). LinkedIn itself
+  has no public profile API and scraping breaks its terms, hence the PDF.
+
+  Evidence over self-report: tasks are done in a workspace (quiz for
+  technical skills, explain-it-back otherwise). A pass (60+) completes the
+  task, and each attempt moves the skill rating 40% toward the score shown.
+
+  AI coach: any OpenAI-compatible API from .env. With no key it uses
+  Pollinations' free anonymous tier (open-weight gpt-oss-20b); a free Groq
+  key gives Llama 3.3 70B. Rules fallback when slow, busy or malformed.
+  Never sends name, email or resume text. Fine for our ~5 users; a paid
+  API is a config swap later.
+
+  Privacy: students see only their own data (visibility.py); staff see
+  the cohort. Anonymous aggregates stay visible to all.
+
+  Nav: built from navigation.py; course labels ("FBV", "CBV") are hidden
+  behind "Show how pages are built" in the account menu.
+
+  Lesson: restoring db.sqlite3 after local testing also rolled back the
+  new migrations, and the next run 500'd with "no such column". Always run
+  migrate after switching databases - and on PythonAnywhere after a pull.
+
+
+REMINDERS / TODO
+
+  [ ] Redeploy on PythonAnywhere: pip install, migrate (0003, 0004),
+      collectstatic, reload. See docs/a5/DEPLOY.md.
+  [ ] Create a staff "coach" account on production for the cohort view.
+  [ ] Google OAuth: if sign-in says "app is in testing", add test users
+      under OAuth consent screen.
+  [ ] Optional: free Groq key in production .env for a faster AI coach.
+  [ ] Fill in the three @illinois.edu emails in docs/a5/video/opening-slide.html.
+  [ ] Google Sheets screenshot for alternative use 2 (needs the redeploy
+      first, for ?format=csv).
+  [ ] Terminal screenshot of use1_python_report.py, and a notebook screenshot
+      from Jupyter or VS Code.
+  [ ] Record the video from docs/a5/video/script.md.

@@ -111,6 +111,8 @@ TEMPLATES = [
                 # Tells the templates whether Google credentials exist on
                 # this machine, so the button is only shown when it works.
                 "preparation.context_processors.google_oauth",
+                # The site menu, built from preparation/navigation.py.
+                "preparation.navigation.navigation",
             ],
         },
     },
@@ -205,6 +207,36 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
+
+# ---------------------------------------------------------------------------
+# AI coach (preparation/coach.py)
+# ---------------------------------------------------------------------------
+# Any OpenAI-compatible chat API, configured only here and in .env, so a
+# provider swap is never a code change. Every host below is on
+# PythonAnywhere's free-tier outbound allowlist.
+#
+# Three tiers, picked automatically:
+#   1. LLM_API_KEY set     -> LLM_BASE_URL / LLM_MODEL (default: Groq,
+#                             open-weight Llama 3.3 70B). Fast and reliable.
+#   2. no key (default)    -> Pollinations' free anonymous tier, which needs no
+#                             account at all and serves OpenAI's open-weight
+#                             gpt-oss-20b. Slower and rate-limited, but it means
+#                             the coach is AI-powered out of the box.
+#   3. LLM_ENABLED=false   -> rules only. The test suite and CI run this way.
+LLM_ENABLED = os.environ.get("LLM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+LLM_KEYLESS_BASE_URL = os.environ.get("LLM_KEYLESS_BASE_URL", "https://text.pollinations.ai/openai")
+LLM_KEYLESS_MODEL = os.environ.get("LLM_KEYLESS_MODEL", "openai")          # = gpt-oss-20b
+LLM_KEYLESS_LABEL = os.environ.get("LLM_KEYLESS_LABEL", "gpt-oss-20b")
+LLM_KEYLESS_PROVIDER = os.environ.get("LLM_KEYLESS_PROVIDER", "Pollinations (free, no key)")
+
+# A first-time Google sign-in creates an account with no profile, exactly
+# like the signup form. Send it to onboarding too, instead of the cohort
+# dashboard. Returning users still land on LOGIN_REDIRECT_URL.
+ACCOUNT_SIGNUP_REDIRECT_URL = "preparation:onboarding"
 
 
 # ---------------------------------------------------------------------------

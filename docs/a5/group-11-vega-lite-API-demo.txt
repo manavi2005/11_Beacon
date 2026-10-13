@@ -1,0 +1,63 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "title": {
+    "text": "Beacon: where candidates fall short, skill by skill",
+    "subtitle": "Average proficiency against the level target roles require. Live from Beacon's public API.",
+    "anchor": "start"
+  },
+  "description": "Grouped bar chart: for every assessed skill, the average current proficiency and the average required level, sorted by the widest gap.",
+  "data": {
+    "url": "https://simonhwang1998.pythonanywhere.com/api/skills/summary/",
+    "format": {"type": "json"}
+  },
+  "transform": [
+    {"filter": "datum.learners > 0"},
+    {
+      "fold": ["avg_proficiency", "avg_required"],
+      "as": ["measure", "score"]
+    },
+    {
+      "calculate": "datum.measure === 'avg_proficiency' ? 'Current proficiency' : 'Required by target role'",
+      "as": "Measure"
+    }
+  ],
+  "width": 520,
+  "height": {"step": 14},
+  "mark": {"type": "bar", "cornerRadiusEnd": 3},
+  "encoding": {
+    "y": {
+      "field": "skill",
+      "type": "nominal",
+      "title": null,
+      "sort": {"field": "avg_gap", "order": "descending"},
+      "axis": {"labelLimit": 220}
+    },
+    "yOffset": {"field": "Measure"},
+    "x": {
+      "field": "score",
+      "type": "quantitative",
+      "title": "Average score (0-100)",
+      "scale": {"domain": [0, 100]}
+    },
+    "color": {
+      "field": "Measure",
+      "type": "nominal",
+      "title": null,
+      "scale": {"range": ["#e84a27", "#13294b"]},
+      "legend": {"orient": "top"}
+    },
+    "tooltip": [
+      {"field": "skill", "title": "Skill"},
+      {"field": "category", "title": "Category"},
+      {"field": "Measure"},
+      {"field": "score", "title": "Score", "format": ".1f"},
+      {"field": "avg_gap", "title": "Gap (points)", "format": ".1f"},
+      {"field": "learners", "title": "Candidates assessed"}
+    ]
+  },
+  "config": {
+    "font": "system-ui, -apple-system, Segoe UI, sans-serif",
+    "view": {"stroke": null},
+    "axis": {"labelColor": "#1c1c1c", "titleColor": "#5b6472", "gridColor": "#e1e5ec"}
+  }
+}

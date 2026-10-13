@@ -16,12 +16,13 @@ between them is how the response is plumbed - that is the whole point of the
 exercise, and it is also what Section 3 means by "template reuse".
 """
 
+import csv
+import json
 from functools import wraps
 
 from django.conf import settings
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.template import loader
@@ -32,7 +33,7 @@ from django.contrib.auth.forms import (
     UserCreationForm,
 )
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views import View
 from django.views.decorators.http import require_safe, require_POST, require_GET
 from django.views.generic import CreateView, DetailView, ListView
@@ -40,6 +41,7 @@ from django.utils.decorators import method_decorator
 
 from . import charts, exports, market, vega
 from .models import (
+    TaskAttempt,
     CandidateProfile,
     PlanTask,
     PreparationPlan,
@@ -47,7 +49,12 @@ from .models import (
     SkillAssessment,
 )
 
-from .forms import PlanTaskForm
+from .forms import OnboardingForm, PlanTaskForm
+from . import onboarding as onboarding_rules
+from . import resume as resume_parser
+from . import coach
+from . import practice
+from . import visibility
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -137,7 +144,8 @@ class PlanBoardView(View):
     template_name = "preparation/plan_list.html"
 
     def get(self, request):
-        plans = PreparationPlan.objects.select_related("candidate__user")
+        # Students see their own plans; coaches see everyone's.
+        plans = visibility.plans_for(request.user).select_related("candidate__user")
 
         context = {
             "plans": plans,
@@ -172,7 +180,7 @@ class PlanTaskListView(ListView):
     def get_queryset(self):
         # select_related avoids one extra query per row when the template
         # prints task.plan.title and task.skill.name.
-        return PlanTask.objects.select_related("plan", "skill")
+        return visibility.tasks_for(self.request.user).select_related("plan", "skill")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -195,20 +203,60 @@ class PlanTaskDetailView(DetailView):
     template_name = "preparation/task_detail.html"
     context_object_name = "task"
 
+    def get_queryset(self):
+        # Someone else's task is a 404 for a student.
+        return visibility.tasks_for(self.request.user)
+
 
 # ---------------------------------------------------------------------------
 # Part 4 dashboard (kept so the existing route keeps working)
 # ---------------------------------------------------------------------------
 @login_required
 def dashboard(request):
-    """Read-only summary of what is currently in the database."""
+    """The signed-in home page: counts, readiness per candidate, widest gaps.
+
+    Readiness is CandidateProfile.readiness_percent, which walks the
+    candidate's assessments; prefetching them makes that one query for the
+    whole list instead of one per candidate.
+    """
+    # A coach sees every candidate's ring; a student sees only their own.
+    candidates = (
+        visibility.candidates_for(request.user).select_related("user")
+        .prefetch_related("assessments")
+        .order_by("user__first_name", "user__username")
+    )
+    readiness = [
+        {
+            "candidate": c,
+            "name": c.user.get_full_name() or c.user.username,
+            "percent": c.readiness_percent,
+        }
+        for c in candidates
+    ]
+    gaps = sorted(
+        (row for row in vega.skill_summary_rows() if row["avg_gap"] is not None),
+        key=lambda row: row["avg_gap"],
+        reverse=True,
+    )[:5]
+
+    hour = timezone.localtime().hour
+    greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
+
+    my_profile = CandidateProfile.objects.filter(user=request.user).first()
+
     context = {
+        "greeting": greeting,
+        "my_profile": my_profile,
         "skill_count": Skill.objects.count(),
-        "candidate_count": CandidateProfile.objects.count(),
-        "assessment_count": SkillAssessment.objects.count(),
-        "plan_count": PreparationPlan.objects.count(),
-        "task_count": PlanTask.objects.count(),
-        "plans": PreparationPlan.objects.select_related("candidate__user")[:10],
+        "candidate_count": len(readiness),
+        "assessment_count": visibility.assessments_for(request.user).count(),
+        "plan_count": visibility.plans_for(request.user).count(),
+        "task_count": visibility.tasks_for(request.user).count(),
+        "is_coach": visibility.is_coach(request.user),
+        "readiness": readiness,
+        "gaps": gaps,
+        "gap_max": max((g["avg_gap"] for g in gaps), default=0),
+        "plans": visibility.plans_for(request.user).select_related("candidate__user")[:10],
     }
     return render(request, "preparation/dashboard.html", context)
 
@@ -237,10 +285,15 @@ class SkillDetailView(DetailView):
 
         # Relationship spanning: reach through SkillAssessment to the
         # candidate and the User behind them, in one query.
-        context["assessments"] = skill.assessments.select_related(
-            "candidate__user"
-        )
-        context["tasks"] = skill.tasks.select_related("plan__candidate__user")
+        # Named rows only for what this user may see; the average below
+        # stays cohort-wide, because an average identifies nobody.
+        user = self.request.user
+        context["assessments"] = visibility.assessments_for(user).filter(
+            skill=skill
+        ).select_related("candidate__user")
+        context["tasks"] = visibility.tasks_for(user).filter(
+            skill=skill
+        ).select_related("plan__candidate__user")
 
         # Aggregation on a single object: how strong is this skill across
         # everyone who has been measured on it?
@@ -261,7 +314,7 @@ class PlanDetailView(DetailView):
     context_object_name = "plan"
 
     def get_queryset(self):
-        return PreparationPlan.objects.select_related("candidate__user")
+        return visibility.plans_for(self.request.user).select_related("candidate__user")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -280,7 +333,7 @@ class CandidateDetailView(DetailView):
     context_object_name = "candidate"
 
     def get_queryset(self):
-        return CandidateProfile.objects.select_related("user")
+        return visibility.candidates_for(self.request.user).select_related("user")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -311,7 +364,7 @@ class CandidateListView(ListView):
 
     def get_queryset(self):
         return (
-            CandidateProfile.objects.select_related("user")
+            visibility.candidates_for(self.request.user).select_related("user")
             .annotate(
                 # distinct=True matters: joining two different related tables
                 # in one query would otherwise multiply the row counts.
@@ -439,8 +492,9 @@ class CandidateSearchView(View):
             # RELATIONSHIP SPANNING: CandidateProfile -> User, via user__.
             # One Q object per field, OR-ed together, so a single box
             # searches name, username, email and target role at once.
+            # A student can only ever find themselves; a coach searches all.
             results = (
-                CandidateProfile.objects.select_related("user")
+                visibility.candidates_for(request.user).select_related("user")
                 .filter(
                     Q(user__first_name__icontains=term)
                     | Q(user__last_name__icontains=term)
@@ -507,8 +561,10 @@ def insights(request):
     ]
 
     # --- GROUPED SUMMARY 2: tasks per plan, with completion ---------------
+    # Per-plan rows name a person, so they follow the visibility rule; the
+    # totals above and the per-skill averages below are anonymous.
     plans = (
-        PreparationPlan.objects.select_related("candidate__user")
+        visibility.plans_for(request.user).select_related("candidate__user")
         .annotate(
             task_total=Count("tasks", distinct=True),
             # A filtered Count: only the tasks whose status is DONE.
@@ -536,7 +592,7 @@ def insights(request):
     # /insights/?role=Data%20Analyst narrows every task to the ones belonging
     # to candidates chasing that role: task -> plan -> candidate -> role.
     role = request.GET.get("role", "").strip()
-    tasks = PlanTask.objects.select_related("plan__candidate__user", "skill")
+    tasks = visibility.tasks_for(request.user).select_related("plan__candidate__user", "skill")
     if role:
         tasks = tasks.filter(plan__candidate__target_role__icontains=role)
 
@@ -652,6 +708,12 @@ class PlanTaskCreateView(CreateView):
     form_class = PlanTaskForm
     template_name = "preparation/task_form.html"
 
+    def get_form(self, form_class=None):
+        # A student may only add tasks to their own plans.
+        form = super().get_form(form_class)
+        form.fields["plan"].queryset = visibility.plans_for(self.request.user)
+        return form
+
 @login_required
 def skill_api(request):
 
@@ -727,16 +789,81 @@ def public_api(view):
     return wrapper
 
 
+def api_login_required(view):
+    """A protected JSON endpoint: 401 with a JSON body when signed out.
+
+    Assignment 5 allows exactly one public API. Every other JSON endpoint
+    sits behind this. @login_required would not do here: it answers with a
+    302 to the HTML login page, which a script, a spreadsheet or Vega-Lite
+    would try to parse as data. A 401 says plainly what is wrong.
+
+    Only GET and HEAD are accepted, and no CORS header is sent: these
+    endpoints are for this site's own signed-in pages, which are same-origin.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {
+                    "error": "Authentication required",
+                    "login_url": reverse(settings.LOGIN_URL),
+                    "public_api": reverse("preparation:api_skill_summary"),
+                },
+                status=401,
+            )
+        return view(request, *args, **kwargs)
+
+    return require_safe(wrapper)
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5, PART 3 - THE ONE PUBLIC API
+#
+# /api/skills/summary/ is the only endpoint that answers without a login.
+# It is the safe one to publish: every row is an aggregate over a skill
+# (counts and averages), so no individual candidate can be picked out of it.
+# The per-candidate data behind it (/api/assessments/, the reports, the
+# exports) stays protected.
+#
+#   GET /api/skills/summary/              JSON array (the default)
+#   GET /api/skills/summary/?format=csv   the same rows as CSV
+#
+# The CSV form exists for spreadsheets: Google Sheets' IMPORTDATA() and
+# Excel's "From Text/CSV" read CSV from a URL directly, but not JSON.
+# ---------------------------------------------------------------------------
+SKILL_SUMMARY_FIELDS = [
+    "skill", "category", "learners", "avg_proficiency", "avg_required",
+    "avg_gap", "tasks",
+]
+
+
 @public_api
 def api_skill_summary(request):
-    """/api/skills/summary/ - one aggregated row per skill."""
-    return _api_response(vega.skill_summary_rows())
+    """/api/skills/summary/ - one aggregated row per skill. Public."""
+    rows = vega.skill_summary_rows()
+    if request.GET.get("format", "").lower() == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Access-Control-Allow-Origin"] = "*"
+        # inline, not attachment: IMPORTDATA and curl want the text, and a
+        # browser showing it is fine. The JSON form is the primary one.
+        response["Content-Disposition"] = 'inline; filename="beacon-skill-summary.csv"'
+        writer = csv.DictWriter(response, fieldnames=SKILL_SUMMARY_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+        return response
+    return _api_response(rows)
 
 
-@public_api
+@api_login_required
 def api_assessments(request):
-    """/api/assessments/ - one anonymous row per skill assessment."""
-    return _api_response(vega.assessment_rows())
+    """/api/assessments/ - one row per skill assessment. Protected.
+
+    Anonymous rows (no names), but still one row per person per skill, so it
+    stays behind login: Assignment 5 allows one public API, and the
+    aggregated summary is the one to publish.
+    """
+    return JsonResponse(vega.assessment_rows(), safe=False)
 
 
 # ---------------------------------------------------------------------------
@@ -764,14 +891,15 @@ def vega_lite_page(request):
     return render(request, "preparation/vega_lite.html", {"charts": charts_info})
 
 
-@public_api
+@api_login_required
 def vega_lite_spec(request, number):
-    """/vega-lite/chart<N>.json"""
+    """/vega-lite/chart<N>.json - protected, like every API but one."""
     _chart_or_404(number)
-    return _api_response(vega.spec_for_editor(number, request.build_absolute_uri))
+    return JsonResponse(vega.spec_for_editor(number, request.build_absolute_uri))
 
 
 @require_safe
+@login_required
 def vega_lite_png(request, number):
     """/vega-lite/chart<N>.png"""
     _chart_or_404(number)
@@ -787,19 +915,19 @@ def vega_lite_png(request, number):
 # The external call, the error handling and the analysis live in market.py,
 # so neither view knows anything about Jobicy.
 # ---------------------------------------------------------------------------
-@public_api
+@api_login_required
 def api_market_demand(request):
-    """/api/market-demand/?q=data analyst"""
+    """/api/market-demand/?q=data analyst - protected."""
     query = request.GET.get("q", "").strip()
     if not query:
-        return _api_response(
+        return JsonResponse(
             {"error": "Add a role to search for, e.g. ?q=data analyst"}, status=400
         )
     try:
         report = market.market_report(query)
     except market.MarketDataError as exc:
-        return _api_response({"error": exc.message, "query": query}, status=exc.status)
-    return _api_response(report)
+        return JsonResponse({"error": exc.message, "query": query}, status=exc.status)
+    return JsonResponse(report)
 
 
 @require_safe
@@ -851,7 +979,7 @@ def export_candidates_csv(request):
     )
     # HttpResponse is a file-like object, so csv writes straight into the
     # response rather than building the whole file in memory first.
-    exports.write_csv(response, exports.candidate_rows())
+    exports.write_csv(response, exports.candidate_rows(visibility.candidates_for(request.user)))
     return response
 
 @login_required
@@ -864,7 +992,7 @@ def export_candidates_json(request):
     six weeks later: without them it is a bare array with no way to tell when
     it was taken or whether it is complete.
     """
-    rows = exports.candidate_rows()
+    rows = exports.candidate_rows(visibility.candidates_for(request.user))
     payload = {
         "generated_at": timezone.localtime().isoformat(),
         "record_count": len(rows),
@@ -891,12 +1019,12 @@ def reports_page(request):
     candidate rows that back the exports are listed underneath, so what you
     see is what you download.
     """
-    rows = exports.candidate_rows()
+    rows = exports.candidate_rows(visibility.candidates_for(request.user))
     context = {
         "totals": exports.report_totals(),
         "by_experience": exports.candidates_by_experience(),
         "by_role": exports.candidates_by_role(),
-        "by_plan": exports.tasks_by_plan(),
+        "by_plan": exports.tasks_by_plan(visibility.plans_for(request.user)),
         "headers": [label for _, label in exports.EXPORT_COLUMNS],
         # Cells are aligned to EXPORT_COLUMNS here rather than looked up by
         # key in the template: Django has no dict-lookup-by-variable filter,
@@ -985,7 +1113,9 @@ def signup_view(request):
                 user,
                 backend="django.contrib.auth.backends.ModelBackend",
             )
-            return redirect(settings.LOGIN_REDIRECT_URL)
+            # A brand-new account has no profile yet, so the useful next
+            # page is onboarding, not the cohort dashboard.
+            return redirect("preparation:onboarding")
     else:
         form = UserCreationForm()
 
@@ -1042,3 +1172,322 @@ def api_whoami(request):
             "is_staff": request.user.is_staff,
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5 - command palette data (Ctrl/Cmd+K)
+#
+# Protected like every API except the one public summary: the list carries
+# candidate names. The palette fetches it once, the first time it is opened,
+# so ordinary page loads pay nothing for it.
+# ---------------------------------------------------------------------------
+PALETTE_PAGES = [
+    ("My plan", "preparation:my_plan", "Your readiness and week-by-week plan"),
+    ("Retake the diagnosis", "preparation:onboarding", "Rebuild your plan"),
+    ("Dashboard", "preparation:dashboard", "Home, readiness and widest gaps"),
+    ("Candidates", "preparation:candidate_list", "Every candidate with scores"),
+    ("Find a candidate", "preparation:candidate_search", "POST search"),
+    ("Search skills", "preparation:skill_search", "GET search"),
+    ("Skill catalog", "preparation:skill_catalog_render", ""),
+    ("Plans", "preparation:plan_board", ""),
+    ("Tasks", "preparation:task_list", ""),
+    ("Create a task", "preparation:task_create", ""),
+    ("Insights", "preparation:insights", "Totals and grouped summaries"),
+    ("Charts", "preparation:charts", "Matplotlib"),
+    ("Vega-Lite charts", "preparation:vega_lite", ""),
+    ("Job market", "preparation:market", "Live postings vs skill gaps"),
+    ("Reports and exports", "preparation:reports", "CSV and JSON downloads"),
+    ("Public API: skill summary", "preparation:api_skill_summary", "JSON, no login"),
+]
+
+
+@api_login_required
+def api_palette(request):
+    """/api/palette/ - everything the command palette can jump to."""
+    items = [
+        {"label": label, "url": reverse(name), "group": "Page", "hint": hint}
+        for label, name, hint in PALETTE_PAGES
+    ]
+    items += [
+        {
+            "label": c.user.get_full_name() or c.user.username,
+            "url": c.get_absolute_url(),
+            "group": "Candidate",
+            "hint": c.target_role,
+        }
+        for c in visibility.candidates_for(request.user).select_related("user").order_by("user__first_name")
+    ]
+    items += [
+        {"label": s.name, "url": s.get_absolute_url(), "group": "Skill",
+         "hint": s.get_category_display()}
+        for s in Skill.objects.order_by("name")
+    ]
+    items += [
+        {"label": p.title, "url": p.get_absolute_url(), "group": "Plan", "hint": p.focus_role}
+        for p in visibility.plans_for(request.user).order_by("title")
+    ]
+    return JsonResponse({"items": items})
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 5 - the start-from-scratch journey
+#
+#   /welcome/                    onboarding: goal + self-rating per skill
+#   /me/                         your readiness, gaps and week-by-week plan
+#   /me/tasks/<pk>/              do a task: quiz or explain-it-back, graded
+#
+# The rules that turn ratings into a plan live in preparation/onboarding.py.
+# ---------------------------------------------------------------------------
+@login_required
+def onboarding_view(request):
+    profile = CandidateProfile.objects.filter(user=request.user).first()
+    if request.method == "POST":
+        form = OnboardingForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            onboarding_rules.complete_onboarding(
+                request.user,
+                target_roles=data["target_roles"],
+                target_company=data["target_company"],
+                experience_level=data["experience_level"],
+                target_interview_date=data["target_interview_date"],
+                prep_weeks=data["prep_weeks"],
+                primary_concern=data["primary_concern"],
+                ratings=form.ratings(),
+                interests=data["interests"],
+                about=data["about"],
+            )
+            return redirect(reverse("preparation:my_plan") + "?welcome=1")
+    else:
+        initial = {}
+        if profile:  # a retake starts from the previous answers
+            initial = {
+                "interests": profile.interests,
+                "target_roles": [
+                    r for r in (profile.target_roles or [profile.target_role])
+                    if r in onboarding_rules.ROLE_REQUIREMENTS
+                ],
+                "target_company": profile.target_company,
+                "experience_level": profile.experience_level,
+                "has_interview": "yes" if profile.target_interview_date else "no",
+                "target_interview_date": profile.target_interview_date,
+                "prep_weeks": str(profile.preparation_timeline_weeks),
+                "primary_concern": profile.primary_concern,
+                "about": profile.resume_summary,
+            }
+            initial.update({
+                f"skill_{a.skill_id}": a.proficiency_score
+                for a in profile.assessments.all()
+            })
+        form = OnboardingForm(initial=initial)
+
+    groups = {}
+    for skill, field in form.skill_fields():
+        groups.setdefault(skill.get_category_display(), []).append(field)
+    return render(request, "preparation/onboarding.html", {
+        "form": form,
+        "skill_groups": groups,
+        "is_retake": profile is not None,
+        # The role -> required level table, so each slider can show its
+        # target live as the role changes.
+        "role_requirements": onboarding_rules.ROLE_REQUIREMENTS,
+        # interest key -> suggested roles, for the "Suggested for you" badges.
+        "interest_roles": {
+            key: roles for key, (_label, _desc, roles) in onboarding_rules.INTERESTS.items()
+        },
+        "interest_cards": [
+            {"widget": w, "desc": onboarding_rules.INTERESTS[w.data["value"]][1]}
+            for w in form["interests"]
+        ],
+        "default_required": onboarding_rules.DEFAULT_REQUIRED,
+        "skill_names": {f"id_skill_{s.pk}": s.name for s in form.skills},
+    })
+
+
+@require_POST
+def resume_parse(request):
+    """/welcome/resume/ - read a resume or LinkedIn PDF, suggest answers.
+
+    POST with a file ("resume", PDF or .txt) or pasted text ("text").
+    Returns JSON suggestions for the onboarding form. Nothing is stored:
+    the file is read in memory and dropped when the request ends.
+
+    401 JSON rather than a redirect when signed out, like the other
+    protected JSON endpoints, because the caller is fetch(), not a person.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    try:
+        text = resume_parser.extract_text(
+            upload=request.FILES.get("resume"),
+            pasted=request.POST.get("text", ""),
+        )
+    except resume_parser.ResumeError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse(resume_parser.analyse(text))
+
+
+@login_required
+def my_plan(request):
+    profile = (
+        CandidateProfile.objects.filter(user=request.user)
+        .prefetch_related("assessments__skill")
+        .first()
+    )
+    if profile is None:
+        return redirect("preparation:onboarding")
+
+    plan = (
+        profile.plans.filter(status=PreparationPlan.Status.ACTIVE)
+        .order_by("-created_at").first()
+        or profile.plans.order_by("-created_at").first()
+    )
+    weeks = []
+    if plan:
+        tasks = list(plan.tasks.select_related("skill").order_by("week_number", "pk"))
+        # Best score and attempt count per task, in one query, so each row
+        # can say Start / Retry / Done 85 without a query per task.
+        best = {
+            row["task_id"]: row
+            for row in TaskAttempt.objects.filter(task__plan=plan)
+            .values("task_id").annotate(best=Max("score"), tries=Count("id"))
+        }
+        for t in tasks:
+            t.best_score = best.get(t.pk, {}).get("best")
+            t.tries = best.get(t.pk, {}).get("tries", 0)
+        for number in range(1, plan.total_weeks + 1):
+            week_tasks = [t for t in tasks if t.week_number == number]
+            if week_tasks:
+                weeks.append({
+                    "number": number,
+                    "tasks": week_tasks,
+                    "current": number == plan.current_week,
+                    "done": all(t.status == PlanTask.Status.DONE for t in week_tasks),
+                })
+
+    gaps = sorted(
+        (a for a in profile.assessments.all() if a.gap > 0),
+        key=lambda a: a.gap, reverse=True,
+    )
+    days_left = (
+        (profile.target_interview_date - timezone.localdate()).days
+        if profile.target_interview_date else None
+    )
+    return render(request, "preparation/my_plan.html", {
+        "profile": profile,
+        "plan": plan,
+        "weeks": weeks,
+        "gaps": gaps[:6],
+        "gap_max": gaps[0].gap if gaps else 0,
+        "readiness": profile.readiness_percent,
+        "days_left": days_left,
+        "welcome": request.GET.get("welcome") == "1",
+        "recent": (
+            TaskAttempt.objects.filter(task__plan__candidate=profile)
+            .select_related("task__skill")[:5]
+        ),
+        # Rendered straight away from the rules engine; beacon.js then asks
+        # /me/coach/ for the AI version and swaps it in when it arrives.
+        "advice": coach.rule_advice(coach.build_context(profile)),
+        "coach_engine": coach.engine_label(),
+        "coach_ai": coach.llm_enabled(),
+    })
+
+
+@api_login_required
+def coach_advice(request):
+    """/me/coach/ - the AI coach's recommendations for the signed-in user.
+
+    Fetched by the My plan page after it loads, so a slow model never holds
+    up the page; the page renders the rule-based advice first and swaps this
+    in. ?refresh=1 skips the six-hour cache.
+    """
+    profile = CandidateProfile.objects.filter(user=request.user).first()
+    if profile is None:
+        return JsonResponse({"error": "Finish onboarding first."}, status=404)
+    return JsonResponse(coach.get_advice(profile, refresh=request.GET.get("refresh") == "1"))
+
+
+@require_POST
+def coach_ask(request):
+    """/me/coach/ask/ - one question to the coach, answered with your context.
+
+    POST {"question": "..."}; JSON in, JSON out. 401 when signed out, like
+    the other protected JSON endpoints.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    profile = CandidateProfile.objects.filter(user=request.user).first()
+    if profile is None:
+        return JsonResponse({"error": "Finish onboarding first."}, status=404)
+    try:
+        question = json.loads(request.body or b"{}").get("question", "")
+    except (ValueError, AttributeError):
+        question = request.POST.get("question", "")
+    return JsonResponse(coach.ask(profile, question))
+
+
+@login_required
+def task_workspace(request, pk):
+    """/me/tasks/<pk>/ - do the task here, get graded, see the rating move.
+
+    Owner-only: the lookup is filtered by the signed-in user, so anyone
+    else's task is a 404. GET shows the quiz or the writing prompt plus past
+    attempts; POST grades the submission, records a TaskAttempt (which moves
+    the skill rating and completes the task on a pass), and shows the result.
+    """
+    task = get_object_or_404(
+        PlanTask.objects.select_related("plan__candidate", "skill"),
+        pk=pk, plan__candidate__user=request.user,
+    )
+    profile = task.plan.candidate
+    kind = practice.task_kind(task)
+    error, attempt = None, None
+    readiness_before = profile.readiness_percent
+
+    if request.method == "POST":
+        if kind == TaskAttempt.Kind.QUIZ:
+            questions = practice.QUIZ_BANK[task.skill.name]
+            picks = {}
+            for i in range(len(questions)):
+                value = request.POST.get(f"q{i}", "")
+                if value.isdigit():
+                    picks[i] = int(value)
+            if len(picks) < len(questions):
+                error = "Answer every question before submitting."
+            else:
+                score, feedback = practice.grade_quiz(task, picks)
+                attempt = practice.record_attempt(
+                    task, kind=kind, response={"picks": picks}, score=score,
+                    feedback=feedback, graded_by=TaskAttempt.GradedBy.AUTO,
+                )
+        else:
+            text = request.POST.get("answer", "").strip()
+            if len(text.split()) < 15:
+                error = "Write at least a few sentences (15+ words) so there is something to grade."
+            else:
+                score, feedback, graded_by = practice.grade_written(task, text[:6000])
+                attempt = practice.record_attempt(
+                    task, kind=kind, response={"answer": text[:6000]}, score=score,
+                    feedback=feedback, graded_by=graded_by,
+                )
+        if attempt:
+            profile = CandidateProfile.objects.get(pk=profile.pk)  # fresh readiness
+            task.refresh_from_db()
+
+    context = {
+        "task": task,
+        "kind": kind,
+        "is_quiz": kind == TaskAttempt.Kind.QUIZ,
+        "questions": practice.QUIZ_BANK.get(task.skill.name, []) if task.skill else [],
+        "brief": practice.written_prompt(task),
+        "attempt": attempt,
+        "error": error,
+        "draft": request.POST.get("answer", "") if error else "",
+        "history": task.attempts.all()[:5],
+        "pass_score": practice.PASS_SCORE,
+        "readiness_before": readiness_before,
+        "readiness_after": profile.readiness_percent,
+        "assessment": profile.assessments.filter(skill=task.skill).first() if task.skill else None,
+    }
+    return render(request, "preparation/task_workspace.html", context)

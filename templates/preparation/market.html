@@ -13,7 +13,8 @@
 {% block heading %}Job market vs skill gaps{% endblock %}
 
 {% block content %}
-  <p class="tag">External API (Jobicy) triangulated with Beacon's own data</p>
+  <p class="tag">Live job postings, compared with your cohort's skill gaps</p>
+  <p class="tag devnote">External API (Jobicy, falling back to Remotive) triangulated with Beacon's own data</p>
   <p>
     Enter a target role. Beacon pulls live remote job postings for it, counts
     how many mention each skill in the catalog, and sets that beside how far
@@ -40,7 +41,7 @@
       <li class="stat"><span class="stat__value">{{ report.skills|length }}</span>
           <span class="stat__label">Skills measured</span></li>
     </ul>
-    <p class="tag">Internal cohort: {{ report.cohort.description }}.
+    <p class="tag devnote">Internal cohort: {{ report.cohort.description }}.
       Same result as JSON:
       <a href="{% url 'preparation:api_market_demand' %}?q={{ query|urlencode }}"><code>/api/market-demand/?q={{ query }}</code></a></p>
 
@@ -75,11 +76,11 @@
         <li><a href="{{ post.url }}" rel="noopener" target="_blank">{{ post.title }}</a>
             &middot; {{ post.company }}{% if post.published %} &middot; {{ post.published }}{% endif %}</li>
       {% empty %}
-        <li>Jobicy had no remote postings tagged "{{ query }}". Try a broader role,
+        <li>{{ report.source.name }} had no remote postings for "{{ query }}". Try a broader role,
             such as "analyst" or "engineer".</li>
       {% endfor %}
     </ul>
-    <p class="tag">Job data from <a href="{{ report.source.url }}" rel="noopener">Jobicy</a>,
+    <p class="tag">Job data from <a href="{{ report.source.url }}" rel="noopener">{{ report.source.name }}</a>,
       fetched live and not stored.</p>
   {% else %}
     <p class="muted">Pick a role above. Candidates in the database are currently

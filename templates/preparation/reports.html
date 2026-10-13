@@ -67,7 +67,7 @@
   </p>
 
   <h2>Candidates by experience level</h2>
-  <p class="tag">Grouped with
+  <p class="tag devnote">Grouped with
   <code>values("experience_level").annotate(Count("id"))</code></p>
   <div class="table-scroll">
   <table>
@@ -105,7 +105,7 @@
   </div>
 
   <h2>Tasks per plan, done against all</h2>
-  <p class="tag">A count and a filtered count of the same relation:
+  <p class="tag devnote">A count and a filtered count of the same relation:
   <code>Count("tasks")</code> beside
   <code>Count("tasks", filter=Q(status=DONE))</code></p>
   <div class="table-scroll">
@@ -135,7 +135,7 @@
   </div>
 
   <h2>The records in the exports</h2>
-  <p class="tag">Same rows, same column order, as
+  <p class="tag devnote">Same rows, same column order, as
   <code>{{ csv_name }}</code> and <code>{{ json_name }}</code></p>
   <div class="table-scroll">
   <table>

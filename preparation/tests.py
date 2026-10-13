@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from . import exports
 from .models import (
+    TaskAttempt,
     CandidateProfile,
     PlanTask,
     PreparationPlan,
@@ -64,8 +65,11 @@ class GradedViewsTests(TestCase):
         )
 
     def setUp(self):
-        # Create and log in a test user for template tests
-        self.user = User.objects.create_user("templateuser", password="test-only-pw")
+        # Create and log in a test user for template tests. A coach (staff):
+        # the plan and task lists show the whole cohort only to coaches, and
+        # the plan here belongs to a different user. visibility.py.
+        self.user = User.objects.create_user("templateuser", password="test-only-pw",
+                                             is_staff=True)
         # assertTrue, not a bare call: Client.login() returns False on a bad
         # username and the test then runs anonymous. Against a public route
         # that still passes, which is how five of these were silently broken.
@@ -113,7 +117,7 @@ class TemplateBehaviourTests(TestCase):
     def test_every_page_extends_base_and_shows_the_nav(self):
         response = self.client.get(reverse("preparation:skill_catalog_render"))
         self.assertContains(response, "Team Career Coaches (Group 11)")
-        self.assertContains(response, "Tasks (generic CBV)")
+        self.assertContains(response, f'href="{reverse("preparation:task_list")}"')
 
     def test_empty_branch_fires_when_the_filter_matches_nothing(self):
         Skill.objects.create(name="Python fundamentals", category=Skill.Category.TECHNICAL)
@@ -183,8 +187,11 @@ class UrlsAndNavigationTests(TestCase):
         nav = body.split("<nav")[1].split("</nav>")[0]
         hrefs = [h for h in nav.split('href="')[1:]]
         self.assertGreaterEqual(len(hrefs), 3)
-        for expected in ("/candidates/", "/search/skills/", "/insights/"):
+        # Students see their own work plus the shared, anonymous pages; the
+        # cohort's candidate list is in the coaches' menu (visibility.py).
+        for expected in ("/me/", "/search/skills/", "/insights/"):
             self.assertIn(expected, nav)
+        self.assertNotIn("/candidates/", nav)
 
     def test_get_absolute_url_returns_a_working_pk_url(self):
         for obj in (self.skill, self.candidate, self.plan, self.task):
@@ -609,16 +616,15 @@ class InternalApiTests(TestCase):
         for personal in ("Eunji", "eunji", "example.edu"):
             self.assertNotIn(personal, body)
 
-    def test_apis_allow_cross_origin_reads(self):
+    def test_public_api_allows_cross_origin_reads(self):
         """The Vega-Lite editor fetches from another origin."""
-        for name in ("api_skill_summary", "api_assessments"):
-            r = self.client.get(reverse(f"preparation:{name}"))
-            self.assertEqual(r["Access-Control-Allow-Origin"], "*")
+        r = self.client.get(reverse("preparation:api_skill_summary"))
+        self.assertEqual(r["Access-Control-Allow-Origin"], "*")
 
     def test_preflight_allows_public_site_to_read_localhost(self):
         """Chrome asks before vega.github.io may read from 127.0.0.1."""
         r = self.client.options(
-            reverse("preparation:api_assessments"),
+            reverse("preparation:api_skill_summary"),
             headers={"Origin": "https://vega.github.io",
                      "Access-Control-Request-Private-Network": "true"},
         )
@@ -1354,3 +1360,983 @@ class OAuthDependencyTests(TestCase):
 
         text = pathlib.Path("requirements.txt").read_text()
         self.assertIn("django-allauth[socialaccount]", text)
+
+
+# ===========================================================================
+# ASSIGNMENT 5, PART 3 - one public API, every other API protected
+# ===========================================================================
+class PublicVsProtectedApiTests(TestCase):
+    """Exactly one JSON API answers without a login: /api/skills/summary/."""
+
+    PROTECTED_APIS = [
+        "/api/assessments/",
+        "/api/market-demand/?q=analyst",
+        "/vega-lite/chart1.json",
+        "/vega-lite/chart2.json",
+        "/api/whoami/",
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def test_public_api_needs_no_login(self):
+        r = self.client.get(reverse("preparation:api_skill_summary"))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/json")
+        self.assertIsInstance(r.json(), list)
+
+    def test_public_api_is_aggregates_only(self):
+        """Nothing in it identifies a person."""
+        body = self.client.get(reverse("preparation:api_skill_summary")).content.decode()
+        for personal in ("eunji", "tquant", "example.edu", "Eunji"):
+            self.assertNotIn(personal, body)
+        row = self.client.get(reverse("preparation:api_skill_summary")).json()[0]
+        self.assertEqual(
+            set(row),
+            {"skill", "category", "learners", "avg_proficiency", "avg_required",
+             "avg_gap", "tasks"},
+        )
+
+    def test_public_api_csv_form_matches_the_json(self):
+        r = self.client.get(reverse("preparation:api_skill_summary"), {"format": "csv"})
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r["Content-Type"].startswith("text/csv"))
+        lines = r.content.decode().strip().splitlines()
+        self.assertEqual(
+            lines[0], "skill,category,learners,avg_proficiency,avg_required,avg_gap,tasks"
+        )
+        json_rows = self.client.get(reverse("preparation:api_skill_summary")).json()
+        self.assertEqual(len(lines) - 1, len(json_rows))
+
+    def test_every_other_api_answers_401_json_when_signed_out(self):
+        for url in self.PROTECTED_APIS:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertEqual(r.status_code, 401, f"{url} is not protected")
+                self.assertEqual(r["Content-Type"], "application/json")
+                self.assertIn("error", r.json())
+
+    def test_protected_apis_send_no_cors_header(self):
+        """Only the public API invites other sites to read it."""
+        r = self.client.get("/api/assessments/")
+        self.assertNotIn("Access-Control-Allow-Origin", r)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_protected_apis_answer_once_signed_in(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        for url in self.PROTECTED_APIS:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_chart_png_needs_a_login(self):
+        r = self.client.get(reverse("preparation:vega_lite_png", args=[2]))
+        self.assertEqual(r.status_code, 302)
+
+
+class MarketSourceFallbackTests(TestCase):
+    """PythonAnywhere's free tier cannot reach Jobicy; Remotive takes over."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def setUp(self):
+        cache.clear()
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+
+    @mock.patch("preparation.market.requests.get")
+    def test_falls_back_to_remotive_when_jobicy_is_unreachable(self, get):
+        remotive = mock.Mock(status_code=200)
+        remotive.raise_for_status.return_value = None
+        remotive.json.return_value = {"jobs": [
+            {"title": "Data Analyst", "company_name": "Initech",
+             "url": "https://remotive.com/remote-jobs/1", "tags": ["sql", "python"],
+             "description": "<p>SQL daily</p>", "publication_date": "2026-10-10T09:00:00"},
+        ]}
+        get.side_effect = [requests.ConnectionError(), remotive]
+
+        data = self.client.get(reverse("preparation:api_market_demand"),
+                               {"q": "data analyst"}).json()
+
+        self.assertEqual(data["source"]["name"], "Remotive")
+        self.assertEqual(data["postings_analyzed"], 1)
+        self.assertEqual(data["sample_postings"][0]["url"], "https://remotive.com/remote-jobs/1")
+        remotive_call = get.call_args_list[1]
+        self.assertEqual(remotive_call.kwargs["params"]["search"], "data analyst")
+        self.assertEqual(remotive_call.kwargs["timeout"], 5)
+        sql = {r["skill"]: r for r in data["skills"]}["SQL & relational modeling"]
+        self.assertEqual(sql["postings_mentioning"], 1)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_jobicy_is_used_when_it_answers(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        data = self.client.get(reverse("preparation:api_market_demand"),
+                               {"q": "data analyst"}).json()
+        self.assertEqual(data["source"]["name"], "Jobicy")
+        self.assertEqual(get.call_count, 1)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_page_credits_whichever_source_answered(self, get):
+        remotive = mock.Mock(status_code=200)
+        remotive.raise_for_status.return_value = None
+        remotive.json.return_value = {"jobs": []}
+        get.side_effect = [requests.ConnectionError(), remotive]
+        r = self.client.get(reverse("preparation:market"), {"q": "data analyst"})
+        self.assertContains(r, 'href="https://remotive.com"')
+
+
+class PolishTests(TestCase):
+    """Assignment 5 polish: palette data, dashboard panels, auth pages."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def test_palette_api_is_protected(self):
+        r = self.client.get(reverse("preparation:api_palette"))
+        self.assertEqual(r.status_code, 401)
+
+    def test_palette_lists_pages_candidates_and_skills(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        items = self.client.get(reverse("preparation:api_palette")).json()["items"]
+        groups = {i["group"] for i in items}
+        self.assertTrue({"Page", "Candidate", "Skill"} <= groups)
+        labels = {i["label"] for i in items}
+        self.assertNotIn("Eunji", labels)          # another student: hidden
+        self.assertIn("tquant", labels)            # themselves: listed
+        for item in items:
+            self.assertTrue(item["url"].startswith("/"))
+
+    def test_palette_markup_only_for_signed_in_users(self):
+        self.assertNotContains(self.client.get(reverse("preparation:login")), "data-palette")
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.assertContains(self.client.get("/"), "data-palette-open")
+
+    def test_dashboard_shows_readiness_and_widest_gaps(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        # A student sees only their own ring.
+        self.assertEqual([row["name"] for row in r.context["readiness"]], ["tquant"])
+        # SQL (gap 40) is wider than Python (gap 27.5), so it comes first.
+        self.assertEqual(r.context["gaps"][0]["skill"], "SQL & relational modeling")
+        self.assertContains(r, 'class="ring ')
+        self.assertContains(r, "gapbar__fill")
+
+    def test_dashboard_reads_readiness_without_a_query_per_candidate(self):
+        """Adding a candidate must not add a query (prefetch_related)."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.client.get("/")  # warm the session
+        with CaptureQueriesContext(connection) as before:
+            self.client.get("/")
+        extra = CandidateProfile.objects.create(
+            user=User.objects.create_user("extra", password="test-only-pw"),
+            target_role="Backend Engineer", preparation_timeline_weeks=4,
+        )
+        SkillAssessment.objects.create(
+            candidate=extra, skill=self.sql, proficiency_score=50, required_level=70
+        )
+        with CaptureQueriesContext(connection) as after:
+            self.client.get("/")
+        self.assertEqual(len(after), len(before))
+
+    def test_auth_pages_render_the_hero_and_styled_fields(self):
+        for name in ("preparation:login", "preparation:signup"):
+            with self.subTest(page=name):
+                r = self.client.get(reverse(name))
+                self.assertContains(r, "auth-hero")
+                self.assertContains(r, 'class="field__label"')
+                self.assertNotContains(r, "{%")
+
+    def test_login_errors_are_shown_on_the_redesigned_form(self):
+        r = self.client.post(reverse("preparation:login"),
+                             {"username": "tquant", "password": "wrong"})
+        self.assertContains(r, "auth-card__alert")
+
+
+class FromScratchJourneyTests(TestCase):
+    """A brand-new user: sign up -> onboarding -> personal plan -> tick tasks."""
+
+    PASSWORD = "Lighthouse-test-2026"
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)   # three skills and two existing candidates
+
+    def _sign_up(self, username="newbie"):
+        return self.client.post(reverse("preparation:signup"), {
+            "username": username, "password1": self.PASSWORD, "password2": self.PASSWORD,
+        })
+
+    def _onboard(self, **overrides):
+        data = {
+            "interests": ["data"],
+            "target_roles": ["Data Analyst"],
+            "target_company": "Spotify",
+            "experience_level": "NEW",
+            "has_interview": "yes",
+            "target_interview_date": (timezone.localdate() + timezone.timedelta(weeks=4)).isoformat(),
+            "prep_weeks": "6",
+            "primary_concern": "TECH",
+            "about": "Stats major, two internships.",
+            f"skill_{self.sql.pk}": 40,        # Data Analyst requires 85: gap 45
+            f"skill_{self.python.pk}": 70,     # requires 75: gap 5
+            f"skill_{self.pitch.pk}": 90,      # default 65: no gap
+        }
+        data.update(overrides)
+        return self.client.post(reverse("preparation:onboarding"), data)
+
+    def test_signup_lands_on_onboarding(self):
+        r = self._sign_up()
+        self.assertRedirects(r, reverse("preparation:onboarding"))
+
+    def test_new_user_without_profile_is_sent_to_onboarding_from_my_plan(self):
+        self._sign_up()
+        self.assertRedirects(self.client.get(reverse("preparation:my_plan")),
+                             reverse("preparation:onboarding"))
+
+    def test_dashboard_offers_the_diagnosis_to_a_new_user(self):
+        self._sign_up()
+        self.assertContains(self.client.get("/"), "Start your diagnosis")
+
+    def test_onboarding_builds_profile_assessments_and_plan(self):
+        self._sign_up()
+        r = self._onboard()
+        self.assertRedirects(r, reverse("preparation:my_plan") + "?welcome=1",
+                             fetch_redirect_response=False)
+        profile = CandidateProfile.objects.get(user__username="newbie")
+        self.assertEqual(profile.target_role, "Data Analyst")
+        self.assertEqual(profile.preparation_timeline_weeks, 4)
+        sql = profile.assessments.get(skill=self.sql)
+        self.assertEqual((sql.proficiency_score, sql.required_level), (40, 85))
+
+        plan = profile.plans.get(status=PreparationPlan.Status.ACTIVE)
+        tasks = list(plan.tasks.order_by("week_number", "pk"))
+        # Widest gap first, and no tasks for a skill already above the bar.
+        self.assertEqual(tasks[0].skill, self.sql)
+        self.assertEqual(tasks[0].week_number, 1)
+        self.assertEqual(tasks[0].priority, PlanTask.Priority.HIGH)
+        self.assertNotIn(self.pitch, {t.skill for t in tasks})
+        self.assertTrue(all(1 <= t.week_number <= 4 for t in tasks))
+        self.assertIn("45-point gap", tasks[0].rationale)
+
+    def test_my_plan_shows_the_users_own_plan(self):
+        self._sign_up()
+        self._onboard()
+        r = self.client.get(reverse("preparation:my_plan") + "?welcome=1")
+        self.assertContains(r, "Your beacon is lit")
+        self.assertContains(r, "Data Analyst at Spotify")
+        self.assertContains(r, "Week 1")
+        self.assertContains(r, "data-lighthouse")
+        self.assertNotContains(r, "{%")
+
+    def test_retake_archives_the_old_plan_and_keeps_one_active(self):
+        self._sign_up()
+        self._onboard()
+        self._onboard(**{f"skill_{self.sql.pk}": 80})
+        profile = CandidateProfile.objects.get(user__username="newbie")
+        self.assertEqual(profile.plans.count(), 2)
+        self.assertEqual(profile.plans.filter(status=PreparationPlan.Status.ACTIVE).count(), 1)
+        self.assertEqual(profile.assessments.get(skill=self.sql).proficiency_score, 80)
+
+    def test_past_interview_date_is_rejected(self):
+        self._sign_up()
+        r = self._onboard(target_interview_date="2020-01-01")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Pick a date in the future")
+        self.assertFalse(CandidateProfile.objects.filter(user__username="newbie").exists())
+
+    def test_onboarding_and_my_plan_need_login(self):
+        for name in ("preparation:onboarding", "preparation:my_plan"):
+            with self.subTest(page=name):
+                r = self.client.get(reverse(name))
+                self.assertEqual(r.status_code, 302)
+                self.assertIn(reverse("preparation:login"), r["Location"])
+
+
+class FlexibleGoalsTests(TestCase):
+    """No interview yet, several roles at once, or no specific role at all."""
+
+    PASSWORD = "Lighthouse-test-2026"
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def setUp(self):
+        self.client.post(reverse("preparation:signup"), {
+            "username": "flex", "password1": self.PASSWORD, "password2": self.PASSWORD,
+        })
+
+    def _onboard(self, **overrides):
+        data = {
+            "interests": [], "target_roles": ["Data Analyst"], "target_company": "",
+            "experience_level": "STU", "has_interview": "no", "target_interview_date": "",
+            "prep_weeks": "8", "primary_concern": "", "about": "",
+            f"skill_{self.sql.pk}": 40, f"skill_{self.python.pk}": 70, f"skill_{self.pitch.pk}": 60,
+        }
+        data.update(overrides)
+        return self.client.post(reverse("preparation:onboarding"), data)
+
+    def _profile(self):
+        return CandidateProfile.objects.get(user__username="flex")
+
+    def test_no_interview_yet_builds_an_open_ended_plan(self):
+        self._onboard()
+        profile = self._profile()
+        self.assertIsNone(profile.target_interview_date)
+        self.assertEqual(profile.preparation_timeline_weeks, 8)
+        plan = profile.plans.get()
+        self.assertEqual(plan.target_date, timezone.localdate() + timezone.timedelta(weeks=8))
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, "No interview booked yet")
+
+    def test_interview_date_is_required_only_when_booked(self):
+        r = self._onboard(has_interview="yes", target_interview_date="")
+        self.assertContains(r, "Add the date")
+        self.assertFalse(CandidateProfile.objects.filter(user__username="flex").exists())
+
+    def test_several_roles_use_the_highest_bar(self):
+        # SQL: Data Analyst 85, Product Manager 55 -> 85.
+        # Resume & pitch: Data Analyst default 65, Product Manager 75 -> 75.
+        self._onboard(target_roles=["Data Analyst", "Product Manager"])
+        profile = self._profile()
+        self.assertEqual(profile.target_roles, ["Data Analyst", "Product Manager"])
+        self.assertEqual(profile.target_role, "Data Analyst + Product Manager")
+        self.assertEqual(profile.assessments.get(skill=self.sql).required_level, 85)
+        self.assertEqual(profile.assessments.get(skill=self.pitch).required_level, 75)
+        task = profile.plans.get().tasks.order_by("pk").first()
+        self.assertIn("toughest of your target roles", task.rationale)
+
+    def test_at_most_three_roles(self):
+        r = self._onboard(target_roles=["Data Analyst", "Product Manager",
+                                        "Software Engineer", "UX Researcher"])
+        self.assertContains(r, "Pick up to 3 roles")
+
+    def test_at_least_one_role(self):
+        r = self._onboard(target_roles=[])
+        self.assertContains(r, "Pick at least one role")
+
+    def test_general_readiness_for_no_specific_role(self):
+        self._onboard(target_roles=["General interview readiness"])
+        profile = self._profile()
+        self.assertEqual(profile.target_role, "General interview readiness")
+        self.assertEqual(profile.assessments.get(skill=self.pitch).required_level, 75)
+
+    def test_general_is_dropped_when_combined_with_a_real_role(self):
+        self._onboard(target_roles=["General interview readiness", "Data Analyst"])
+        self.assertEqual(self._profile().target_roles, ["Data Analyst"])
+
+    def test_interests_and_about_are_saved_and_prefill_a_retake(self):
+        self._onboard(interests=["data", "product"], about="Econ major.")
+        profile = self._profile()
+        self.assertEqual(profile.interests, ["data", "product"])
+        self.assertEqual(profile.resume_summary, "Econ major.")
+        r = self.client.get(reverse("preparation:onboarding"))
+        form = r.context["form"]
+        self.assertEqual(form.initial["interests"], ["data", "product"])
+        self.assertEqual(form.initial["has_interview"], "no")
+
+    def test_interest_suggestions(self):
+        from .onboarding import suggested_roles
+        self.assertEqual(suggested_roles(["data"])[0], "Data Analyst")
+        self.assertEqual(suggested_roles(["unsure"]), ["General interview readiness"])
+        # Product + people both point at PM and UXR; PM ranks first overall.
+        self.assertEqual(set(suggested_roles(["product", "people"])[:2]),
+                         {"Product Manager", "UX Researcher"})
+
+
+class ResumeImportTests(TestCase):
+    """Onboarding shortcut: read a resume or LinkedIn PDF, suggest answers."""
+
+    SAMPLE_PDF = settings.BASE_DIR / "docs" / "a5" / "demo" / "sample_resume_maya.pdf"
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.git = Skill.objects.create(name="Version control with Git",
+                                       category=Skill.Category.TECHNICAL)
+
+    def setUp(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.url = reverse("preparation:resume_parse")
+
+    def _upload(self, name, content, content_type):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return self.client.post(self.url, {"resume": SimpleUploadedFile(name, content, content_type)})
+
+    def test_reads_the_sample_resume_pdf(self):
+        r = self._upload("maya.pdf", self.SAMPLE_PDF.read_bytes(), "application/pdf")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        found = {s["name"]: s for s in data["skills"]}
+        self.assertEqual(found["SQL & relational modeling"]["rating"], 70)   # 3+ mentions
+        self.assertIn("Python fundamentals", found)
+        self.assertIn("Version control with Git", found)
+        self.assertIn("SQL", found["SQL & relational modeling"]["evidence"])
+        # A resume always says "resume"; that is not pitching evidence.
+        self.assertNotIn("Resume & elevator pitch", found)
+        self.assertIn("data", data["interests"])
+        self.assertEqual(data["suggested_roles"][0], "Data Analyst")
+        self.assertEqual(data["source"], "resume")
+
+    def test_pasted_text_works_without_a_file(self):
+        r = self.client.post(self.url, {"text": "Built REST APIs in Python and deployed them. " * 3})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Python fundamentals", {s["name"] for s in r.json()["skills"]})
+
+    def test_recognises_a_linkedin_export(self):
+        text = ("Contact\nTop Skills\nSQL\nPython\nExperience\nData Analyst Intern\n"
+                "Wrote SQL daily.\nPage 1 of 2")
+        self.assertEqual(self.client.post(self.url, {"text": text}).json()["source"], "linkedin")
+
+    def test_rejects_other_file_types_and_empty_text(self):
+        r = self._upload("resume.docx", b"PK\x03\x04 not really a docx", "application/octet-stream")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("PDF", r.json()["error"])
+        r = self.client.post(self.url, {"text": "hi"})
+        self.assertEqual(r.status_code, 400)
+
+    def test_unreadable_pdf_is_a_clean_400(self):
+        r = self._upload("broken.pdf", b"%PDF-1.4 this is not a real pdf", "application/pdf")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("error", r.json())
+
+    def test_nothing_is_stored(self):
+        before = CandidateProfile.objects.get(user__username="tquant").resume_summary
+        self._upload("maya.pdf", self.SAMPLE_PDF.read_bytes(), "application/pdf")
+        profile = CandidateProfile.objects.get(user__username="tquant")
+        self.assertEqual(profile.resume_summary, before)
+        self.assertFalse(profile.resume_file)
+
+    def test_needs_login_and_post(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+        self.client.logout()
+        r = self.client.post(self.url, {"text": "Python " * 20})
+        self.assertEqual(r.status_code, 401)
+
+    def test_onboarding_page_offers_the_import(self):
+        r = self.client.get(reverse("preparation:onboarding"))
+        self.assertContains(r, "data-resume-import")
+        self.assertContains(r, "Save to PDF")
+
+
+class ProductNavigationTests(TestCase):
+    """The menu is data (navigation.py): clean labels, active state, staff-only."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.staff = User.objects.create_user("coach", password="test-only-pw", is_staff=True)
+
+    def _nav(self, url="/"):
+        body = self.client.get(url).content.decode()
+        return body.split("<nav")[1].split("</nav>")[0]
+
+    def test_no_course_jargon_in_the_menu(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        nav = self._nav()
+        for jargon in ("FBV", "CBV", "HttpResponse", "render()", "generic"):
+            self.assertNotIn(jargon, nav)
+
+    def test_every_entry_is_a_reversed_url_name(self):
+        from .navigation import ACCOUNT_MENU, NAV
+        names = [c["name"] for i in NAV for c in i.get("children", [i])] + \
+                [i["name"] for i in ACCOUNT_MENU]
+        for name in names:
+            with self.subTest(name=name):
+                reverse(name)   # raises if a route was renamed
+
+    def test_current_page_and_its_group_are_marked_active(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        nav = self._nav(reverse("preparation:insights"))
+        self.assertRegex(nav, rf'href="{reverse("preparation:insights")}"\s+aria-current="page"')
+        self.assertIn('class="menu is-active"', nav)
+
+    def test_detail_pages_highlight_their_section(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        nav = self._nav(self.sql.get_absolute_url())
+        self.assertIn('aria-current="page"', nav)
+
+    def test_admin_only_for_staff(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.assertNotIn(reverse("admin:index"), self._nav())
+        self.client.logout()
+        self.assertTrue(self.client.login(username="coach", password="test-only-pw"))
+        self.assertIn(reverse("admin:index"), self._nav())
+
+    def test_course_notes_are_hidden_behind_the_switch(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        r = self.client.get(reverse("preparation:task_list"))
+        self.assertContains(r, 'class="tag devnote"')
+        self.assertContains(r, "data-dev-toggle")
+
+
+LLM_ON = dict(LLM_ENABLED=True, LLM_BASE_URL="https://llm.example/v1", LLM_MODEL="open-model",
+              LLM_API_KEY="test-key", LLM_PROVIDER="TestProvider")
+LLM_OFF = dict(LLM_ENABLED=False)
+LLM_KEYLESS = dict(LLM_ENABLED=True, LLM_API_KEY="", LLM_KEYLESS_BASE_URL="https://free.example/openai",
+                   LLM_KEYLESS_MODEL="openai", LLM_KEYLESS_LABEL="gpt-oss-20b",
+                   LLM_KEYLESS_PROVIDER="FreeTier (no key)")
+
+
+def _llm_reply(content, status=200):
+    response = mock.Mock(status_code=status)
+    response.json.return_value = {"choices": [{"message": {"content": content}}]}
+    if status >= 400:
+        response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    else:
+        response.raise_for_status.return_value = None
+    return response
+
+
+GOOD_ADVICE = json.dumps({
+    "headline": "Spend this week on SQL.",
+    "focus_skill": "SQL & relational modeling",
+    "why": "You rated it 40 against 85.",
+    "actions": ["Do 5 JOIN drills", "Model one schema", "Time yourself on 2 queries"],
+    "practice_question": "Return each customer's latest order.",
+    "encouragement": "You have 4 weeks - plenty of time.",
+})
+
+
+class CoachTests(TestCase):
+    """The AI coach: rules by default, any OpenAI-compatible LLM when keyed."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.user = User.objects.create_user("coached", first_name="Priya",
+                                            email="priya@example.edu", password="test-only-pw")
+        from .onboarding import complete_onboarding
+        complete_onboarding(
+            cls.user, target_roles=["Data Analyst"], target_company="", experience_level="NEW",
+            target_interview_date=None, prep_weeks="4", primary_concern="TECH",
+            ratings={cls.sql.pk: 40, cls.python.pk: 70, cls.pitch.pk: 60},
+            interests=["data"], about="Priya Sharma, 555-0100, my resume text",
+        )
+
+    def setUp(self):
+        cache.clear()
+        self.assertTrue(self.client.login(username="coached", password="test-only-pw"))
+
+    @override_settings(**LLM_OFF)
+    def test_without_a_key_the_rules_coach_answers(self):
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "rules")
+        self.assertIn("SQL & relational modeling", data["advice"]["headline"])
+        self.assertIn("switched off", data["engine"])
+        self.assertEqual(len(data["advice"]["actions"]), 3)
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_with_a_key_the_llm_answers_through_the_openai_api(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "llm")
+        self.assertEqual(data["advice"]["headline"], "Spend this week on SQL.")
+        self.assertIn("open-model via TestProvider", data["engine"])
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://llm.example/v1/chat/completions")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
+        self.assertEqual(kwargs["json"]["model"], "open-model")
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.requests.post")
+    def test_with_no_key_the_free_keyless_tier_is_used(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "llm")
+        self.assertEqual(data["engine"], "AI · gpt-oss-20b via FreeTier (no key)")
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://free.example/openai/chat/completions")
+        self.assertNotIn("Authorization", kwargs["headers"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_nothing_identifying_is_sent_to_the_model(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        self.client.get(reverse("preparation:coach_advice"))
+        sent = json.dumps(post.call_args.kwargs["json"])
+        for private in ("coached", "Priya", "priya@example.edu", "555-0100", "resume text"):
+            self.assertNotIn(private, sent)
+        self.assertIn("SQL & relational modeling", sent)   # the scores do go
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_bad_model_output_falls_back_to_rules(self, post):
+        for reply in (_llm_reply("not json at all"),
+                      _llm_reply(json.dumps({"headline": "only this"})),
+                      _llm_reply("", status=503)):
+            with self.subTest(reply=reply):
+                cache.clear()
+                post.return_value = reply
+                data = self.client.get(reverse("preparation:coach_advice")).json()
+                self.assertEqual(data["source"], "rules")
+                self.assertIn("rule-based advice instead", data["note"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post", side_effect=requests.Timeout())
+    def test_slow_model_falls_back_to_rules(self, post):
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "rules")
+        self.assertIn("too long", data["note"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_advice_is_cached_until_refresh(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        self.client.get(reverse("preparation:coach_advice"))
+        self.client.get(reverse("preparation:coach_advice"))
+        self.assertEqual(post.call_count, 1)
+        self.client.get(reverse("preparation:coach_advice"), {"refresh": "1"})
+        self.assertEqual(post.call_count, 2)
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_model_cannot_invent_a_focus_skill(self, post):
+        bad = json.loads(GOOD_ADVICE); bad["focus_skill"] = "Juggling"
+        post.return_value = _llm_reply(json.dumps(bad))
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertIsNone(data["advice"]["focus_skill"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_ask_answers_with_context(self, post):
+        post.return_value = _llm_reply("Do 20 minutes of JOIN practice.")
+        r = self.client.post(reverse("preparation:coach_ask"),
+                             data=json.dumps({"question": "What now?"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["answer"], "Do 20 minutes of JOIN practice.")
+        user_msg = post.call_args.kwargs["json"]["messages"][1]["content"]
+        self.assertIn("What now?", user_msg)
+        self.assertIn("SQL & relational modeling", user_msg)
+
+    @override_settings(**LLM_OFF)
+    def test_ask_without_a_key_explains_and_uses_the_plan(self):
+        r = self.client.post(reverse("preparation:coach_ask"),
+                             data=json.dumps({"question": "What now?"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["source"], "rules")
+        self.assertIn("isn't available", r.json()["answer"])
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_questions_are_rate_limited(self, post):
+        post.return_value = _llm_reply("ok")
+        from .coach import ASKS_PER_HOUR
+        for _ in range(ASKS_PER_HOUR):
+            self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        r = self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["source"], "limit")
+        self.assertEqual(post.call_count, ASKS_PER_HOUR)
+
+    def test_endpoints_are_protected(self):
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("preparation:coach_advice")).status_code, 401)
+        self.assertEqual(self.client.post(reverse("preparation:coach_ask")).status_code, 401)
+
+    def test_user_without_a_profile_is_told_to_onboard(self):
+        self.client.logout()
+        User.objects.create_user("fresh", password="test-only-pw")
+        self.assertTrue(self.client.login(username="fresh", password="test-only-pw"))
+        self.assertEqual(self.client.get(reverse("preparation:coach_advice")).status_code, 404)
+
+    @override_settings(**LLM_OFF)
+    def test_my_plan_renders_the_coach_panel(self):
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, "data-coach")
+        self.assertContains(r, "Your coach")
+        self.assertContains(r, "Never your name, email or resume")
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_keyless_tier_retries_once_when_busy(self, post, sleep):
+        busy = mock.Mock(status_code=402)
+        post.side_effect = [busy, _llm_reply("Answer after retry.")]
+        r = self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["answer"], "Answer after retry.")
+        self.assertEqual(post.call_count, 2)
+        sleep.assert_called_once()
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_still_busy_says_so_plainly(self, post, sleep):
+        post.return_value = mock.Mock(status_code=429)
+        r = self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["source"], "busy")
+        self.assertIn("Try again in about 15 seconds", r.json()["answer"])
+        self.assertNotIn("HTTP", r.json()["answer"])
+
+
+class TaskWorkspaceTests(TestCase):
+    """Doing tasks on the platform: graded attempts move ratings and complete tasks."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.star = Skill.objects.create(name="STAR-format storytelling",
+                                        category=Skill.Category.BEHAVIORAL)
+        cls.user = User.objects.create_user("learner", password="test-only-pw")
+        from .onboarding import complete_onboarding
+        cls.profile, cls.plan = complete_onboarding(
+            cls.user, target_roles=["Data Analyst"], target_company="", experience_level="STU",
+            target_interview_date=None, prep_weeks="6", primary_concern="",
+            ratings={cls.sql.pk: 40, cls.python.pk: 70, cls.pitch.pk: 60, cls.star.pk: 30},
+        )
+
+    def setUp(self):
+        cache.clear()
+        self.assertTrue(self.client.login(username="learner", password="test-only-pw"))
+
+    def _task(self, skill):
+        return self.plan.tasks.filter(skill=skill).first()
+
+    def _rating(self, skill):
+        return SkillAssessment.objects.get(candidate=self.profile, skill=skill).proficiency_score
+
+    def _quiz_answers(self, skill, right):
+        from .practice import QUIZ_BANK
+        data = {}
+        for i, q in enumerate(QUIZ_BANK[skill.name]):
+            data[f"q{i}"] = q["answer"] if i < right else (q["answer"] + 1) % len(q["options"])
+        return data
+
+    def test_sql_task_is_a_quiz_and_star_task_is_written(self):
+        r = self.client.get(reverse("preparation:task_workspace", args=[self._task(self.sql).pk]))
+        self.assertContains(r, 'type="radio"')
+        r = self.client.get(reverse("preparation:task_workspace", args=[self._task(self.star).pk]))
+        self.assertContains(r, "Explain it back")
+        self.assertContains(r, "STAR")
+
+    def test_passing_quiz_completes_the_task_and_raises_the_rating(self):
+        task = self._task(self.sql)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                             self._quiz_answers(self.sql, right=3))
+        attempt = r.context["attempt"]
+        self.assertEqual(attempt.score, 75)
+        self.assertTrue(attempt.passed)
+        # 40 + 0.4 * (75 - 40) = 54
+        self.assertEqual((attempt.rating_before, attempt.rating_after), (40, 54))
+        self.assertEqual(self._rating(self.sql), 54)
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.DONE)
+        self.assertContains(r, "Task complete")
+        self.assertGreater(r.context["readiness_after"], r.context["readiness_before"])
+
+    def test_failing_quiz_keeps_the_task_open_and_can_lower_an_overrating(self):
+        task = self._task(self.sql)
+        SkillAssessment.objects.filter(candidate=self.profile, skill=self.sql).update(proficiency_score=80)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                             self._quiz_answers(self.sql, right=1))
+        attempt = r.context["attempt"]
+        self.assertEqual(attempt.score, 25)
+        self.assertFalse(attempt.passed)
+        self.assertEqual(self._rating(self.sql), 58)   # 80 + 0.4 * (25 - 80)
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.IN_PROGRESS)
+        self.assertContains(r, "Correct answer:")
+
+    def test_incomplete_quiz_is_rejected(self):
+        task = self._task(self.sql)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]), {"q0": "1"})
+        self.assertContains(r, "Answer every question")
+        self.assertFalse(TaskAttempt.objects.exists())
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_written_answer_is_graded_by_the_ai(self, post):
+        post.return_value = _llm_reply(json.dumps({
+            "score": 72, "summary": "Clear story with a measurable result.",
+            "strengths": ["Specific action"], "improve": ["State your role earlier"],
+        }))
+        task = self._task(self.star)
+        answer = ("Last semester our team project was behind schedule. My role was to lead the data "
+                  "cleaning. I wrote a script that automated the checks and reorganised the work, "
+                  "and we shipped on time, which reduced errors by 30 percent.")
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]), {"answer": answer})
+        attempt = r.context["attempt"]
+        self.assertEqual((attempt.score, attempt.graded_by), (72, TaskAttempt.GradedBy.AI))
+        self.assertEqual(attempt.rating_after, 47)     # 30 + 0.4 * (72 - 30) = 46.8
+        self.assertContains(r, "State your role earlier")
+        sent = json.dumps(post.call_args.kwargs["json"])
+        self.assertIn("reduced errors by 30 percent", sent)
+        self.assertNotIn("learner", sent)
+
+    @override_settings(**LLM_OFF)
+    def test_written_answer_falls_back_to_rules(self):
+        task = self._task(self.star)
+        answer = ("Last summer at my internship the dashboard kept failing. My role was to fix it. "
+                  "I rebuilt the queries and set up alerts so that the team could trust it again. "
+                  "It reduced support tickets by 40% over the next month and the manager reused it. " * 2)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]), {"answer": answer})
+        attempt = r.context["attempt"]
+        self.assertEqual(attempt.graded_by, TaskAttempt.GradedBy.RULES)
+        self.assertGreaterEqual(attempt.score, 60)     # long, all four STAR parts, a number
+        self.assertIn("Has a clear Result.", attempt.feedback["strengths"])
+
+    def test_too_short_written_answer_is_rejected(self):
+        r = self.client.post(reverse("preparation:task_workspace", args=[self._task(self.star).pk]),
+                             {"answer": "I did it."})
+        self.assertContains(r, "at least a few sentences")
+
+    def test_someone_elses_task_is_a_404(self):
+        task = self._task(self.sql)
+        self.client.logout()
+        User.objects.create_user("nosy", password="test-only-pw")
+        self.assertTrue(self.client.login(username="nosy", password="test-only-pw"))
+        self.assertEqual(self.client.get(reverse("preparation:task_workspace", args=[task.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                                          self._quiz_answers(self.sql, right=4)).status_code, 404)
+
+    def test_my_plan_shows_start_then_done_with_score_and_activity(self):
+        task = self._task(self.sql)
+        url = reverse("preparation:task_workspace", args=[task.pk])
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, f'href="{url}"')
+        self.assertContains(r, "Start")
+        self.client.post(url, self._quiz_answers(self.sql, right=4))
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, "&#10003; 100", html=False)
+        self.assertContains(r, "Recent activity")
+        self.assertContains(r, "SQL &amp; relational modeling 40 &rarr; <strong>64</strong>", html=False)
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_a_failed_advice_fetch_is_not_retried_on_every_visit(self, post, sleep):
+        post.return_value = mock.Mock(status_code=429)
+        self.client.get(reverse("preparation:coach_advice"))
+        calls = post.call_count
+        self.client.get(reverse("preparation:coach_advice"))
+        self.assertEqual(post.call_count, calls)
+
+
+class PatientGradingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.star = Skill.objects.create(name="STAR-format storytelling", category=Skill.Category.BEHAVIORAL)
+        cls.user = User.objects.create_user("patient", password="test-only-pw")
+        from .onboarding import complete_onboarding
+        cls.profile, cls.plan = complete_onboarding(
+            cls.user, target_roles=["Data Analyst"], target_company="", experience_level="STU",
+            target_interview_date=None, prep_weeks="6", primary_concern="", ratings={cls.star.pk: 30},
+        )
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_grading_waits_out_a_busy_free_tier(self, post, sleep):
+        cache.clear()
+        busy = mock.Mock(status_code=402)
+        post.side_effect = [busy, busy, _llm_reply(json.dumps(
+            {"score": 70, "summary": "Good.", "strengths": [], "improve": []}))]
+        self.assertTrue(self.client.login(username="patient", password="test-only-pw"))
+        task = self.plan.tasks.filter(skill=self.star).first()
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                             {"answer": "Last semester my role was to lead the cleanup. " * 4})
+        self.assertEqual(r.context["attempt"].graded_by, TaskAttempt.GradedBy.AI)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [6, 10])
+
+
+class StudentPrivacyTests(TestCase):
+    """A student sees only their own data; a coach (staff) sees the cohort."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)        # eunji (Data Analyst) and tquant (Quant Trader)
+        cls.eunji = CandidateProfile.objects.get(user__username="eunji")
+        cls.tquant = CandidateProfile.objects.get(user__username="tquant")
+        for profile in (cls.eunji, cls.tquant):
+            plan = PreparationPlan.objects.create(
+                candidate=profile, title=f"{profile.user.username} plan", focus_role="x",
+                target_date=timezone.localdate() + timezone.timedelta(weeks=4))
+            PlanTask.objects.create(plan=plan, skill=cls.sql, title=f"{profile.user.username} task",
+                                    week_number=1)
+        cls.coach = User.objects.create_user("coach", password="test-only-pw", is_staff=True)
+
+    def _as(self, username):
+        self.client.logout()
+        self.assertTrue(self.client.login(username=username, password="test-only-pw"))
+
+    def test_lists_show_a_student_only_their_own_rows(self):
+        self._as("tquant")
+        for url, own, other in [
+            ("/candidates/", "tquant", "Eunji"),
+            ("/plans/cbv-base/", "tquant plan", "eunji plan"),
+            ("/tasks/", "tquant task", "eunji task"),
+            ("/", "tquant plan", "eunji plan"),
+        ]:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertContains(r, own)
+                self.assertNotContains(r, other)
+
+    def test_someone_elses_pages_are_404(self):
+        self._as("tquant")
+        other_plan = self.eunji.plans.get()
+        for url in (self.eunji.get_absolute_url(), other_plan.get_absolute_url(),
+                    other_plan.tasks.get().get_absolute_url()):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.get(self.tquant.get_absolute_url()).status_code, 200)
+
+    def test_search_and_exports_only_reach_yourself(self):
+        self._as("tquant")
+        r = self.client.post(reverse("preparation:candidate_search"), {"term": "Eunji"})
+        self.assertNotContains(r, self.eunji.get_absolute_url())
+        export = self.client.get(reverse("preparation:export_candidates_json")).content.decode()
+        self.assertIn("tquant", export)
+        self.assertNotIn("eunji", export)
+
+    def test_skill_page_hides_other_peoples_scores(self):
+        self._as("tquant")
+        r = self.client.get(self.sql.get_absolute_url())
+        self.assertNotContains(r, "Eunji")
+
+    def test_student_cannot_add_tasks_to_someone_elses_plan(self):
+        self._as("tquant")
+        form = self.client.get(reverse("preparation:task_create")).context["form"]
+        self.assertEqual(list(form.fields["plan"].queryset), [self.tquant.plans.get()])
+
+    def test_coach_sees_the_whole_cohort(self):
+        self._as("coach")
+        r = self.client.get("/candidates/")
+        self.assertContains(r, "Eunji")
+        self.assertContains(r, "tquant")
+        self.assertEqual(self.client.get(self.eunji.get_absolute_url()).status_code, 200)
+        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        self.assertIn("/candidates/", nav)
+
+    def test_anonymous_aggregates_stay_visible_to_students(self):
+        self._as("tquant")
+        self.assertEqual(self.client.get(reverse("preparation:insights")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("preparation:charts")).status_code, 200)
+
+
+class GooglePlaceholderTests(TestCase):
+    """Dev without credentials: a disabled button that explains itself."""
+
+    @override_settings(DEBUG=True, SOCIALACCOUNT_PROVIDERS={"google": {"APP": {"client_id": "", "secret": ""}}})
+    def test_development_shows_a_disabled_button_with_instructions(self):
+        r = self.client.get(reverse("preparation:login"))
+        self.assertContains(r, "Continue with Google")
+        self.assertContains(r, "disabled")
+        self.assertContains(r, "GOOGLE_OAUTH_CLIENT_ID")
+        self.assertNotContains(r, reverse("google_login"))
+
+    @override_settings(DEBUG=False, SOCIALACCOUNT_PROVIDERS={"google": {"APP": {"client_id": "", "secret": ""}}})
+    def test_production_without_credentials_still_hides_it(self):
+        self.assertNotContains(self.client.get(reverse("preparation:login")), "Continue with Google")

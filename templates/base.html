@@ -24,10 +24,19 @@ Django prints it as page text.
   /static/. In production the staticfiles storage rewrites this to the
   content-hashed name, so the path is never written by hand anywhere.
   {% endcomment %}
+  {% comment %}
+  Marks the page as JavaScript-capable before first paint, so the
+  count-up and grow-in animations can start from zero. Without JavaScript
+  the class never appears and everything renders at its final value.
+  {% endcomment %}
+  <script>
+    document.documentElement.classList.add("js");
+    try { if (localStorage.getItem("beacon-dev-notes") === "1") document.documentElement.classList.add("show-dev"); } catch (e) {}
+  </script>
   <link rel="stylesheet" href="{% static 'css/beacon.css' %}">
   <link rel="icon" href="{% static 'img/beacon-logo.svg' %}" type="image/svg+xml">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <div class="page">
 
     <header class="masthead">
@@ -45,38 +54,92 @@ Django prints it as page text.
     Routes are reversed by name, never hard-coded, so renaming a URL pattern
     never breaks navigation.
     {% endcomment %}
-    <nav class="nav">
-        {% if user.is_authenticated %}
-            <a href="{% url 'preparation:dashboard' %}">Dashboard</a>
-            <a href="{% url 'preparation:skill_catalog_manual' %}">Skills (HttpResponse FBV)</a>
-            <a href="{% url 'preparation:skill_catalog_render' %}">Skills (render FBV)</a>
-            <a href="{% url 'preparation:plan_board' %}">Plans (base CBV)</a>
-            <a href="{% url 'preparation:task_list' %}">Tasks (generic CBV)</a>
-            <a href="{% url 'preparation:candidate_list' %}">Candidates</a>
-            <a href="{% url 'preparation:skill_search' %}">Search skills</a>
-            <a href="{% url 'preparation:candidate_search' %}">Find a candidate</a>
-            <a href="{% url 'preparation:insights' %}">Insights</a>
-            <a href="{% url 'preparation:charts' %}">Charts</a>
-            <a href="{% url 'preparation:vega_lite' %}">Vega-Lite</a>
-            <a href="{% url 'preparation:market' %}">Job market</a>
-            <a href="{% url 'preparation:reports' %}">Reports</a>
-            <a href="{% url 'admin:index' %}">Admin</a>
+    {% comment %}
+    The menu is data, not markup: preparation/navigation.py lists every
+    entry by URL name and the context processor reverses them, marks the
+    current page, and hides staff-only entries. Groups are <details>
+    dropdowns, so they open and close without JavaScript; beacon.js only
+    closes an open one when you click elsewhere.
+    {% endcomment %}
+    <nav class="nav" aria-label="Main">
+      {% if nav %}
+        <ul class="nav__list">
+          {% for item in nav.items %}
+            {% if item.children %}
+              <li class="nav__group">
+                <details class="menu{% if item.active %} is-active{% endif %}">
+                  <summary class="nav__link">{{ item.label }}</summary>
+                  <ul class="menu__panel">
+                    {% for child in item.children %}
+                      <li>
+                        <a class="menu__link{% if child.active %} is-active{% endif %}" href="{{ child.url }}"
+                           {% if child.active %}aria-current="page"{% endif %}>
+                          <span class="menu__label">{{ child.label }}</span>
+                          {% if child.hint %}<span class="menu__hint">{{ child.hint }}</span>{% endif %}
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </details>
+              </li>
+            {% else %}
+              <li>
+                <a class="nav__link{% if item.active %} is-active{% endif %}" href="{{ item.url }}"
+                   {% if item.active %}aria-current="page"{% endif %}>{{ item.label }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+        </ul>
 
-            <form method="post"
-                  action="{% url 'preparation:logout' %}"
-                  class="nav-logout">
-                {% csrf_token %}
-                <button type="submit" class="nav-logout__button">Log Out</button>
-            </form>
-        {% else %}
-            <a href="{% url 'preparation:login' %}">Log In</a>
-            <a href="{% url 'preparation:signup' %}">Sign Up</a>
-        {% endif %}
-
+        <div class="nav__right">
+          {% comment %} Opens the command palette (beacon.js). Ctrl/Cmd+K does the same. {% endcomment %}
+          <button type="button" class="nav-palette" data-palette-open
+                  aria-label="Search pages, candidates and skills">
+            Jump to&hellip; <kbd>&#8984;K</kbd>
+          </button>
+          <details class="menu menu--account">
+            <summary class="nav__link nav__avatar" aria-label="Account menu">
+              <span class="avatar" aria-hidden="true">{{ user.get_username|slice:":1"|upper }}</span>
+              <span class="nav__username">{{ user.get_username }}</span>
+            </summary>
+            <ul class="menu__panel menu__panel--right">
+              {% for entry in nav.account %}
+                <li><a class="menu__link" href="{{ entry.url }}"><span class="menu__label">{{ entry.label }}</span></a></li>
+              {% endfor %}
+              <li>
+                {% comment %}
+                Pages carry short notes on how they are built (which Django
+                view, which ORM query) for the course. They are hidden in the
+                product by default; this switch shows them. Remembered per
+                browser in localStorage.
+                {% endcomment %}
+                <button type="button" class="menu__toggle" data-dev-toggle aria-pressed="false">
+                  <span class="menu__label">Show how pages are built</span>
+                  <span class="switch" aria-hidden="true"></span>
+                </button>
+              </li>
+              <li class="menu__divider" role="separator"></li>
+              <li>
+                <form method="post" action="{% url 'preparation:logout' %}" class="nav-logout">
+                  {% csrf_token %}
+                  <button type="submit" class="nav-logout__button">Log Out</button>
+                </form>
+              </li>
+            </ul>
+          </details>
+        </div>
+      {% else %}
+        <ul class="nav__list">
+          <li><a class="nav__link" href="{% url 'preparation:login' %}">Log In</a></li>
+          <li><a class="nav__link" href="{% url 'preparation:signup' %}">Sign Up</a></li>
+        </ul>
+      {% endif %}
     </nav>
 
     <main class="content">
-      <h1 class="page-title">{% block heading %}Beacon{% endblock %}</h1>
+      {% block page_header %}
+        <h1 class="page-title">{% block heading %}Beacon{% endblock %}</h1>
+      {% endblock %}
       {% block content %}{% endblock %}
     </main>
 
@@ -85,5 +148,22 @@ Django prints it as page text.
     </footer>
 
   </div>
+  {% if user.is_authenticated %}
+    {% comment %}
+    Command palette (Assignment 5 polish). Empty until first opened; the
+    entries come from /api/palette/, a protected endpoint, so nothing about
+    candidates is in the page source for a signed-out visitor.
+    {% endcomment %}
+    <div class="palette" data-palette data-source="{% url 'preparation:api_palette' %}" hidden>
+      <div class="palette__backdrop" data-palette-close></div>
+      <div class="palette__panel" role="dialog" aria-modal="true" aria-label="Jump to">
+        <input class="palette__input" type="search" placeholder="Jump to a page, candidate or skill&hellip;"
+               autocomplete="off" spellcheck="false" aria-controls="palette-results">
+        <ul class="palette__results" id="palette-results" role="listbox"></ul>
+        <p class="palette__hint"><kbd>&uarr;</kbd><kbd>&darr;</kbd> to move &middot; <kbd>Enter</kbd> to open &middot; <kbd>Esc</kbd> to close</p>
+      </div>
+    </div>
+  {% endif %}
+  <script src="{% static 'js/beacon.js' %}" defer></script>
 </body>
 </html>

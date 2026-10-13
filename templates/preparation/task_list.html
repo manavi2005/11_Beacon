@@ -4,8 +4,8 @@
 {% block heading %}Plan tasks{% endblock %}
 
 {% block content %}
-  <p class="tag">{{ view_label }}</p>
-  <p>{{ explainer }}</p>
+  <p class="tag devnote">{{ view_label }}</p>
+  <p class="devnote">{{ explainer }}</p>
 
   <p>
       <a href="{% url 'preparation:task_create' %}">

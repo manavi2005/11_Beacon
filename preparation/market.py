@@ -8,9 +8,10 @@ Assignment 4, Part 2. The question this answers for a candidate:
 Beacon's database knows the first half (proficiency against required level,
 per skill). It cannot know the second half, so it asks a public job board.
 
-Source: Jobicy's remote-jobs API (docs: https://jobi.cy/apidocs). It is
-keyless, and its only terms are that Jobicy is credited with a link and that
-every job links to its original URL, which the API response and the page both
+Sources: Jobicy's remote-jobs API (docs: https://jobi.cy/apidocs), with
+Remotive (https://remotive.com/api/remote-jobs) as the fallback - see Step 1
+for why. Both are keyless. Both ask to be credited with a link and for every
+job to link to its original URL, which the API response and the page both
 do. Open-Meteo was excluded by the assignment.
 
 Nothing from Jobicy is stored in the database. Postings are fetched, measured
@@ -108,45 +109,62 @@ class MarketDataError(Exception):
 
 # ---------------------------------------------------------------------------
 # Step 1 - fetch
+#
+# Two sources, tried in order. Jobicy gives the more relevant results for a
+# role search, so it goes first. Remotive is the fallback, and the reason it
+# exists is deployment: PythonAnywhere's free tier only lets a web app reach
+# hosts on its allowlist (pythonanywhere.com/whitelist). Remotive is on it;
+# Jobicy is not, so in production every Jobicy request fails to connect.
+# Rather than return 502 forever, the report says which source it used.
 # ---------------------------------------------------------------------------
-def fetch_postings(query):
-    """Remote job postings matching `query`, newest first, from Jobicy.
+REMOTIVE_URL = "https://remotive.com/api/remote-jobs"
+REMOTIVE_HOME = "https://remotive.com"
+# Remotive asks callers to fetch no more than a few times a day.
+REMOTIVE_CACHE_SECONDS = 6 * 60 * 60
 
-    Cached per query for an hour. Jobicy's listings do not change faster than
-    that, and the cache is what makes it reasonable to demo this live.
+SOURCES = {
+    "jobicy": {"name": "Jobicy", "url": JOBICY_HOME},
+    "remotive": {"name": "Remotive", "url": REMOTIVE_HOME},
+}
+
+
+def _get_json(name, url, params):
+    """requests.get with params=, timeout=5 and raise_for_status().
+
+    Every failure becomes a MarketDataError naming the source, so callers
+    never see a raw requests exception.
     """
-    cache_key = "jobicy:" + re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
     try:
         response = requests.get(
-            JOBICY_URL,
-            params={"count": POSTING_LIMIT, "tag": query},
+            url,
+            params=params,
             timeout=TIMEOUT_SECONDS,
             headers={"User-Agent": "Beacon career coach (INFO 490 class project)"},
         )
         response.raise_for_status()
-        payload = response.json()
+        return response.json()
     except requests.Timeout as exc:
         raise MarketDataError(
-            f"Jobicy did not respond within {TIMEOUT_SECONDS} seconds.", status=504
+            f"{name} did not respond within {TIMEOUT_SECONDS} seconds.", status=504
         ) from exc
     except requests.HTTPError as exc:
-        raise MarketDataError(
-            f"Jobicy returned HTTP {exc.response.status_code}."
-        ) from exc
+        raise MarketDataError(f"{name} returned HTTP {exc.response.status_code}.") from exc
     except requests.RequestException as exc:
-        raise MarketDataError("Could not reach Jobicy.") from exc
+        raise MarketDataError(f"Could not reach {name}.") from exc
     except ValueError as exc:  # the body was not JSON
-        raise MarketDataError("Jobicy sent a response that was not JSON.") from exc
+        raise MarketDataError(f"{name} sent a response that was not JSON.") from exc
 
+
+def _jobs_list(name, payload):
     jobs = payload.get("jobs") if isinstance(payload, dict) else None
     if not isinstance(jobs, list):
-        raise MarketDataError("Jobicy's response had no list of jobs in it.")
+        raise MarketDataError(f"{name}'s response had no list of jobs in it.")
+    return [job for job in jobs if isinstance(job, dict)]
 
-    postings = [
+
+def _fetch_jobicy(query):
+    payload = _get_json("Jobicy", JOBICY_URL, {"count": POSTING_LIMIT, "tag": query})
+    return [
         {
             "title": html.unescape(job.get("jobTitle") or ""),
             "company": html.unescape(job.get("companyName") or ""),
@@ -159,11 +177,59 @@ def fetch_postings(query):
                 job.get("jobTitle"), job.get("jobExcerpt"), job.get("jobDescription")
             ),
         }
-        for job in jobs
-        if isinstance(job, dict)
+        for job in _jobs_list("Jobicy", payload)
     ]
-    cache.set(cache_key, postings, CACHE_SECONDS)
-    return postings
+
+
+def _fetch_remotive(query):
+    payload = _get_json("Remotive", REMOTIVE_URL, {"search": query, "limit": POSTING_LIMIT})
+    return [
+        {
+            "title": html.unescape(job.get("title") or ""),
+            "company": html.unescape(job.get("company_name") or ""),
+            "url": job.get("url") or "",
+            "level": job.get("job_type") or "",
+            "published": (job.get("publication_date") or "")[:10],
+            "_text": _plain_text(
+                job.get("title"),
+                " ".join(job.get("tags") or []) if isinstance(job.get("tags"), list) else "",
+                job.get("description"),
+            ),
+        }
+        for job in _jobs_list("Remotive", payload)
+    ]
+
+
+def fetch_postings(query):
+    """(source key, postings) for `query`: Jobicy first, Remotive if not.
+
+    Each source's result is cached per query - an hour for Jobicy, six for
+    Remotive - which is what makes it reasonable to demo this live.
+
+    Falls back on any Jobicy failure, not only a refused connection: a
+    student looking at the page cares about getting postings, not about
+    which board was down. If both fail, the second error is raised, since
+    it is the one that decided the outcome.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")
+    attempts = [
+        ("jobicy", _fetch_jobicy, CACHE_SECONDS),
+        ("remotive", _fetch_remotive, REMOTIVE_CACHE_SECONDS),
+    ]
+    error = None
+    for key, fetch, ttl in attempts:
+        cache_key = f"{key}:{slug}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return key, cached
+        try:
+            postings = fetch(query)
+        except MarketDataError as exc:
+            error = exc
+            continue
+        cache.set(cache_key, postings, ttl)
+        return key, postings
+    raise error
 
 
 def _plain_text(*parts):
@@ -207,7 +273,7 @@ def market_report(query):
     A skill scores high only when employers ask for it AND our candidates are
     behind on it. Either one alone is not worth a week of preparation.
     """
-    postings = fetch_postings(query)
+    source_key, postings = fetch_postings(query)
 
     role_filter = Q(assessments__candidate__target_role__icontains=query)
     cohort_is_role = Skill.objects.filter(role_filter).exists()
@@ -245,8 +311,7 @@ def market_report(query):
     return {
         "query": query,
         "source": {
-            "name": "Jobicy",
-            "url": JOBICY_HOME,
+            **SOURCES[source_key],
             "note": "Remote job postings, fetched live and not stored.",
         },
         "postings_analyzed": total,

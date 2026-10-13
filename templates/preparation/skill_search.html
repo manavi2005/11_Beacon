@@ -9,7 +9,7 @@
 {% block heading %}Search the skill catalog{% endblock %}
 
 {% block content %}
-  <p class="tag">Submitted with <strong>GET</strong>. Your filters appear in the
+  <p class="tag devnote">Submitted with <strong>GET</strong>. Your filters appear in the
   address bar, so this page can be bookmarked, reloaded and shared as a link.</p>
 
   <form method="get">
@@ -70,7 +70,7 @@
   </table>
   </div>
 
-  <p class="tag">Compare with the
+  <p class="tag devnote">Compare with the
     <a href="{% url 'preparation:candidate_search' %}">candidate lookup</a>,
     which uses POST for the opposite reason.</p>
 {% endblock %}

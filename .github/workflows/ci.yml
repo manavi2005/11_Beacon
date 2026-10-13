@@ -20,6 +20,8 @@ jobs:
       DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
       # Headless Matplotlib backend; there is no display on the runner.
       MPLBACKEND: Agg
+      # Never call a real LLM from CI; the coach tests mock it.
+      LLM_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v4

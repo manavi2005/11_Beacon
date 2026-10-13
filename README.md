@@ -24,6 +24,7 @@ everything they could do, it tells them what to do next.
 11. [Forms & User Input](#11-forms--user-input)
 12. [Creating APIs](#12-creating-apis)
 13. [Vega-Lite charts and an external API](#13-vega-lite-charts-and-an-external-api)
+14. [Assignment 5: public API, alternative uses, UI polish](#14-assignment-5-public-api-alternative-uses-ui-polish)
 
 ---
 
@@ -504,12 +505,15 @@ stale: `CandidateProfile.readiness_percent` (Screen 3's Overall Readiness),
 python manage.py test preparation
 ```
 
-41 tests, no fixtures needed. They load every page and assert the right
-template and data came back, check that `{% empty %}` fires, exercise both
-search forms, the aggregations and the chart endpoints, and guard against the
-multi-line `{# #}` comment bug that once printed template notes onto every
-page. Not an assignment requirement - they are there so a later change cannot
-quietly break an earlier deliverable.
+196 tests, no fixtures needed, and no network: every external call (the
+job boards, the LLM) is mocked, and CI runs with `LLM_ENABLED=false`. They
+load every page and assert the right template and data came back, check that
+`{% empty %}` fires, and exercise the search forms, aggregations, charts,
+public and protected APIs, authentication and Google OAuth, onboarding,
+resume parsing, the AI coach, graded task attempts and who-sees-what privacy.
+They also guard against the multi-line `{# #}` comment bug that once printed
+template notes onto every page. Not an assignment requirement - they are
+there so a later change cannot quietly break an earlier deliverable.
 
 ### Constraints
 
@@ -874,3 +878,82 @@ the page instead of failing.
 anonymity of `/api/assessments/`, CORS, the specs having no inline data, the
 PNG endpoints, and every Jobicy failure path. `requests.get` is mocked in
 every test, so the suite never calls Jobicy.
+
+---
+
+## 14. Assignment 5: public API, alternative uses, UI polish
+
+**One public API.** `/api/skills/summary/` answers without a login. It holds
+only per-skill aggregates, so nobody can be identified, and `?format=csv`
+returns the same rows for spreadsheets. Every other JSON API
+(`/api/assessments/`, `/api/market-demand/`, `/api/whoami/`, `/api/palette/`,
+`/vega-lite/chart<N>.json`) returns `401` with a JSON error when signed out.
+See [`docs/a5/README.md`](docs/a5/README.md) for the full table, the Vega-Lite
+spec that reads the production URL, and three alternative uses of the API
+(a Python report, a Google Sheets/Excel import, and a pandas notebook).
+
+**Production and external APIs.** PythonAnywhere's free tier can only reach
+hosts on its allowlist. Jobicy is not on it, so the job-market feature falls
+back to Remotive, which is. The response says which source answered.
+
+**UI.**
+- Login and signup open on an animated lighthouse (its beam sweeps the sea)
+  beside a styled form.
+- The dashboard greets the signed-in user, counts up the totals, draws a
+  readiness ring per candidate, and shows the five widest gaps as bars.
+- **Ctrl/Cmd+K** opens a command palette that jumps to any page, candidate,
+  skill or plan.
+- **Start from scratch.** A new account goes to `/welcome/` (target role,
+  interview date, a self-rating per skill, with a live readiness ring), and
+  Beacon builds the profile, scores and a dated plan aimed at the widest
+  gaps. `/me/` shows that plan; tasks tick off in place. On the login page,
+  the lighthouse beam follows the mouse.
+- **No interview yet, several roles, or not sure.** Onboarding accepts an
+  open-ended plan length instead of a date, up to three roles (held to the
+  highest bar), or interests that suggest roles.
+- **Resume and LinkedIn PDF import** pre-fills onboarding from a resume or
+  LinkedIn's *Save to PDF* export. It is rule-based, read in memory and
+  never stored.
+- **AI coach** on *My plan*: personal recommendations (this week's focus,
+  three concrete actions, a practice question) and a question box that
+  also gives feedback on practice answers. `preparation/coach.py` talks to
+  any OpenAI-compatible API, set entirely from `.env`. With **no key** it
+  uses Pollinations' free anonymous tier (OpenAI's open-weight
+  `gpt-oss-20b`), so the coach is AI-powered with zero setup. A free Groq
+  key (`LLM_API_KEY`) switches to the faster, more reliable open-weight
+  Llama 3.3 70B. Swapping provider later is a config change. If the model
+  is slow, busy, down or returns malformed output, a rule-based coach
+  answers instead. The model gets roles, scores
+  and the plan, never name, email or resume text. Advice is cached for 6
+  hours; questions are limited to 20 an hour per user.
+- **Tasks are done on the platform, and progress is evidence.** Each plan
+  task opens a workspace at `/me/tasks/<id>/` (`preparation/practice.py`).
+  Technical skills get an auto-graded quiz with explanations. Everything
+  else is "explain it back": write the STAR story, or what you read or
+  practised, and the AI coach grades it against a rubric (rules if the
+  model is unavailable). A task completes at 60+, and each attempt moves
+  that skill's rating 40% of the way toward the score shown, up or down,
+  so readiness reflects what you demonstrate, not what you claim. Every
+  attempt is stored (`TaskAttempt`, migration 0004) with before and after
+  ratings, and *My plan* lists recent activity.
+- **Privacy: students see only their own data.** `preparation/visibility.py`
+  decides what each account sees. A regular account (a student) sees only
+  their own profile, plans, tasks, scores and exports. Lists show just
+  them, search finds only them, and anyone else's page is a 404. Staff
+  accounts (coaches) see the whole cohort, the Coaching menu and the
+  admin. Anonymous aggregates (Insights, Charts, the public skill summary)
+  stay visible to everyone, because an average identifies nobody.
+- **Product navigation.** The menu is defined once as data in
+  `preparation/navigation.py`: grouped dropdowns (Coaching, Skills,
+  Insights), the current page highlighted, and Admin shown to staff only.
+  Every entry is a URL *name* reversed at request time, so no path is
+  hard-coded (the Assignment 3 rule still holds, enforced by a test). The
+  course explanations on each page ("View 4 - CBV, generic ListView", ORM
+  notes) are kept but hidden. *Account menu > Show how pages are built*
+  reveals them for grading.
+
+All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
+dependencies, and it respects `prefers-reduced-motion`.
+
+**Deploying.** [`docs/a5/DEPLOY.md`](docs/a5/DEPLOY.md). This release adds a
+static file, so `collectstatic` must run before the reload.
