@@ -1426,3 +1426,55 @@ class PublicVsProtectedApiTests(TestCase):
     def test_chart_png_needs_a_login(self):
         r = self.client.get(reverse("preparation:vega_lite_png", args=[2]))
         self.assertEqual(r.status_code, 302)
+
+
+class MarketSourceFallbackTests(TestCase):
+    """PythonAnywhere's free tier cannot reach Jobicy; Remotive takes over."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+
+    def setUp(self):
+        cache.clear()
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+
+    @mock.patch("preparation.market.requests.get")
+    def test_falls_back_to_remotive_when_jobicy_is_unreachable(self, get):
+        remotive = mock.Mock(status_code=200)
+        remotive.raise_for_status.return_value = None
+        remotive.json.return_value = {"jobs": [
+            {"title": "Data Analyst", "company_name": "Initech",
+             "url": "https://remotive.com/remote-jobs/1", "tags": ["sql", "python"],
+             "description": "<p>SQL daily</p>", "publication_date": "2026-10-10T09:00:00"},
+        ]}
+        get.side_effect = [requests.ConnectionError(), remotive]
+
+        data = self.client.get(reverse("preparation:api_market_demand"),
+                               {"q": "data analyst"}).json()
+
+        self.assertEqual(data["source"]["name"], "Remotive")
+        self.assertEqual(data["postings_analyzed"], 1)
+        self.assertEqual(data["sample_postings"][0]["url"], "https://remotive.com/remote-jobs/1")
+        remotive_call = get.call_args_list[1]
+        self.assertEqual(remotive_call.kwargs["params"]["search"], "data analyst")
+        self.assertEqual(remotive_call.kwargs["timeout"], 5)
+        sql = {r["skill"]: r for r in data["skills"]}["SQL & relational modeling"]
+        self.assertEqual(sql["postings_mentioning"], 1)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_jobicy_is_used_when_it_answers(self, get):
+        get.return_value = _jobicy_response(FAKE_JOBS)
+        data = self.client.get(reverse("preparation:api_market_demand"),
+                               {"q": "data analyst"}).json()
+        self.assertEqual(data["source"]["name"], "Jobicy")
+        self.assertEqual(get.call_count, 1)
+
+    @mock.patch("preparation.market.requests.get")
+    def test_page_credits_whichever_source_answered(self, get):
+        remotive = mock.Mock(status_code=200)
+        remotive.raise_for_status.return_value = None
+        remotive.json.return_value = {"jobs": []}
+        get.side_effect = [requests.ConnectionError(), remotive]
+        r = self.client.get(reverse("preparation:market"), {"q": "data analyst"})
+        self.assertContains(r, 'href="https://remotive.com"')
