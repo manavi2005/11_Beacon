@@ -16,6 +16,35 @@ python manage.py collectstatic --noinput --settings=beacon_core.settings.product
 
 Then **Web tab > Reload**.
 
+## Before you pull: the committed database
+
+`db.sqlite3` is committed to the repository (the assignment requires it).
+The copy on PythonAnywhere is the **live** database, though, and it changes
+every time someone signs up. If a commit you pull also changes
+`db.sqlite3`, `git pull` will refuse:
+
+```
+error: Your local changes to the following files would be overwritten by merge:
+        db.sqlite3
+```
+
+The safe way through is to set the live database aside, pull, then put it
+back, so the server always keeps its own data:
+
+```bash
+cp db.sqlite3 ~/db-live-$(date +%F).sqlite3      # 1. save the live database
+git checkout -- db.sqlite3                       # 2. let git update the file
+git pull origin main                             # 3. pull
+cp ~/db-live-$(date +%F).sqlite3 db.sqlite3      # 4. put the live database back
+```
+
+Then carry on with `migrate` as usual. Skipping step 4 would replace every
+production account with the repository's copy.
+
+None of the commits in this release change `db.sqlite3`, so a plain
+`git pull` should just work. New fields reach the live database through
+`migrate`, not through the file.
+
 ## Why each step matters this time
 
 - **`collectstatic` is required.** This release adds `static/js/beacon.js`
@@ -23,10 +52,12 @@ Then **Web tab > Reload**.
   Production uses `ManifestStaticFilesStorage`, which raises an error, and
   so returns a 500 on every page, when a template asks for a static file
   that was never collected.
-- **`pip install`:** no new packages in this release, but it is cheap
-  insurance if the virtualenv has drifted from `requirements.txt`.
-- **`migrate`:** no new migrations. Onboarding writes to the existing
-  models. It is safe to run, and it confirms the database is current.
+- **`pip install` is required:** this release adds `pypdf` (the resume
+  parser). It is pure Python, so it installs on PythonAnywhere with no
+  build tools.
+- **`migrate` is required:** migration `0003` adds
+  `CandidateProfile.target_roles` and `.interests`. Without it, onboarding
+  fails with "no such column".
 
 ## Check it worked
 
@@ -48,7 +79,10 @@ point: it proves the journey works there, not just locally.
 
 1. Signed out, open the site. It redirects to the lighthouse login page.
 2. **Sign Up** with the new username. You land on `/welcome/`.
-3. Pick a role and date, then **Next**, then drag a few sliders. The ring updates.
+3. Click **Use the sample resume**. It reports "found 5 skills" and ticks
+   *Working with data*. **Next**: Data Analyst is pre-selected. Leave
+   **No interview yet**. **Next**: SQL, Python and Git sliders are tagged
+   *from resume*.
 4. **Light my beacon**. `/me/` opens with "Your beacon is lit", gaps, and weeks.
 5. Tick a task. The progress bar moves without a reload.
 6. **Dashboard** now shows the new candidate's ring; ⌘K finds them by name.

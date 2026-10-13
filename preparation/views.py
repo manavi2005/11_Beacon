@@ -50,6 +50,7 @@ from .models import (
 
 from .forms import OnboardingForm, PlanTaskForm
 from . import onboarding as onboarding_rules
+from . import resume as resume_parser
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -1276,6 +1277,29 @@ def onboarding_view(request):
         "default_required": onboarding_rules.DEFAULT_REQUIRED,
         "skill_names": {f"id_skill_{s.pk}": s.name for s in form.skills},
     })
+
+
+@require_POST
+def resume_parse(request):
+    """/welcome/resume/ - read a resume or LinkedIn PDF, suggest answers.
+
+    POST with a file ("resume", PDF or .txt) or pasted text ("text").
+    Returns JSON suggestions for the onboarding form. Nothing is stored:
+    the file is read in memory and dropped when the request ends.
+
+    401 JSON rather than a redirect when signed out, like the other
+    protected JSON endpoints, because the caller is fetch(), not a person.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    try:
+        text = resume_parser.extract_text(
+            upload=request.FILES.get("resume"),
+            pasted=request.POST.get("text", ""),
+        )
+    except resume_parser.ResumeError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse(resume_parser.analyse(text))
 
 
 @login_required

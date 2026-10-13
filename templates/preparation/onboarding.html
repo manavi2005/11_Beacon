@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% comment %}
   Onboarding: the first page a brand-new account sees. Three steps:
 
@@ -58,7 +59,40 @@
 
   {# ---------------- Step 1: about you ---------------- #}
   <fieldset class="onb-step" data-step="1">
-    <legend class="onb-step__title">{{ form.interests.label }}</legend>
+    <legend class="onb-step__title">Tell us about you</legend>
+    {% comment %}
+    Optional shortcut: read a resume or a LinkedIn "Save to PDF" export and
+    pre-fill interests, roles and skill ratings. Posted separately by
+    beacon.js to /welcome/resume/; the file is never stored. These inputs
+    are not part of OnboardingForm, so the main submit ignores them.
+    {% endcomment %}
+    <section class="importer" data-resume-import data-url="{% url 'preparation:resume_parse' %}">
+      <div class="importer__head">
+        <p class="importer__title">Speed it up: import your resume or LinkedIn profile</p>
+        <p class="importer__sub">PDF or .txt. On LinkedIn, open your profile, choose
+          <strong>More &rsaquo; Save to PDF</strong>, and drop that file here.
+          It's read once to suggest answers, then discarded.</p>
+      </div>
+      <label class="importer__drop" data-drop>
+        <input type="file" name="resume" accept=".pdf,.txt,application/pdf,text/plain" data-resume-file>
+        <span class="importer__icon" aria-hidden="true">&#8682;</span>
+        <span data-drop-label>Drop a PDF here, or <u>choose a file</u></span>
+      </label>
+      <p class="importer__sample">No resume handy?
+        <button type="button" class="importer__sample-btn" data-resume-sample="{% static 'demo/sample_resume_maya.pdf' %}">Use the sample resume</button>
+        (a made-up data-analytics student).</p>
+      <details class="importer__paste">
+        <summary>or paste the text instead</summary>
+        <textarea name="resume_text" rows="5" placeholder="Paste your resume or LinkedIn About and Experience sections" data-resume-text></textarea>
+      </details>
+      <div class="importer__actions">
+        <button type="button" class="importer__go" data-resume-go>Read it</button>
+        <span class="importer__status" data-resume-status role="status" aria-live="polite"></span>
+      </div>
+      <div class="importer__result" data-resume-result hidden></div>
+    </section>
+
+    <h3 class="onb-subtitle">{{ form.interests.label }}</h3>
     <p class="muted onb-step__lede">Pick any that fit. Beacon uses them to suggest roles in the next step.</p>
     <div class="chips chips--cards{% if form.interests.errors %} field--error{% endif %}">
       {% for card in interest_cards %}
@@ -148,7 +182,8 @@
       <h3 class="onb-cat">{{ category }}</h3>
       {% for field in fields %}
         <div class="slider">
-          <label class="slider__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <label class="slider__label" for="{{ field.id_for_label }}">{{ field.label }}
+            <span class="slider__tag" data-from-resume="{{ field.id_for_label }}" hidden>from resume</span></label>
           <div class="slider__track">
             {{ field }}
             <span class="slider__target" data-target-for="{{ field.id_for_label }}" hidden></span>

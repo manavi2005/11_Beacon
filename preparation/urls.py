@@ -105,6 +105,7 @@ urlpatterns = [
     path("api/palette/", views.api_palette, name="api_palette"),
     # Start-from-scratch journey: onboarding, your plan, ticking tasks off.
     path("welcome/", views.onboarding_view, name="onboarding"),
+    path("welcome/resume/", views.resume_parse, name="resume_parse"),
     path("me/", views.my_plan, name="my_plan"),
     path("me/tasks/<int:pk>/toggle/", views.toggle_task, name="toggle_task"),
 ]

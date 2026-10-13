@@ -22,12 +22,14 @@ Not Disturb.
 - [ ] Emails are filled in on `opening-slide.html`.
 - [ ] The Vega-Lite spec is ready to paste, and a terminal is open in
       `docs/a5/alt_uses/`.
-- [ ] Do one full rehearsal. Dragging the sliders to sensible values is
-      what takes time.
+- [ ] Do one full rehearsal on production (see `../DEPLOY.md`). Delete the
+      rehearsal account afterwards in Django admin > Users.
 
-**Suggested ratings (Data Analyst at Spotify)** give a clear plan with SQL
-at the top: SQL 40, Python 55, STAR 35, data structures 45, system design
-30, product sense 70, Git 70, whiteboard 60, resume 65, everything else 50.
+**Demo persona:** Maya, using the built-in sample resume (a data-analytics
+student). It is served by the site, so there is no file to find on
+camera: click **Use the sample resume** on step 1. After the import, drag
+**STAR-format storytelling** to 30 and **Product sense** to 45 so the plan
+has clear top gaps.
 
 Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 **C** coach view and APIs.
@@ -60,21 +62,24 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | Point at the nav: only *Log In* and *Sign Up*. | "Signed out, the navigation hides every private page." |
 | Click **Sign Up**. Enter `maya_demo1` and a password. Submit. | "Sign-up is our own page, with Django's password rules. Google sign-in is right here too, through django-allauth, and it works on this deployed domain." |
 
-## 1:25 to 2:20 · Onboarding: from blank account to diagnosis (narrator B)
+## 1:25 to 2:25 · Onboarding: from blank account to diagnosis (narrator B)
 
 | Do | Say |
 |---|---|
-| You land on **Welcome**. Choose *Data Analyst*, type *Spotify*, leave the date about 6 weeks out. | "A new account knows nothing about Maya yet, so Beacon asks two things. First, what she is aiming for and when." |
-| **Next: rate your skills.** Drag SQL down to 40, and watch the ring. | "Then an honest self-rating per skill. The dark tick on each slider is what a Data Analyst role actually expects, and the ring projects her readiness live as she answers." |
-| Set the rest quickly (ratings above), then click **Light my beacon**. | "Submit, and Beacon builds her profile, records every score, and generates a plan." |
+| You land on **Welcome**, step 1. Click **Use the sample resume** (or drop Maya's PDF). | "A new account knows nothing about Maya, so instead of a long form, she can hand Beacon her resume, or her LinkedIn profile saved as a PDF. It's read once and never stored." |
+| Point at the results: 5 skills, the quoted evidence, *Working with data* ticked. | "Beacon found SQL five times, Python four, Git three, and quotes where. It also noticed she enjoys working with data." |
+| **Next.** Data Analyst is pre-selected and *Suggested for you*. Also tick **Product Manager**. | "It suggests Data Analyst. She's also curious about product, so she picks both, and Beacon holds her to the tougher bar of the two." |
+| Leave **No interview yet** and choose **8 weeks**. | "She has no interview booked yet, so she gets an open-ended eight-week plan instead." |
+| **Next.** Point at a *from resume* tag, then drag STAR storytelling down to 30. The ring moves. | "Her resume gave her a head start on these sliders, but a resume shows you used a skill, not how good you are. So she adjusts honestly, and the ring projects her readiness live." |
+| **Light my beacon.** | "Submit, and Beacon builds her profile and her plan." |
 
-## 2:20 to 3:05 · Her plan (narrator B)
+## 2:25 to 3:05 · Her plan (narrator B)
 
 | Do | Say |
 |---|---|
-| **My plan** loads with "Your beacon is lit". Pause on it. | "This page is now hers: target role, a countdown to her interview, and her readiness." |
-| Point at **Your widest gaps**. | "Her widest gap is SQL, 45 points below the bar, so that's where the plan starts." |
-| Scroll to **Week by week**. Read one task's *why* line. | "Every task says why it's there: she rated SQL at 40, and Data Analyst roles expect 85." |
+| **My plan** loads with "Your beacon is lit". Pause on it. | "This page is now hers: both target roles, her eight-week timeline, and her readiness." |
+| Point at **Your widest gaps**. | "Her widest gaps are the ones her resume couldn't show, like storytelling and product sense, so that's where the plan starts." |
+| Scroll to **Week by week**. Read one task's *why* line. | "Every task says why it's there: what she rated herself, and what the tougher of her roles expects." |
 | **Tick the two week-1 tasks.** The progress bar moves and week 1 turns green. | "As she practises, she ticks tasks off and her progress updates instantly." |
 
 ## 3:05 to 3:35 · The coach's view (narrator C)

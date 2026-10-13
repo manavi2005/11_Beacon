@@ -1776,3 +1776,78 @@ class FlexibleGoalsTests(TestCase):
         # Product + people both point at PM and UXR; PM ranks first overall.
         self.assertEqual(set(suggested_roles(["product", "people"])[:2]),
                          {"Product Manager", "UX Researcher"})
+
+
+class ResumeImportTests(TestCase):
+    """Onboarding shortcut: read a resume or LinkedIn PDF, suggest answers."""
+
+    SAMPLE_PDF = settings.BASE_DIR / "docs" / "a5" / "demo" / "sample_resume_maya.pdf"
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.git = Skill.objects.create(name="Version control with Git",
+                                       category=Skill.Category.TECHNICAL)
+
+    def setUp(self):
+        self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
+        self.url = reverse("preparation:resume_parse")
+
+    def _upload(self, name, content, content_type):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return self.client.post(self.url, {"resume": SimpleUploadedFile(name, content, content_type)})
+
+    def test_reads_the_sample_resume_pdf(self):
+        r = self._upload("maya.pdf", self.SAMPLE_PDF.read_bytes(), "application/pdf")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        found = {s["name"]: s for s in data["skills"]}
+        self.assertEqual(found["SQL & relational modeling"]["rating"], 70)   # 3+ mentions
+        self.assertIn("Python fundamentals", found)
+        self.assertIn("Version control with Git", found)
+        self.assertIn("SQL", found["SQL & relational modeling"]["evidence"])
+        # A resume always says "resume"; that is not pitching evidence.
+        self.assertNotIn("Resume & elevator pitch", found)
+        self.assertIn("data", data["interests"])
+        self.assertEqual(data["suggested_roles"][0], "Data Analyst")
+        self.assertEqual(data["source"], "resume")
+
+    def test_pasted_text_works_without_a_file(self):
+        r = self.client.post(self.url, {"text": "Built REST APIs in Python and deployed them. " * 3})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Python fundamentals", {s["name"] for s in r.json()["skills"]})
+
+    def test_recognises_a_linkedin_export(self):
+        text = ("Contact\nTop Skills\nSQL\nPython\nExperience\nData Analyst Intern\n"
+                "Wrote SQL daily.\nPage 1 of 2")
+        self.assertEqual(self.client.post(self.url, {"text": text}).json()["source"], "linkedin")
+
+    def test_rejects_other_file_types_and_empty_text(self):
+        r = self._upload("resume.docx", b"PK\x03\x04 not really a docx", "application/octet-stream")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("PDF", r.json()["error"])
+        r = self.client.post(self.url, {"text": "hi"})
+        self.assertEqual(r.status_code, 400)
+
+    def test_unreadable_pdf_is_a_clean_400(self):
+        r = self._upload("broken.pdf", b"%PDF-1.4 this is not a real pdf", "application/pdf")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("error", r.json())
+
+    def test_nothing_is_stored(self):
+        before = CandidateProfile.objects.get(user__username="tquant").resume_summary
+        self._upload("maya.pdf", self.SAMPLE_PDF.read_bytes(), "application/pdf")
+        profile = CandidateProfile.objects.get(user__username="tquant")
+        self.assertEqual(profile.resume_summary, before)
+        self.assertFalse(profile.resume_file)
+
+    def test_needs_login_and_post(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+        self.client.logout()
+        r = self.client.post(self.url, {"text": "Python " * 20})
+        self.assertEqual(r.status_code, 401)
+
+    def test_onboarding_page_offers_the_import(self):
+        r = self.client.get(reverse("preparation:onboarding"))
+        self.assertContains(r, "data-resume-import")
+        self.assertContains(r, "Save to PDF")

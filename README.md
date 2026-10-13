@@ -905,6 +905,12 @@ back to Remotive, which is. The response says which source answered.
   Beacon builds the profile, scores and a dated plan aimed at the widest
   gaps. `/me/` shows that plan; tasks tick off in place. On the login page,
   the lighthouse beam follows the mouse.
+- **No interview yet, several roles, or not sure.** Onboarding accepts an
+  open-ended plan length instead of a date, up to three roles (held to the
+  highest bar), or interests that suggest roles.
+- **Resume and LinkedIn PDF import** pre-fills onboarding from a resume or
+  LinkedIn's *Save to PDF* export. It is rule-based, read in memory and
+  never stored.
 
 All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
 dependencies, and it respects `prefers-reduced-motion`.

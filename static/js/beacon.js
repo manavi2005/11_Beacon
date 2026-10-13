@@ -394,6 +394,125 @@
     timeline.forEach(function (b) { b.addEventListener("change", syncTimeline); });
     sliders.forEach(function (s) { s.addEventListener("input", update); });
 
+    // --- resume / LinkedIn PDF import --------------------------------------
+    var importer = form.querySelector("[data-resume-import]");
+    if (importer) {
+      var fileInput = importer.querySelector("[data-resume-file]");
+      var pasteInput = importer.querySelector("[data-resume-text]");
+      var status = importer.querySelector("[data-resume-status]");
+      var result = importer.querySelector("[data-resume-result]");
+      var drop = importer.querySelector("[data-drop]");
+      var dropLabel = importer.querySelector("[data-drop-label]");
+
+      fileInput.addEventListener("change", function () {
+        if (fileInput.files[0]) dropLabel.textContent = fileInput.files[0].name;
+      });
+      ["dragenter", "dragover"].forEach(function (t) {
+        drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add("is-over"); });
+      });
+      ["dragleave", "drop"].forEach(function (t) {
+        drop.addEventListener(t, function () { drop.classList.remove("is-over"); });
+      });
+      drop.addEventListener("drop", function (e) {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          dropLabel.textContent = e.dataTransfer.files[0].name;
+        }
+      });
+
+      var sample = importer.querySelector("[data-resume-sample]");
+      if (sample) {
+        sample.addEventListener("click", function () {
+          fetch(sample.getAttribute("data-resume-sample"))
+            .then(function (r) { return r.blob(); })
+            .then(function (blob) {
+              var dt = new DataTransfer();
+              dt.items.add(new File([blob], "sample_resume_maya.pdf", { type: "application/pdf" }));
+              fileInput.files = dt.files;
+              dropLabel.textContent = "sample_resume_maya.pdf";
+              importer.querySelector("[data-resume-go]").click();
+            });
+        });
+      }
+
+      importer.querySelector("[data-resume-go]").addEventListener("click", function () {
+        var body = new FormData();
+        body.append("csrfmiddlewaretoken", form.querySelector("[name=csrfmiddlewaretoken]").value);
+        if (fileInput.files[0]) body.append("resume", fileInput.files[0]);
+        else body.append("text", pasteInput.value);
+        status.textContent = "Reading\u2026";
+        status.className = "importer__status";
+        fetch(importer.getAttribute("data-url"), { method: "POST", body: body, credentials: "same-origin" })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error(res.data.error || "Could not read that.");
+            applyResume(res.data);
+          })
+          .catch(function (err) {
+            status.textContent = err.message;
+            status.className = "importer__status is-error";
+          });
+      });
+
+      function applyResume(data) {
+        // Interests: tick any the resume points to (never untick the user's).
+        interestBoxes.forEach(function (b) {
+          if (data.interests.indexOf(b.value) !== -1) b.checked = true;
+        });
+        markSuggestions();
+        // Roles: only pre-select when the user has not chosen any.
+        if (!checkedValues(roleBoxes).length && data.suggested_roles.length) {
+          roleBoxes.forEach(function (b) { b.checked = b.value === data.suggested_roles[0]; });
+        }
+        // Skills: start each slider with evidence at the suggested rating.
+        data.skills.forEach(function (s) {
+          var slider = document.getElementById(s.field);
+          if (!slider) return;
+          slider.value = s.rating;
+          var tag = form.querySelector('[data-from-resume="' + s.field + '"]');
+          if (tag) { tag.hidden = false; tag.title = s.evidence; }
+        });
+        syncChips();
+        update();
+
+        var source = data.source === "linkedin" ? "LinkedIn profile" : "resume";
+        status.textContent = "Read your " + source + ": found " + data.skills.length +
+          " skill" + (data.skills.length === 1 ? "" : "s") + ".";
+        status.className = "importer__status is-ok";
+        result.innerHTML = "";
+        var list = document.createElement("ul");
+        list.className = "importer__skills";
+        data.skills.slice(0, 8).forEach(function (s) {
+          var li = document.createElement("li");
+          var name = document.createElement("strong");
+          name.textContent = s.name;
+          var meta = document.createElement("span");
+          meta.textContent = " \u00b7 " + s.mentions + " mention" + (s.mentions === 1 ? "" : "s") +
+            " \u00b7 starts at " + s.rating;
+          var quote = document.createElement("q");
+          quote.textContent = s.evidence;
+          li.appendChild(name); li.appendChild(meta); li.appendChild(quote);
+          list.appendChild(li);
+        });
+        var note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = data.skills.length
+          ? "These are starting points: a resume shows you used a skill, not how strong you are. You'll confirm every rating in step 3."
+          : "No catalog skills were mentioned, so your ratings start at 50.";
+        if (data.interests.length) {
+          var interestNote = document.createElement("p");
+          interestNote.className = "muted";
+          interestNote.textContent = "Interests ticked from your " + source + ". Suggested roles: " +
+            (data.suggested_roles.join(", ") || "none yet") + ".";
+          result.appendChild(interestNote);
+        }
+        result.appendChild(list);
+        result.appendChild(note);
+        result.hidden = false;
+      }
+    }
+
     // After a failed submit, open the step that holds the first error.
     var firstError = form.querySelector(".field--error, .field__error:not([hidden])");
     var errorStep = firstError ? firstError.closest("[data-step]") : null;

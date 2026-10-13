@@ -102,6 +102,24 @@ the AI coach will replace). **`/me/`** then shows their readiness, gaps and
 week-by-week plan. Tasks can be ticked off in place, and only by their owner.
 Tests: `FromScratchJourneyTests`.
 
+**Flexible goals.** No interview booked? Choose a 4, 6, 8 or 12-week
+open-ended plan instead of a date. Preparing for several roles? Pick up to
+three, and each skill is held to the highest bar among them. No idea yet?
+Pick the interests that fit (building software, data, products, people,
+markets), and Beacon suggests matching roles. Or choose *General interview
+readiness*, which weights storytelling and communication over role-specific
+skills.
+
+**Resume and LinkedIn import.** Step 1 can read a resume PDF, a `.txt`, or
+pasted text (`preparation/resume.py`). It finds evidence for each catalog
+skill (quoting where), ticks matching interests, suggests roles, and starts
+those sliders at a modest rating that the user then confirms. LinkedIn has no
+public profile API, and scraping it breaks its terms, so the supported route
+is LinkedIn's own *More > Save to PDF*, which the same parser reads (and
+recognises as a LinkedIn export). The upload is read in memory and never
+stored. A sample resume is built in for demos (*Use the sample resume*).
+Tests: `FlexibleGoalsTests`, `ResumeImportTests`.
+
 On the login page the lighthouse beam follows the mouse. The video script
 (`video/script.md`) is built around this journey.
 
