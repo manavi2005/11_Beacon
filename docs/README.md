@@ -264,10 +264,9 @@ Full write-up: [`a5/README.md`](a5/README.md).
 
 ## Assignment 5, Part 4 - Demo video
 
-[`a5/video/opening-slide.html`](a5/video/opening-slide.html) is the required
-opening slide. [`a5/video/script.md`](a5/video/script.md) is the timed
-narration and click path, about 4:45. Before recording, update production
-with [`a5/DEPLOY.md`](a5/DEPLOY.md).
+Submitted separately; the recording materials are kept outside the
+repository. Before recording, update production with
+[`a5/DEPLOY.md`](a5/DEPLOY.md).
 
 ## Product features (final deployment stage)
 
