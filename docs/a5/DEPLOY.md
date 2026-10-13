@@ -103,23 +103,37 @@ Jobicy is not on it, so in production the job-market feature falls back to
 Remotive, which is. Locally both work, and Jobicy is tried first. The page
 and the JSON both say which source answered.
 
-## Turn on the AI coach (optional, free)
+## The AI coach in production
 
-Without a key the coach runs on Beacon's built-in rules, so nothing breaks.
-To switch on the LLM:
+**It works with no setup.** With no key in `.env`, the coach uses
+Pollinations' free anonymous tier, which serves OpenAI's open-weight
+`gpt-oss-20b` with no account at all. `text.pollinations.ai` is on
+PythonAnywhere's allowlist. On **My plan** the badge should read
+*AI · gpt-oss-20b via Pollinations (free, no key)*.
 
-1. Create a free key at <https://console.groq.com/keys> (Groq's free tier
-   serves open-weight models such as Meta's Llama 3.3 70B).
+That tier is slow (about 10-15 s an answer) and rate-limited (about one
+request every few seconds per server). Beacon caches advice for 6 hours,
+retries once when busy, and otherwise falls back to its rule-based coach,
+so the page never breaks. It is fine for a demo, not for many users.
+
+**Faster and more reliable, still free: add a Groq key.**
+
+1. Create a free key at <https://console.groq.com/keys>.
 2. Add it to `.env` on PythonAnywhere: `LLM_API_KEY=gsk_...`
-3. **Web tab > Reload.**
+3. **Web tab > Reload.** The badge changes to
+   *AI · llama-3.3-70b-versatile via Groq* (Meta's open-weight Llama 3.3 70B).
 
-`api.groq.com` is on PythonAnywhere's free-tier allowlist, so this works on
-the deployed site. Check it: on **My plan**, the coach's badge should read
-*AI · llama-3.3-70b-versatile via Groq*, not *Beacon rules*.
+**Why that matters on PythonAnywhere's free plan:** it runs a single web
+worker. While one person waits on a slow model, everyone else's page loads
+wait too. Groq answers in a second or two, which keeps that wait short.
 
-To move to another provider later (Hugging Face, OpenRouter, Together, or a
-self-hosted model for many users), change `LLM_BASE_URL`, `LLM_MODEL` and
-`LLM_API_KEY`. `.env.example` lists ready-made values. No code changes.
+**Scaling to many users later:** change `LLM_BASE_URL`, `LLM_MODEL` and
+`LLM_API_KEY` to a paid or self-hosted endpoint (Hugging Face, Together,
+OpenRouter, or your own vLLM/Ollama server). `.env.example` lists ready
+values. No code changes are needed. At that point, also move model calls
+off the request thread (a task queue) and add more web workers.
+
+To switch the AI off entirely: `LLM_ENABLED=false`.
 
 ## Google OAuth in production
 

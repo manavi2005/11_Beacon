@@ -592,7 +592,8 @@
   /* -------------------------------------------------------------------------
      9. AI coach on My plan. The panel is rendered with the rule-based advice;
         this fetches the AI version and swaps it in, and runs the question
-        box. All model text goes through textContent, never innerHTML.
+        box. Model text goes through textContent, except chat answers, which
+        are HTML-escaped first and then given a few safe Markdown tags.
      ------------------------------------------------------------------------- */
   function coachPanel(panel) {
     var ai = panel.getAttribute("data-ai") === "1";
@@ -635,6 +636,28 @@
         .then(function () { body.classList.remove("is-thinking"); });
     }
 
+    // Models answer in light Markdown. Escape everything first, then turn
+    // only **bold**, *italic* and "- " bullet lines into tags, so nothing the
+    // model writes can become live HTML.
+    function miniMarkdown(text) {
+      var escaped = String(text)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      var html = [], inList = false;
+      escaped.split(/\n/).forEach(function (line) {
+        var bullet = /^\s*(?:[-*\u2022]|\d+[.)])\s+(.*)$/.exec(line);
+        if (bullet && !inList) { html.push("<ul>"); inList = true; }
+        if (!bullet && inList) { html.push("</ul>"); inList = false; }
+        var body = (bullet ? bullet[1] : line)
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>");
+        if (bullet) html.push("<li>" + body + "</li>");
+        else if (body.trim()) html.push("<p>" + body + "</p>");
+      });
+      if (inList) html.push("</ul>");
+      return html.join("");
+    }
+
     function bubble(text, who) {
       var li = document.createElement("li");
       li.className = "coach__msg coach__msg--" + who;
@@ -658,7 +681,10 @@
         body: JSON.stringify({ question: question }),
       })
         .then(function (r) { return r.json(); })
-        .then(function (d) { pending.textContent = d.answer || d.error || "No answer."; })
+        .then(function (d) {
+          pending.classList.add("coach__msg--rich");
+          pending.innerHTML = miniMarkdown(d.answer || d.error || "No answer.");
+        })
         .catch(function () { pending.textContent = "The coach could not be reached. Try again."; })
         .then(function () { pending.classList.remove("is-typing"); });
     }

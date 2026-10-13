@@ -20,9 +20,9 @@ Not Disturb.
       Otherwise you land on your existing account, not onboarding. For a
       guaranteed fresh start, use the username signup form.
 - [ ] Emails are filled in on `opening-slide.html`.
-- [ ] `LLM_API_KEY` is set on the server, so the coach shows *AI · ...*, not
-      *Beacon rules* (see `../DEPLOY.md`). Without it the demo still works,
-      but skip the "open-source model" line.
+- [ ] The coach badge on **My plan** reads *AI · ...*. It works with no key
+      (free gpt-oss-20b, about 10-15 s); a free Groq key makes it about 1-2 s,
+      which looks far better on camera (see `../DEPLOY.md`).
 - [ ] The Vega-Lite spec is ready to paste, and a terminal is open in
       `docs/a5/alt_uses/`.
 - [ ] Do one full rehearsal on production (see `../DEPLOY.md`). Delete the
@@ -84,7 +84,7 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | Point at **Your widest gaps**. | "Her widest gaps are the ones her resume couldn't show, like storytelling and product sense, so that's where the plan starts." |
 | Scroll to **Week by week**. Read one task's *why* line. | "Every task says why it's there: what she rated herself, and what the tougher of her roles expects." |
 | **Tick the two week-1 tasks.** The progress bar moves and week 1 turns green. | "As she practises, she ticks tasks off and her progress updates instantly." |
-| Scroll up to **Your coach**. Point at the badge (*AI · Llama 3.3 70B via Groq*). | "And because Beacon is an AI coach: an open-source model reads her scores and plan, never her name, and tells her what to focus on this week." |
+| Scroll up to **Your coach**. Point at the badge (*AI · ...*). | "And because Beacon is an AI coach: an open-source model reads her scores and plan, never her name, and tells her what to focus on this week." |
 | Click **Answer it and get feedback**, type a 2-line answer, and press **Ask**. | "She can practise right here. The coach gives feedback on her answer, including whether it follows the STAR structure." |
 
 ## 3:25 to 3:45 · The coach's view (narrator C)

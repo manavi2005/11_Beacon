@@ -1904,9 +1904,12 @@ class ProductNavigationTests(TestCase):
         self.assertContains(r, "data-dev-toggle")
 
 
-LLM_ON = dict(LLM_BASE_URL="https://llm.example/v1", LLM_MODEL="open-model",
+LLM_ON = dict(LLM_ENABLED=True, LLM_BASE_URL="https://llm.example/v1", LLM_MODEL="open-model",
               LLM_API_KEY="test-key", LLM_PROVIDER="TestProvider")
-LLM_OFF = dict(LLM_API_KEY="")
+LLM_OFF = dict(LLM_ENABLED=False)
+LLM_KEYLESS = dict(LLM_ENABLED=True, LLM_API_KEY="", LLM_KEYLESS_BASE_URL="https://free.example/openai",
+                   LLM_KEYLESS_MODEL="openai", LLM_KEYLESS_LABEL="gpt-oss-20b",
+                   LLM_KEYLESS_PROVIDER="FreeTier (no key)")
 
 
 def _llm_reply(content, status=200):
@@ -1954,7 +1957,7 @@ class CoachTests(TestCase):
         data = self.client.get(reverse("preparation:coach_advice")).json()
         self.assertEqual(data["source"], "rules")
         self.assertIn("SQL & relational modeling", data["advice"]["headline"])
-        self.assertIn("not configured", data["engine"])
+        self.assertIn("switched off", data["engine"])
         self.assertEqual(len(data["advice"]["actions"]), 3)
 
     @override_settings(**LLM_ON)
@@ -1969,6 +1972,17 @@ class CoachTests(TestCase):
         self.assertEqual(args[0], "https://llm.example/v1/chat/completions")
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
         self.assertEqual(kwargs["json"]["model"], "open-model")
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.requests.post")
+    def test_with_no_key_the_free_keyless_tier_is_used(self, post):
+        post.return_value = _llm_reply(GOOD_ADVICE)
+        data = self.client.get(reverse("preparation:coach_advice")).json()
+        self.assertEqual(data["source"], "llm")
+        self.assertEqual(data["engine"], "AI · gpt-oss-20b via FreeTier (no key)")
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://free.example/openai/chat/completions")
+        self.assertNotIn("Authorization", kwargs["headers"])
 
     @override_settings(**LLM_ON)
     @mock.patch("preparation.coach.requests.post")
@@ -2036,7 +2050,7 @@ class CoachTests(TestCase):
                              data=json.dumps({"question": "What now?"}),
                              content_type="application/json")
         self.assertEqual(r.json()["source"], "rules")
-        self.assertIn("isn't switched on", r.json()["answer"])
+        self.assertIn("isn't available", r.json()["answer"])
 
     @override_settings(**LLM_ON)
     @mock.patch("preparation.coach.requests.post")
@@ -2068,3 +2082,26 @@ class CoachTests(TestCase):
         self.assertContains(r, "data-coach")
         self.assertContains(r, "Your coach")
         self.assertContains(r, "Never your name, email or resume")
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_keyless_tier_retries_once_when_busy(self, post, sleep):
+        busy = mock.Mock(status_code=402)
+        post.side_effect = [busy, _llm_reply("Answer after retry.")]
+        r = self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["answer"], "Answer after retry.")
+        self.assertEqual(post.call_count, 2)
+        sleep.assert_called_once()
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_still_busy_says_so_plainly(self, post, sleep):
+        post.return_value = mock.Mock(status_code=429)
+        r = self.client.post(reverse("preparation:coach_ask"), data=json.dumps({"question": "q"}),
+                             content_type="application/json")
+        self.assertEqual(r.json()["source"], "busy")
+        self.assertIn("Try again in about 15 seconds", r.json()["answer"])
+        self.assertNotIn("HTTP", r.json()["answer"])

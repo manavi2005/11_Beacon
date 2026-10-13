@@ -2,21 +2,19 @@
 
 Two engines behind one interface, so the page never breaks:
 
-  LLM    any OpenAI-compatible chat API, configured entirely from .env:
-             LLM_BASE_URL   default https://api.groq.com/openai/v1
-             LLM_MODEL      default llama-3.3-70b-versatile (open weights)
-             LLM_API_KEY    empty = LLM off
-             LLM_PROVIDER   label shown in the UI, default "Groq"
-         Groq's free tier serves open-weight models (Llama, Qwen, gpt-oss)
-         and is on PythonAnywhere's outbound allowlist, so it works on the
-         deployed site with no local model. Swapping provider later - Hugging
+  LLM    any OpenAI-compatible chat API, configured entirely from .env.
+         With no key it uses Pollinations' free anonymous tier (OpenAI's
+         open-weight gpt-oss-20b, no account needed); with LLM_API_KEY set
+         it uses LLM_BASE_URL / LLM_MODEL, by default Groq's free tier with
+         open-weight Llama 3.3 70B. Both are on PythonAnywhere's outbound
+         allowlist, so it works on the deployed site with no local model. Swapping provider later - Hugging
          Face, OpenRouter, Together, a self-hosted vLLM or Ollama - is a
          change of those three settings, not of this code, because they all
          speak the same /chat/completions API.
 
   Rules  the deterministic coach: widest gap first, concrete tasks, a
-         practice question from a small bank. Used when no key is set, when
-         the LLM is slow or down, or when its answer fails validation. It is
+         practice question from a small bank. Used when LLM_ENABLED is off,
+         when the LLM is slow, rate-limited or down, or when its answer fails validation. It is
          also what CI and the test suite run against.
 
 Privacy: the LLM sees the candidate's target roles, experience level,
@@ -32,6 +30,7 @@ limited per user per hour.
 import hashlib
 import json
 import re
+import time
 
 import requests
 from django.conf import settings
@@ -45,6 +44,7 @@ ADVICE_TTL = 6 * 60 * 60
 ASKS_PER_HOUR = 20
 MAX_QUESTION = 600
 TIMEOUT_SECONDS = 25
+RETRY_WAIT_SECONDS = 5
 
 # One strong practice question per skill, for the rules engine.
 QUESTION_BANK = {
@@ -68,28 +68,47 @@ class CoachError(Exception):
     pass
 
 
+class CoachBusy(CoachError):
+    """The provider is rate-limiting us (HTTP 402/429). On the free keyless
+    tier that means 'one request every few seconds', not a real failure."""
+
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 def llm_config():
+    """Which model to call: the keyed provider if a key is set, otherwise the
+    free keyless tier. See the AI coach block in settings/base.py."""
+    key = getattr(settings, "LLM_API_KEY", "")
+    if key:
+        return {
+            "base_url": getattr(settings, "LLM_BASE_URL", "").rstrip("/"),
+            "model": getattr(settings, "LLM_MODEL", ""),
+            "label": getattr(settings, "LLM_MODEL", ""),
+            "key": key,
+            "provider": getattr(settings, "LLM_PROVIDER", "LLM"),
+            "keyless": False,
+        }
     return {
-        "base_url": getattr(settings, "LLM_BASE_URL", "").rstrip("/"),
-        "model": getattr(settings, "LLM_MODEL", ""),
-        "key": getattr(settings, "LLM_API_KEY", ""),
-        "provider": getattr(settings, "LLM_PROVIDER", "LLM"),
+        "base_url": getattr(settings, "LLM_KEYLESS_BASE_URL", "").rstrip("/"),
+        "model": getattr(settings, "LLM_KEYLESS_MODEL", ""),
+        "label": getattr(settings, "LLM_KEYLESS_LABEL", ""),
+        "key": "",
+        "provider": getattr(settings, "LLM_KEYLESS_PROVIDER", "free tier"),
+        "keyless": True,
     }
 
 
 def llm_enabled():
     cfg = llm_config()
-    return bool(cfg["base_url"] and cfg["model"] and cfg["key"])
+    return bool(getattr(settings, "LLM_ENABLED", True) and cfg["base_url"] and cfg["model"])
 
 
 def engine_label():
     cfg = llm_config()
     if llm_enabled():
-        return f"AI · {cfg['model']} via {cfg['provider']}"
-    return "Beacon rules (AI not configured)"
+        return f"AI · {cfg['label'] or cfg['model']} via {cfg['provider']}"
+    return "Beacon rules (AI switched off)"
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +207,7 @@ def rule_advice(ctx):
 def rule_answer(ctx, question):
     advice = rule_advice(ctx)
     return (
-        "The AI coach isn't switched on yet, so here is what your plan says. "
+        "The AI coach isn't available right now, so here is what your plan says. "
         f"{advice['headline']} {advice['why']} Next: {advice['actions'][0] if advice['actions'] else ''}"
     )
 
@@ -226,21 +245,35 @@ def _chat(messages, *, json_mode=False, max_tokens=600):
     }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
-    try:
-        response = requests.post(
-            f"{cfg['base_url']}/chat/completions",
-            json=body,
-            headers={"Authorization": f"Bearer {cfg['key']}"},
-            timeout=TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
-    except requests.Timeout as exc:
-        raise CoachError("The AI coach took too long to answer.") from exc
-    except requests.HTTPError as exc:
-        raise CoachError(f"The AI provider returned HTTP {exc.response.status_code}.") from exc
-    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as exc:
-        raise CoachError("The AI coach could not be reached.") from exc
+    headers = {"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {}
+    # The free keyless tier allows roughly one request every few seconds per
+    # server, and says so with 402/429. One short wait and retry covers the
+    # common case of two requests close together (advice, then a question).
+    attempts = 2 if cfg["keyless"] else 1
+    for attempt in range(attempts):
+        try:
+            response = requests.post(
+                f"{cfg['base_url']}/chat/completions",
+                json=body,
+                headers=headers,
+                timeout=TIMEOUT_SECONDS + (15 if cfg["keyless"] else 0),
+            )
+            if response.status_code in (402, 429):
+                if attempt + 1 < attempts:
+                    time.sleep(RETRY_WAIT_SECONDS)
+                    continue
+                raise CoachBusy("The free AI model is busy right now.")
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+        except CoachBusy:
+            raise
+        except requests.Timeout as exc:
+            raise CoachError("The AI coach took too long to answer.") from exc
+        except requests.HTTPError as exc:
+            raise CoachError(f"The AI provider returned HTTP {exc.response.status_code}.") from exc
+        except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as exc:
+            raise CoachError("The AI coach could not be reached.") from exc
+    raise CoachBusy("The free AI model is busy right now.")
 
 
 def _parse_advice(text, ctx):
@@ -353,6 +386,12 @@ def ask(profile, question):
             max_tokens=400,
         )
         return {"answer": answer.strip(), "engine": engine_label(), "source": "llm"}
+    except CoachBusy:
+        return {
+            "answer": ("The free AI model is busy right now - it serves one request every "
+                       "few seconds. Try again in about 15 seconds."),
+            "engine": engine_label(), "source": "busy",
+        }
     except CoachError as exc:
         return {
             "answer": f"{exc} " + rule_answer(ctx, question),

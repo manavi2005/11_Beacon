@@ -914,11 +914,13 @@ back to Remotive, which is. The response says which source answered.
 - **AI coach** on *My plan*: personal recommendations (this week's focus,
   three concrete actions, a practice question) and a question box that
   also gives feedback on practice answers. `preparation/coach.py` talks to
-  any OpenAI-compatible API. The default is Groq's free tier with the
-  open-weight Llama 3.3 70B, set entirely from `.env` (`LLM_BASE_URL`,
-  `LLM_MODEL`, `LLM_API_KEY`), so swapping provider later is a config
-  change. With no key, or if the model is slow, down or returns malformed
-  output, a rule-based coach answers instead. The model gets roles, scores
+  any OpenAI-compatible API, set entirely from `.env`. With **no key** it
+  uses Pollinations' free anonymous tier (OpenAI's open-weight
+  `gpt-oss-20b`), so the coach is AI-powered with zero setup. A free Groq
+  key (`LLM_API_KEY`) switches to the faster, more reliable open-weight
+  Llama 3.3 70B. Swapping provider later is a config change. If the model
+  is slow, busy, down or returns malformed output, a rule-based coach
+  answers instead. The model gets roles, scores
   and the plan, never name, email or resume text. Advice is cached for 6
   hours; questions are limited to 20 an hour per user.
 - **Product navigation.** The menu is defined once as data in
