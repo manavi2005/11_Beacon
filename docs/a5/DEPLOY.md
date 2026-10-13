@@ -56,8 +56,9 @@ None of the commits in this release change `db.sqlite3`, so a plain
   parser). It is pure Python, so it installs on PythonAnywhere with no
   build tools.
 - **`migrate` is required:** migration `0003` adds
-  `CandidateProfile.target_roles` and `.interests`. Without it, onboarding
-  fails with "no such column".
+  `CandidateProfile.target_roles` and `.interests`, and `0004` adds the
+  `TaskAttempt` table. Without them, onboarding and the task workspace fail
+  with "no such column" / "no such table".
 
 ## Check it worked
 
@@ -84,7 +85,9 @@ point: it proves the journey works there, not just locally.
    **No interview yet**. **Next**: SQL, Python and Git sliders are tagged
    *from resume*.
 4. **Light my beacon**. `/me/` opens with "Your beacon is lit", gaps, and weeks.
-5. Tick a task. The progress bar moves without a reload.
+5. Open a week-1 task. For SQL or Python it is a quiz, otherwise a writing
+   box. Submit it: you see the score, feedback, and "Skill 40 → 54".
+   *My plan* then shows the task done (✓ score) and a Recent activity row.
 6. **Dashboard** now shows the new candidate's ring; ⌘K finds them by name.
 
 If step 4 errors, check that `collectstatic` ran (the page needs

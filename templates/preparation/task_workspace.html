@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% comment %}
+  The task workspace: where a plan task is actually done. A quiz for
+  technical skills (auto-graded), or an "explain it back" answer for
+  everything else (graded by the AI coach, or by rules as a fallback).
+  After a submission the same page shows the grade, the feedback, and how
+  the skill rating and readiness moved. See preparation/practice.py.
+{% endcomment %}
+
+{% block title %}{{ task.title }} - Beacon{% endblock %}
+{% block body_class %}page-workspace{% endblock %}
+
+{% block page_header %}
+  <section class="hero-strip ws-hero">
+    <div>
+      <p class="hero-strip__eyebrow">
+        Week {{ task.week_number }}{% if task.skill %} &middot; {{ task.skill.name }}{% endif %}
+        &middot; {{ task.estimated_minutes }} min
+      </p>
+      <h1 class="page-title hero-strip__title">{{ task.title }}</h1>
+      <p class="hero-strip__lede">{{ task.rationale }}</p>
+    </div>
+    {% if assessment %}
+      <div class="ws-rating">
+        <span class="ws-rating__label">Your {{ task.skill.name }}</span>
+        <span class="ws-rating__value">{{ assessment.proficiency_score }}<small>/{{ assessment.required_level }}</small></span>
+        <span class="ws-rating__hint">rating / what your role needs</span>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
+
+{% block content %}
+  <p class="ws-back"><a href="{% url 'preparation:my_plan' %}">&larr; Back to my plan</a></p>
+
+  {% if attempt %}
+    {# ---------------- Result of the attempt just submitted ---------------- #}
+    <section class="ws-result{% if attempt.passed %} ws-result--pass{% else %} ws-result--retry{% endif %}">
+      <div class="ws-result__score">
+        <span class="ws-result__number" data-count="{{ attempt.score }}">{{ attempt.score }}</span>
+        <span class="ws-result__of">/100</span>
+      </div>
+      <div class="ws-result__body">
+        <p class="ws-result__verdict">
+          {% if attempt.passed %}Task complete.{% else %}Not yet: {{ pass_score }} completes the task.{% endif %}
+          <span class="ws-result__by">{{ attempt.get_graded_by_display }}</span>
+        </p>
+        <p>{{ attempt.feedback.summary }}</p>
+        {% if attempt.rating_before is not None %}
+          <p class="ws-delta">
+            <strong>{{ task.skill.name }}</strong>
+            <span class="ws-delta__from">{{ attempt.rating_before }}</span> &rarr;
+            <span class="ws-delta__to">{{ attempt.rating_after }}</span>
+            &middot; readiness {{ readiness_before }}% &rarr; <strong>{{ readiness_after }}%</strong>
+          </p>
+          <p class="muted ws-delta__why">Your rating moves part of the way toward what you just demonstrated, up or down.</p>
+        {% endif %}
+        {% if attempt.feedback.note %}<p class="coach__note">{{ attempt.feedback.note }}</p>{% endif %}
+      </div>
+    </section>
+
+    {% if attempt.kind == "QUIZ" %}
+      <ol class="ws-review">
+        {% for r in attempt.feedback.questions %}
+          <li class="ws-review__item{% if r.correct %} is-right{% else %} is-wrong{% endif %}">
+            <p class="ws-review__q">{{ r.q }}</p>
+            <p class="ws-review__a">
+              {% if r.correct %}&#10003; Correct.{% else %}&#10007; Correct answer: <strong>{% for opt in r.options %}{% if forloop.counter0 == r.answer %}{{ opt }}{% endif %}{% endfor %}</strong>{% endif %}
+            </p>
+            <p class="muted">{{ r.why }}</p>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <div class="dash-grid">
+        <section class="panel">
+          <h2 class="panel__title">What worked</h2>
+          <ul>{% for s in attempt.feedback.strengths %}<li>{{ s }}</li>{% empty %}<li class="muted">Nothing flagged yet.</li>{% endfor %}</ul>
+        </section>
+        <section class="panel">
+          <h2 class="panel__title">To improve</h2>
+          <ul>{% for s in attempt.feedback.improve %}<li>{{ s }}</li>{% empty %}<li class="muted">Nothing major.</li>{% endfor %}</ul>
+        </section>
+      </div>
+    {% endif %}
+
+    <p class="ws-actions">
+      <a class="hero-strip__action hero-strip__action--primary" href="{% url 'preparation:my_plan' %}">Back to my plan &rarr;</a>
+      <a class="ws-retry" href="{% url 'preparation:task_workspace' task.pk %}">{% if attempt.passed %}Practise again{% else %}Try again{% endif %}</a>
+    </p>
+
+  {% else %}
+    {# ---------------- The exercise ---------------- #}
+    {% if error %}<div class="auth-card__alert" role="alert"><p>{{ error }}</p></div>{% endif %}
+
+    <form method="post" class="ws-form">
+      {% csrf_token %}
+      {% if is_quiz %}
+        <h2>Check your {{ task.skill.name }}</h2>
+        <p class="muted">Do the practice, then answer these {{ questions|length }} questions. {{ pass_score }}% completes the task.</p>
+        <ol class="quiz">
+          {% for q in questions %}
+            {% with qi=forloop.counter0 %}
+              <li class="quiz__item">
+                <p class="quiz__q">{{ q.q }}</p>
+                <div class="quiz__options">
+                  {% for opt in q.options %}
+                    <label class="quiz__option">
+                      <input type="radio" name="q{{ qi }}" value="{{ forloop.counter0 }}" required>
+                      <span>{{ opt }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </li>
+            {% endwith %}
+          {% endfor %}
+        </ol>
+        <button type="submit" class="onb-submit">Submit answers</button>
+      {% else %}
+        <h2>Explain it back</h2>
+        <p>{{ brief.prompt }}</p>
+        <ul class="ws-rubric">{% for r in brief.rubric %}<li>{{ r }}</li>{% endfor %}</ul>
+        <textarea name="answer" rows="9" class="ws-answer" placeholder="Write your answer here&hellip;" required>{{ draft }}</textarea>
+        <p class="muted ws-count" data-word-count>0 words &middot; aim for 80-200</p>
+        <button type="submit" class="onb-submit" data-grading-label="Grading&hellip;">Submit for feedback</button>
+      {% endif %}
+    </form>
+  {% endif %}
+
+  {% if history %}
+    <h2>Your attempts</h2>
+    <ul class="ws-history">
+      {% for a in history %}
+        <li>
+          <span class="pill{% if a.passed %} pill--done{% endif %}">{{ a.score }}</span>
+          {{ a.get_kind_display }} &middot; {{ a.get_graded_by_display }}
+          {% if a.rating_before is not None %}&middot; {{ a.rating_before }} &rarr; {{ a.rating_after }}{% endif %}
+          <span class="muted">&middot; {{ a.created_at|timesince }} ago</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

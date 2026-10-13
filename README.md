@@ -923,6 +923,16 @@ back to Remotive, which is. The response says which source answered.
   answers instead. The model gets roles, scores
   and the plan, never name, email or resume text. Advice is cached for 6
   hours; questions are limited to 20 an hour per user.
+- **Tasks are done on the platform, and progress is evidence.** Each plan
+  task opens a workspace at `/me/tasks/<id>/` (`preparation/practice.py`).
+  Technical skills get an auto-graded quiz with explanations. Everything
+  else is "explain it back": write the STAR story, or what you read or
+  practised, and the AI coach grades it against a rubric (rules if the
+  model is unavailable). A task completes at 60+, and each attempt moves
+  that skill's rating 40% of the way toward the score shown, up or down,
+  so readiness reflects what you demonstrate, not what you claim. Every
+  attempt is stored (`TaskAttempt`, migration 0004) with before and after
+  ratings, and *My plan* lists recent activity.
 - **Product navigation.** The menu is defined once as data in
   `preparation/navigation.py`: grouped dropdowns (Coaching, Skills,
   Insights), the current page highlighted, and Admin shown to staff only.

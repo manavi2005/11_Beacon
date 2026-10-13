@@ -28,6 +28,13 @@ Not Disturb.
 - [ ] Do one full rehearsal on production (see `../DEPLOY.md`). Delete the
       rehearsal account afterwards in Django admin > Users.
 
+**Prepare a STAR story to paste** (typing on camera is slow). For example:
+*"Last semester our analytics project for a food bank was two weeks behind
+because the data was messy. My role was to own the data cleaning. I wrote
+a Python script to standardise names and flag duplicates, and set up a
+daily check-in. We delivered on time, duplicates dropped 35%, and the food
+bank still uses the dashboard."*
+
 **Demo persona:** Maya, using the built-in sample resume (a data-analytics
 student). It is served by the site, so there is no file to find on
 camera: click **Use the sample resume** on step 1. After the import, drag
@@ -83,7 +90,10 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | **My plan** loads with "Your beacon is lit". Pause on it. | "This page is now hers: both target roles, her eight-week timeline, and her readiness." |
 | Point at **Your widest gaps**. | "Her widest gaps are the ones her resume couldn't show, like storytelling and product sense, so that's where the plan starts." |
 | Scroll to **Week by week**. Read one task's *why* line. | "Every task says why it's there: what she rated herself, and what the tougher of her roles expects." |
-| **Tick the two week-1 tasks.** The progress bar moves and week 1 turns green. | "As she practises, she ticks tasks off and her progress updates instantly." |
+| Click **Start** on the week-1 STAR task. Paste a prepared 5-sentence STAR story and **Submit for feedback**. | "Tasks happen here, not on trust. For storytelling she writes her answer, and the AI coach grades it against a STAR rubric." |
+| Point at the result: score, what worked and what to improve, and **STAR storytelling 30 → 52**. | "Her rating moves toward what she actually demonstrated, and her readiness goes up with it." |
+| Open the **SQL** task. Answer the 4-question quiz and submit. | "Technical skills get a quick auto-graded check, with the reason behind every answer." |
+| Back on **My plan**: point at ✓ scores and **Recent activity**. | "Every attempt is on the record, so her progress is evidence, not checkboxes." |
 | Scroll up to **Your coach**. Point at the badge (*AI · ...*). | "And because Beacon is an AI coach: an open-source model reads her scores and plan, never her name, and tells her what to focus on this week." |
 | Click **Answer it and get feedback**, type a 2-line answer, and press **Ask**. | "She can practise right here. The coach gives feedback on her answer, including whether it follows the STAR structure." |
 

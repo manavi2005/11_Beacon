@@ -13,6 +13,7 @@
      7. Menus                  one open at a time, close on outside click
      8. Developer notes        "Show how pages are built" switch
      9. AI coach               advice swap-in and the question box
+     10. Task workspace        word count, grading state
 
    Motion is skipped entirely for readers who ask their OS for less of it.
    =========================================================================== */
@@ -42,6 +43,9 @@
     }
     el.textContent = (0).toFixed(decimals) + suffix;
     requestAnimationFrame(frame);
+    // Browsers pause animation frames in background tabs; make sure the
+    // real number is always what is left on screen.
+    setTimeout(function () { el.textContent = target.toFixed(decimals) + suffix; }, duration + 150);
   }
 
   /* -------------------------------------------------------------------------
@@ -707,6 +711,30 @@
     load(false);
   }
   document.querySelectorAll("[data-coach]").forEach(coachPanel);
+
+  /* -------------------------------------------------------------------------
+     10. Task workspace: live word count, and a "Grading..." state on submit,
+         because AI grading on the free tier can take 10-15 seconds.
+     ------------------------------------------------------------------------- */
+  document.querySelectorAll(".ws-form").forEach(function (form) {
+    var answer = form.querySelector(".ws-answer");
+    var counter = form.querySelector("[data-word-count]");
+    if (answer && counter) {
+      var count = function () {
+        var n = answer.value.trim() ? answer.value.trim().split(/\s+/).length : 0;
+        counter.textContent = n + " words \u00b7 aim for 80-200";
+      };
+      answer.addEventListener("input", count);
+      count();
+    }
+    form.addEventListener("submit", function () {
+      var btn = form.querySelector("button[type=submit]");
+      if (btn && btn.getAttribute("data-grading-label")) {
+        btn.disabled = true;
+        btn.textContent = "Grading\u2026 (up to 15 s)";
+      }
+    });
+  });
 
   document.querySelectorAll("[data-lighthouse]").forEach(lighthouse);
   document.querySelectorAll("[data-onboarding]").forEach(onboarding);

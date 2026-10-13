@@ -110,5 +110,6 @@ urlpatterns = [
     # AI coach: recommendations (GET) and a question box (POST). Protected JSON.
     path("me/coach/", views.coach_advice, name="coach_advice"),
     path("me/coach/ask/", views.coach_ask, name="coach_ask"),
+    path("me/tasks/<int:pk>/", views.task_workspace, name="task_workspace"),
     path("me/tasks/<int:pk>/toggle/", views.toggle_task, name="toggle_task"),
 ]

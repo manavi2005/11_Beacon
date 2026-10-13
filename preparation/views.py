@@ -21,7 +21,7 @@ import json
 from functools import wraps
 
 from django.conf import settings
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -42,6 +42,7 @@ from django.utils.decorators import method_decorator
 
 from . import charts, exports, market, vega
 from .models import (
+    TaskAttempt,
     CandidateProfile,
     PlanTask,
     PreparationPlan,
@@ -53,6 +54,7 @@ from .forms import OnboardingForm, PlanTaskForm
 from . import onboarding as onboarding_rules
 from . import resume as resume_parser
 from . import coach
+from . import practice
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -1322,6 +1324,16 @@ def my_plan(request):
     weeks = []
     if plan:
         tasks = list(plan.tasks.select_related("skill").order_by("week_number", "pk"))
+        # Best score and attempt count per task, in one query, so each row
+        # can say Start / Retry / Done 85 without a query per task.
+        best = {
+            row["task_id"]: row
+            for row in TaskAttempt.objects.filter(task__plan=plan)
+            .values("task_id").annotate(best=Max("score"), tries=Count("id"))
+        }
+        for t in tasks:
+            t.best_score = best.get(t.pk, {}).get("best")
+            t.tries = best.get(t.pk, {}).get("tries", 0)
         for number in range(1, plan.total_weeks + 1):
             week_tasks = [t for t in tasks if t.week_number == number]
             if week_tasks:
@@ -1349,6 +1361,10 @@ def my_plan(request):
         "readiness": profile.readiness_percent,
         "days_left": days_left,
         "welcome": request.GET.get("welcome") == "1",
+        "recent": (
+            TaskAttempt.objects.filter(task__plan__candidate=profile)
+            .select_related("task__skill")[:5]
+        ),
         # Rendered straight away from the rules engine; beacon.js then asks
         # /me/coach/ for the AI version and swaps it in when it arrives.
         "advice": coach.rule_advice(coach.build_context(profile)),
@@ -1388,6 +1404,72 @@ def coach_ask(request):
     except (ValueError, AttributeError):
         question = request.POST.get("question", "")
     return JsonResponse(coach.ask(profile, question))
+
+
+@login_required
+def task_workspace(request, pk):
+    """/me/tasks/<pk>/ - do the task here, get graded, see the rating move.
+
+    Owner-only: the lookup is filtered by the signed-in user, so anyone
+    else's task is a 404. GET shows the quiz or the writing prompt plus past
+    attempts; POST grades the submission, records a TaskAttempt (which moves
+    the skill rating and completes the task on a pass), and shows the result.
+    """
+    task = get_object_or_404(
+        PlanTask.objects.select_related("plan__candidate", "skill"),
+        pk=pk, plan__candidate__user=request.user,
+    )
+    profile = task.plan.candidate
+    kind = practice.task_kind(task)
+    error, attempt = None, None
+    readiness_before = profile.readiness_percent
+
+    if request.method == "POST":
+        if kind == TaskAttempt.Kind.QUIZ:
+            questions = practice.QUIZ_BANK[task.skill.name]
+            picks = {}
+            for i in range(len(questions)):
+                value = request.POST.get(f"q{i}", "")
+                if value.isdigit():
+                    picks[i] = int(value)
+            if len(picks) < len(questions):
+                error = "Answer every question before submitting."
+            else:
+                score, feedback = practice.grade_quiz(task, picks)
+                attempt = practice.record_attempt(
+                    task, kind=kind, response={"picks": picks}, score=score,
+                    feedback=feedback, graded_by=TaskAttempt.GradedBy.AUTO,
+                )
+        else:
+            text = request.POST.get("answer", "").strip()
+            if len(text.split()) < 15:
+                error = "Write at least a few sentences (15+ words) so there is something to grade."
+            else:
+                score, feedback, graded_by = practice.grade_written(task, text[:6000])
+                attempt = practice.record_attempt(
+                    task, kind=kind, response={"answer": text[:6000]}, score=score,
+                    feedback=feedback, graded_by=graded_by,
+                )
+        if attempt:
+            profile = CandidateProfile.objects.get(pk=profile.pk)  # fresh readiness
+            task.refresh_from_db()
+
+    context = {
+        "task": task,
+        "kind": kind,
+        "is_quiz": kind == TaskAttempt.Kind.QUIZ,
+        "questions": practice.QUIZ_BANK.get(task.skill.name, []) if task.skill else [],
+        "brief": practice.written_prompt(task),
+        "attempt": attempt,
+        "error": error,
+        "draft": request.POST.get("answer", "") if error else "",
+        "history": task.attempts.all()[:5],
+        "pass_score": practice.PASS_SCORE,
+        "readiness_before": readiness_before,
+        "readiness_after": profile.readiness_percent,
+        "assessment": profile.assessments.filter(skill=task.skill).first() if task.skill else None,
+    }
+    return render(request, "preparation/task_workspace.html", context)
 
 
 @require_POST

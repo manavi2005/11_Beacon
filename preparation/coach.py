@@ -41,6 +41,7 @@ from .models import PlanTask, PreparationPlan
 from .onboarding import INTERESTS, TASKS_BY_SKILL
 
 ADVICE_TTL = 6 * 60 * 60
+FAILURE_TTL = 2 * 60
 ASKS_PER_HOUR = 20
 MAX_QUESTION = 600
 TIMEOUT_SECONDS = 25
@@ -235,7 +236,9 @@ ADVICE_INSTRUCTIONS = (
 )
 
 
-def _chat(messages, *, json_mode=False, max_tokens=600):
+def _chat(messages, *, json_mode=False, max_tokens=600, patient=False):
+    """One chat completion. patient=True (used for grading, which the user is
+    actively waiting on) retries a busy free tier twice, after 6 and 10 s."""
     cfg = llm_config()
     body = {
         "model": cfg["model"],
@@ -249,7 +252,8 @@ def _chat(messages, *, json_mode=False, max_tokens=600):
     # The free keyless tier allows roughly one request every few seconds per
     # server, and says so with 402/429. One short wait and retry covers the
     # common case of two requests close together (advice, then a question).
-    attempts = 2 if cfg["keyless"] else 1
+    waits = ([6, 10] if patient else [RETRY_WAIT_SECONDS]) if cfg["keyless"] else []
+    attempts = len(waits) + 1
     for attempt in range(attempts):
         try:
             response = requests.post(
@@ -260,7 +264,7 @@ def _chat(messages, *, json_mode=False, max_tokens=600):
             )
             if response.status_code in (402, 429):
                 if attempt + 1 < attempts:
-                    time.sleep(RETRY_WAIT_SECONDS)
+                    time.sleep(waits[attempt])
                     continue
                 raise CoachBusy("The free AI model is busy right now.")
             response.raise_for_status()
@@ -345,8 +349,10 @@ def get_advice(profile, *, refresh=False):
             result["engine"] = "Beacon rules (fallback)"
     if result["advice"] is None:
         result["advice"] = rule_advice(ctx)
-    if result["source"] == "llm":
-        cache.set(key, result, ADVICE_TTL)
+    # Cache successes for hours. Cache a fallback briefly too, so that every
+    # visit to My plan does not spend the free tier's small request budget
+    # retrying a model that just said it was busy.
+    cache.set(key, result, ADVICE_TTL if result["source"] == "llm" else FAILURE_TTL)
     return result
 
 

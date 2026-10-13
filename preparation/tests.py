@@ -25,6 +25,7 @@ from django.utils import timezone
 
 from . import exports
 from .models import (
+    TaskAttempt,
     CandidateProfile,
     PlanTask,
     PreparationPlan,
@@ -2105,3 +2106,174 @@ class CoachTests(TestCase):
         self.assertEqual(r.json()["source"], "busy")
         self.assertIn("Try again in about 15 seconds", r.json()["answer"])
         self.assertNotIn("HTTP", r.json()["answer"])
+
+
+class TaskWorkspaceTests(TestCase):
+    """Doing tasks on the platform: graded attempts move ratings and complete tasks."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.star = Skill.objects.create(name="STAR-format storytelling",
+                                        category=Skill.Category.BEHAVIORAL)
+        cls.user = User.objects.create_user("learner", password="test-only-pw")
+        from .onboarding import complete_onboarding
+        cls.profile, cls.plan = complete_onboarding(
+            cls.user, target_roles=["Data Analyst"], target_company="", experience_level="STU",
+            target_interview_date=None, prep_weeks="6", primary_concern="",
+            ratings={cls.sql.pk: 40, cls.python.pk: 70, cls.pitch.pk: 60, cls.star.pk: 30},
+        )
+
+    def setUp(self):
+        cache.clear()
+        self.assertTrue(self.client.login(username="learner", password="test-only-pw"))
+
+    def _task(self, skill):
+        return self.plan.tasks.filter(skill=skill).first()
+
+    def _rating(self, skill):
+        return SkillAssessment.objects.get(candidate=self.profile, skill=skill).proficiency_score
+
+    def _quiz_answers(self, skill, right):
+        from .practice import QUIZ_BANK
+        data = {}
+        for i, q in enumerate(QUIZ_BANK[skill.name]):
+            data[f"q{i}"] = q["answer"] if i < right else (q["answer"] + 1) % len(q["options"])
+        return data
+
+    def test_sql_task_is_a_quiz_and_star_task_is_written(self):
+        r = self.client.get(reverse("preparation:task_workspace", args=[self._task(self.sql).pk]))
+        self.assertContains(r, 'type="radio"')
+        r = self.client.get(reverse("preparation:task_workspace", args=[self._task(self.star).pk]))
+        self.assertContains(r, "Explain it back")
+        self.assertContains(r, "STAR")
+
+    def test_passing_quiz_completes_the_task_and_raises_the_rating(self):
+        task = self._task(self.sql)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                             self._quiz_answers(self.sql, right=3))
+        attempt = r.context["attempt"]
+        self.assertEqual(attempt.score, 75)
+        self.assertTrue(attempt.passed)
+        # 40 + 0.4 * (75 - 40) = 54
+        self.assertEqual((attempt.rating_before, attempt.rating_after), (40, 54))
+        self.assertEqual(self._rating(self.sql), 54)
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.DONE)
+        self.assertContains(r, "Task complete")
+        self.assertGreater(r.context["readiness_after"], r.context["readiness_before"])
+
+    def test_failing_quiz_keeps_the_task_open_and_can_lower_an_overrating(self):
+        task = self._task(self.sql)
+        SkillAssessment.objects.filter(candidate=self.profile, skill=self.sql).update(proficiency_score=80)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                             self._quiz_answers(self.sql, right=1))
+        attempt = r.context["attempt"]
+        self.assertEqual(attempt.score, 25)
+        self.assertFalse(attempt.passed)
+        self.assertEqual(self._rating(self.sql), 58)   # 80 + 0.4 * (25 - 80)
+        task.refresh_from_db()
+        self.assertEqual(task.status, PlanTask.Status.IN_PROGRESS)
+        self.assertContains(r, "Correct answer:")
+
+    def test_incomplete_quiz_is_rejected(self):
+        task = self._task(self.sql)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]), {"q0": "1"})
+        self.assertContains(r, "Answer every question")
+        self.assertFalse(TaskAttempt.objects.exists())
+
+    @override_settings(**LLM_ON)
+    @mock.patch("preparation.coach.requests.post")
+    def test_written_answer_is_graded_by_the_ai(self, post):
+        post.return_value = _llm_reply(json.dumps({
+            "score": 72, "summary": "Clear story with a measurable result.",
+            "strengths": ["Specific action"], "improve": ["State your role earlier"],
+        }))
+        task = self._task(self.star)
+        answer = ("Last semester our team project was behind schedule. My role was to lead the data "
+                  "cleaning. I wrote a script that automated the checks and reorganised the work, "
+                  "and we shipped on time, which reduced errors by 30 percent.")
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]), {"answer": answer})
+        attempt = r.context["attempt"]
+        self.assertEqual((attempt.score, attempt.graded_by), (72, TaskAttempt.GradedBy.AI))
+        self.assertEqual(attempt.rating_after, 47)     # 30 + 0.4 * (72 - 30) = 46.8
+        self.assertContains(r, "State your role earlier")
+        sent = json.dumps(post.call_args.kwargs["json"])
+        self.assertIn("reduced errors by 30 percent", sent)
+        self.assertNotIn("learner", sent)
+
+    @override_settings(**LLM_OFF)
+    def test_written_answer_falls_back_to_rules(self):
+        task = self._task(self.star)
+        answer = ("Last summer at my internship the dashboard kept failing. My role was to fix it. "
+                  "I rebuilt the queries and set up alerts so that the team could trust it again. "
+                  "It reduced support tickets by 40% over the next month and the manager reused it. " * 2)
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]), {"answer": answer})
+        attempt = r.context["attempt"]
+        self.assertEqual(attempt.graded_by, TaskAttempt.GradedBy.RULES)
+        self.assertGreaterEqual(attempt.score, 60)     # long, all four STAR parts, a number
+        self.assertIn("Has a clear Result.", attempt.feedback["strengths"])
+
+    def test_too_short_written_answer_is_rejected(self):
+        r = self.client.post(reverse("preparation:task_workspace", args=[self._task(self.star).pk]),
+                             {"answer": "I did it."})
+        self.assertContains(r, "at least a few sentences")
+
+    def test_someone_elses_task_is_a_404(self):
+        task = self._task(self.sql)
+        self.client.logout()
+        User.objects.create_user("nosy", password="test-only-pw")
+        self.assertTrue(self.client.login(username="nosy", password="test-only-pw"))
+        self.assertEqual(self.client.get(reverse("preparation:task_workspace", args=[task.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                                          self._quiz_answers(self.sql, right=4)).status_code, 404)
+
+    def test_my_plan_shows_start_then_done_with_score_and_activity(self):
+        task = self._task(self.sql)
+        url = reverse("preparation:task_workspace", args=[task.pk])
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, f'href="{url}"')
+        self.assertContains(r, "Start")
+        self.client.post(url, self._quiz_answers(self.sql, right=4))
+        r = self.client.get(reverse("preparation:my_plan"))
+        self.assertContains(r, "&#10003; 100", html=False)
+        self.assertContains(r, "Recent activity")
+        self.assertContains(r, "SQL &amp; relational modeling 40 &rarr; <strong>64</strong>", html=False)
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_a_failed_advice_fetch_is_not_retried_on_every_visit(self, post, sleep):
+        post.return_value = mock.Mock(status_code=429)
+        self.client.get(reverse("preparation:coach_advice"))
+        calls = post.call_count
+        self.client.get(reverse("preparation:coach_advice"))
+        self.assertEqual(post.call_count, calls)
+
+
+class PatientGradingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)
+        cls.star = Skill.objects.create(name="STAR-format storytelling", category=Skill.Category.BEHAVIORAL)
+        cls.user = User.objects.create_user("patient", password="test-only-pw")
+        from .onboarding import complete_onboarding
+        cls.profile, cls.plan = complete_onboarding(
+            cls.user, target_roles=["Data Analyst"], target_company="", experience_level="STU",
+            target_interview_date=None, prep_weeks="6", primary_concern="", ratings={cls.star.pk: 30},
+        )
+
+    @override_settings(**LLM_KEYLESS)
+    @mock.patch("preparation.coach.time.sleep")
+    @mock.patch("preparation.coach.requests.post")
+    def test_grading_waits_out_a_busy_free_tier(self, post, sleep):
+        cache.clear()
+        busy = mock.Mock(status_code=402)
+        post.side_effect = [busy, busy, _llm_reply(json.dumps(
+            {"score": 70, "summary": "Good.", "strengths": [], "improve": []}))]
+        self.assertTrue(self.client.login(username="patient", password="test-only-pw"))
+        task = self.plan.tasks.filter(skill=self.star).first()
+        r = self.client.post(reverse("preparation:task_workspace", args=[task.pk]),
+                             {"answer": "Last semester my role was to lead the cleanup. " * 4})
+        self.assertEqual(r.context["attempt"].graded_by, TaskAttempt.GradedBy.AI)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [6, 10])

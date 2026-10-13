@@ -398,3 +398,47 @@ class PlanTask(models.Model):
     def get_absolute_url(self):
         """Canonical page for this task."""
         return reverse("preparation:task_detail", args=[self.pk])
+
+
+class TaskAttempt(models.Model):
+    """One go at a task, done on the platform, with the evidence and grade.
+
+    This is what makes progress mean something: a task is done when an
+    attempt passes, not when a box is ticked, and every attempt nudges the
+    candidate's rating for the task's skill toward what they demonstrated.
+    rating_before / rating_after keep that change on the record.
+    """
+
+    class Kind(models.TextChoices):
+        QUIZ = "QUIZ", "Quiz"
+        WRITTEN = "WRITE", "Explain it back"
+
+    class GradedBy(models.TextChoices):
+        AUTO = "AUTO", "Auto-graded"
+        AI = "AI", "AI coach"
+        RULES = "RULES", "Beacon rules"
+
+    task = models.ForeignKey(PlanTask, on_delete=models.CASCADE, related_name="attempts")
+    kind = models.CharField(max_length=5, choices=Kind.choices)
+    response = models.JSONField(
+        default=dict, blank=True,
+        help_text="Quiz picks, or the written answer, exactly as submitted.",
+    )
+    score = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    passed = models.BooleanField(default=False)
+    feedback = models.JSONField(
+        default=dict, blank=True,
+        help_text="Summary, strengths and improvements shown to the candidate.",
+    )
+    graded_by = models.CharField(max_length=5, choices=GradedBy.choices)
+    rating_before = models.PositiveSmallIntegerField(null=True, blank=True)
+    rating_after = models.PositiveSmallIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.task.title}: {self.score} ({self.get_kind_display()})"

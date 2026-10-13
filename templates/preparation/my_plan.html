@@ -3,9 +3,9 @@
   "My plan": everything Beacon knows about the signed-in user. Readiness
   ring, widest gaps, and the week-by-week plan built at onboarding.
 
-  Each task's checkbox is a POST form to /me/tasks/<pk>/toggle/, so it works
-  without JavaScript (full page reload). With it, beacon.js sends the same
-  POST with fetch and updates the progress bar in place.
+  Each task opens its workspace (/me/tasks/<pk>/): a quiz or an
+  explain-it-back answer. Passing it completes the task and moves the
+  skill rating, which is what readiness and progress are built from.
 {% endcomment %}
 
 {% block title %}My plan - Beacon{% endblock %}
@@ -131,6 +131,24 @@
     </section>
   </div>
 
+  {% if recent %}
+    <section class="panel recent">
+      <h2 class="panel__title">Recent activity</h2>
+      <ul class="recent__list">
+        {% for a in recent %}
+          <li>
+            <span class="pill{% if a.passed %} pill--done{% endif %}">{{ a.score }}</span>
+            <a href="{% url 'preparation:task_workspace' a.task_id %}">{{ a.task.title }}</a>
+            {% if a.rating_before is not None %}
+              <span class="recent__delta">{{ a.task.skill.name }} {{ a.rating_before }} &rarr; <strong>{{ a.rating_after }}</strong></span>
+            {% endif %}
+            <span class="muted">&middot; {{ a.get_graded_by_display }} &middot; {{ a.created_at|timesince }} ago</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
   {% if plan %}
     <h2>Week by week</h2>
     <ol class="weeks">
@@ -140,14 +158,14 @@
           <ul class="tasks">
             {% for task in week.tasks %}
               <li class="task{% if task.status == 'DONE' %} task--done{% endif %}" id="task-{{ task.pk }}">
-                <form method="post" action="{% url 'preparation:toggle_task' task.pk %}" class="task__form" data-task-toggle>
-                  {% csrf_token %}
-                  <button type="submit" class="task__check" role="checkbox"
-                          aria-checked="{% if task.status == 'DONE' %}true{% else %}false{% endif %}"
-                          aria-label="Mark {{ task.title }} {% if task.status == 'DONE' %}not done{% else %}done{% endif %}">
-                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7" /></svg>
-                  </button>
-                </form>
+                {% comment %}
+                Tasks are completed by passing them in the workspace, not by
+                ticking a box: the button opens the quiz or the writing task.
+                {% endcomment %}
+                <a class="task__go{% if task.status == 'DONE' %} is-done{% elif task.tries %} is-tried{% endif %}"
+                   href="{% url 'preparation:task_workspace' task.pk %}">
+                  {% if task.status == 'DONE' %}&#10003; {{ task.best_score|default:"Done" }}{% elif task.tries %}Retry{% else %}Start{% endif %}
+                </a>
                 <div class="task__body">
                   <p class="task__title">{{ task.title }}</p>
                   <p class="task__meta">
