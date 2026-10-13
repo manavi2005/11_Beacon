@@ -7,7 +7,7 @@
   },
   "description": "Grouped bar chart: for every assessed skill, the average current proficiency and the average required level, sorted by the widest gap.",
   "data": {
-    "url": "https://simonhwang1998.pythonanywhere.com/api/skills/summary/",
+    "url": "https://manavi2005.pythonanywhere.com/api/skills/summary/",
     "format": {"type": "json"}
   },
   "transform": [

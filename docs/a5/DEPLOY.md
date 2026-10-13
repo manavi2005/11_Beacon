@@ -1,6 +1,6 @@
 # Updating the live site (PythonAnywhere)
 
-The site runs on the `SimonHwang1998` PythonAnywhere account at <https://simonhwang1998.pythonanywhere.com/>.
+The site runs on PythonAnywhere at <https://manavi2005.pythonanywhere.com/> and <https://simonhwang1998.pythonanywhere.com/>; the steps are the same for each account.
 After this branch is merged into `main`, run the steps below in a
 PythonAnywhere **Bash console**. Replace `<venv>` with the virtualenv name
 on the Web tab, and `~/11_Beacon` with the clone path if it differs.
@@ -148,4 +148,5 @@ must use the production domain:
 ```
 http://127.0.0.1:8000/accounts/google/login/callback/
 https://simonhwang1998.pythonanywhere.com/accounts/google/login/callback/
+https://manavi2005.pythonanywhere.com/accounts/google/login/callback/
 ```
