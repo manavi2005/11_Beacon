@@ -25,6 +25,9 @@ Not Disturb.
       which looks far better on camera (see `../DEPLOY.md`).
 - [ ] The Vega-Lite spec is ready to paste, and a terminal is open in
       `docs/a5/alt_uses/`.
+- [ ] A **coach** login exists on production for the cohort view: a staff
+      account (`python manage.py createsuperuser`, or tick *Staff status*
+      on a user in Django admin).
 - [ ] Do one full rehearsal on production (see `../DEPLOY.md`). Delete the
       rehearsal account afterwards in Django admin > Users.
 
@@ -70,7 +73,7 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 | Open the production URL. It redirects to the login page. | "Everything in Beacon needs an account, so a new visitor lands here." |
 | **Move the mouse slowly across the lighthouse.** The beam follows it. | "That's our beacon. It follows you." (Pause one beat; it lands.) |
 | Point at the nav: only *Log In* and *Sign Up*. | "Signed out, the navigation hides every private page." |
-| Click **Sign Up**. Enter `maya_demo1` and a password. Submit. | "Sign-up is our own page, with Django's password rules. Google sign-in is right here too, through django-allauth, and it works on this deployed domain." |
+| Point at **Continue with Google** at the top of the card, then use the username form below it: `maya_demo1` and a password. Submit. | "Students can sign in with Google in one click, through django-allauth on our deployed domain, or with a username. Either way, everything they see from here on is only theirs." |
 
 ## 1:25 to 2:25 · Onboarding: from blank account to diagnosis (narrator B)
 
@@ -101,7 +104,7 @@ Suggested split: **A** opening and sign-up, **B** onboarding and plan,
 
 | Do | Say |
 |---|---|
-| Click **Dashboard**. Let the rings animate. | "A career coach sees the whole cohort: readiness for every candidate, and the widest gaps across everyone." |
+| Log out, log in as the **coach** (staff) account, and open **Dashboard**. | "Students only ever see their own progress. A coach account sees the whole cohort: readiness for every candidate, and the widest gaps across everyone." |
 | Press **⌘K**, type `maya`, Enter. | "And can jump to any student, skill or page in one shortcut." |
 | Open **Job market**, search `analyst`. | "Beacon also pulls live job postings from a public jobs API, and ranks skills by how often employers ask for them times how far our students are behind." |
 

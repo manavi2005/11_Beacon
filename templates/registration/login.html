@@ -12,6 +12,8 @@
     <h1 class="auth-card__title">Welcome back</h1>
     <p class="auth-card__lede">Log in to see your readiness and this week's plan.</p>
 
+    {% include "registration/_google_button.html" with google_hint="One click, no new password." %}
+
     <form method="post" class="auth-card__form">
       {% csrf_token %}
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
@@ -19,7 +21,6 @@
       <button type="submit" class="auth-card__submit">Log In</button>
     </form>
 
-    {% include "registration/_google_button.html" %}
 
     <p class="auth-card__switch">Need an account? <a href="{% url 'preparation:signup' %}">Sign up</a></p>
   </section>

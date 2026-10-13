@@ -65,8 +65,11 @@ class GradedViewsTests(TestCase):
         )
 
     def setUp(self):
-        # Create and log in a test user for template tests
-        self.user = User.objects.create_user("templateuser", password="test-only-pw")
+        # Create and log in a test user for template tests. A coach (staff):
+        # the plan and task lists show the whole cohort only to coaches, and
+        # the plan here belongs to a different user. visibility.py.
+        self.user = User.objects.create_user("templateuser", password="test-only-pw",
+                                             is_staff=True)
         # assertTrue, not a bare call: Client.login() returns False on a bad
         # username and the test then runs anonymous. Against a public route
         # that still passes, which is how five of these were silently broken.
@@ -184,8 +187,11 @@ class UrlsAndNavigationTests(TestCase):
         nav = body.split("<nav")[1].split("</nav>")[0]
         hrefs = [h for h in nav.split('href="')[1:]]
         self.assertGreaterEqual(len(hrefs), 3)
-        for expected in ("/candidates/", "/search/skills/", "/insights/"):
+        # Students see their own work plus the shared, anonymous pages; the
+        # cohort's candidate list is in the coaches' menu (visibility.py).
+        for expected in ("/me/", "/search/skills/", "/insights/"):
             self.assertIn(expected, nav)
+        self.assertNotIn("/candidates/", nav)
 
     def test_get_absolute_url_returns_a_working_pk_url(self):
         for obj in (self.skill, self.candidate, self.plan, self.task):
@@ -1497,7 +1503,9 @@ class PolishTests(TestCase):
         items = self.client.get(reverse("preparation:api_palette")).json()["items"]
         groups = {i["group"] for i in items}
         self.assertTrue({"Page", "Candidate", "Skill"} <= groups)
-        self.assertIn("Eunji", {i["label"] for i in items})
+        labels = {i["label"] for i in items}
+        self.assertNotIn("Eunji", labels)          # another student: hidden
+        self.assertIn("tquant", labels)            # themselves: listed
         for item in items:
             self.assertTrue(item["url"].startswith("/"))
 
@@ -1510,7 +1518,8 @@ class PolishTests(TestCase):
         self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(len(r.context["readiness"]), 2)
+        # A student sees only their own ring.
+        self.assertEqual([row["name"] for row in r.context["readiness"]], ["tquant"])
         # SQL (gap 40) is wider than Python (gap 27.5), so it comes first.
         self.assertEqual(r.context["gaps"][0]["skill"], "SQL & relational modeling")
         self.assertContains(r, 'class="ring ')
@@ -2277,3 +2286,78 @@ class PatientGradingTests(TestCase):
                              {"answer": "Last semester my role was to lead the cleanup. " * 4})
         self.assertEqual(r.context["attempt"].graded_by, TaskAttempt.GradedBy.AI)
         self.assertEqual([c.args[0] for c in sleep.call_args_list], [6, 10])
+
+
+class StudentPrivacyTests(TestCase):
+    """A student sees only their own data; a coach (staff) sees the cohort."""
+
+    @classmethod
+    def setUpTestData(cls):
+        _a4_fixture(cls)        # eunji (Data Analyst) and tquant (Quant Trader)
+        cls.eunji = CandidateProfile.objects.get(user__username="eunji")
+        cls.tquant = CandidateProfile.objects.get(user__username="tquant")
+        for profile in (cls.eunji, cls.tquant):
+            plan = PreparationPlan.objects.create(
+                candidate=profile, title=f"{profile.user.username} plan", focus_role="x",
+                target_date=timezone.localdate() + timezone.timedelta(weeks=4))
+            PlanTask.objects.create(plan=plan, skill=cls.sql, title=f"{profile.user.username} task",
+                                    week_number=1)
+        cls.coach = User.objects.create_user("coach", password="test-only-pw", is_staff=True)
+
+    def _as(self, username):
+        self.client.logout()
+        self.assertTrue(self.client.login(username=username, password="test-only-pw"))
+
+    def test_lists_show_a_student_only_their_own_rows(self):
+        self._as("tquant")
+        for url, own, other in [
+            ("/candidates/", "tquant", "Eunji"),
+            ("/plans/cbv-base/", "tquant plan", "eunji plan"),
+            ("/tasks/", "tquant task", "eunji task"),
+            ("/", "tquant plan", "eunji plan"),
+        ]:
+            with self.subTest(url=url):
+                r = self.client.get(url)
+                self.assertContains(r, own)
+                self.assertNotContains(r, other)
+
+    def test_someone_elses_pages_are_404(self):
+        self._as("tquant")
+        other_plan = self.eunji.plans.get()
+        for url in (self.eunji.get_absolute_url(), other_plan.get_absolute_url(),
+                    other_plan.tasks.get().get_absolute_url()):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.get(self.tquant.get_absolute_url()).status_code, 200)
+
+    def test_search_and_exports_only_reach_yourself(self):
+        self._as("tquant")
+        r = self.client.post(reverse("preparation:candidate_search"), {"term": "Eunji"})
+        self.assertNotContains(r, self.eunji.get_absolute_url())
+        export = self.client.get(reverse("preparation:export_candidates_json")).content.decode()
+        self.assertIn("tquant", export)
+        self.assertNotIn("eunji", export)
+
+    def test_skill_page_hides_other_peoples_scores(self):
+        self._as("tquant")
+        r = self.client.get(self.sql.get_absolute_url())
+        self.assertNotContains(r, "Eunji")
+
+    def test_student_cannot_add_tasks_to_someone_elses_plan(self):
+        self._as("tquant")
+        form = self.client.get(reverse("preparation:task_create")).context["form"]
+        self.assertEqual(list(form.fields["plan"].queryset), [self.tquant.plans.get()])
+
+    def test_coach_sees_the_whole_cohort(self):
+        self._as("coach")
+        r = self.client.get("/candidates/")
+        self.assertContains(r, "Eunji")
+        self.assertContains(r, "tquant")
+        self.assertEqual(self.client.get(self.eunji.get_absolute_url()).status_code, 200)
+        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        self.assertIn("/candidates/", nav)
+
+    def test_anonymous_aggregates_stay_visible_to_students(self):
+        self._as("tquant")
+        self.assertEqual(self.client.get(reverse("preparation:insights")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("preparation:charts")).status_code, 200)

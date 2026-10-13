@@ -933,6 +933,13 @@ back to Remotive, which is. The response says which source answered.
   so readiness reflects what you demonstrate, not what you claim. Every
   attempt is stored (`TaskAttempt`, migration 0004) with before and after
   ratings, and *My plan* lists recent activity.
+- **Privacy: students see only their own data.** `preparation/visibility.py`
+  decides what each account sees. A regular account (a student) sees only
+  their own profile, plans, tasks, scores and exports. Lists show just
+  them, search finds only them, and anyone else's page is a 404. Staff
+  accounts (coaches) see the whole cohort, the Coaching menu and the
+  admin. Anonymous aggregates (Insights, Charts, the public skill summary)
+  stay visible to everyone, because an average identifies nobody.
 - **Product navigation.** The menu is defined once as data in
   `preparation/navigation.py`: grouped dropdowns (Coaching, Skills,
   Insights), the current page highlighted, and Admin shown to staff only.

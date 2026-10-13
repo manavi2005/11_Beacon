@@ -1,6 +1,7 @@
 {% comment %}
 Shared "Continue with Google" control, included by both login.html and
-signup.html so the two pages cannot drift apart.
+signup.html so the two pages cannot drift apart. It sits at the top of the
+card as the quickest way in, with the username form below the divider.
 
 google_oauth_configured comes from the context processor in
 preparation/context_processors.py. Without that guard the button renders on a
@@ -18,8 +19,6 @@ rather than connect to an already signed-in account.
 
 {% if google_oauth_configured %}
   <div class="oauth">
-    <div class="oauth__divider"><span>or</span></div>
-
     <form method="post" action="{% provider_login_url 'google' process='login' %}"
           class="oauth__form">
       {% csrf_token %}
@@ -39,5 +38,7 @@ rather than connect to an already signed-in account.
         Continue with Google
       </button>
     </form>
+    <p class="oauth__hint">{{ google_hint|default:"One click, no new password." }}</p>
+    <div class="oauth__divider"><span>or use a username</span></div>
   </div>
 {% endif %}

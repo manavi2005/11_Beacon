@@ -55,6 +55,7 @@ from . import onboarding as onboarding_rules
 from . import resume as resume_parser
 from . import coach
 from . import practice
+from . import visibility
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -144,7 +145,8 @@ class PlanBoardView(View):
     template_name = "preparation/plan_list.html"
 
     def get(self, request):
-        plans = PreparationPlan.objects.select_related("candidate__user")
+        # Students see their own plans; coaches see everyone's.
+        plans = visibility.plans_for(request.user).select_related("candidate__user")
 
         context = {
             "plans": plans,
@@ -179,7 +181,7 @@ class PlanTaskListView(ListView):
     def get_queryset(self):
         # select_related avoids one extra query per row when the template
         # prints task.plan.title and task.skill.name.
-        return PlanTask.objects.select_related("plan", "skill")
+        return visibility.tasks_for(self.request.user).select_related("plan", "skill")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -202,6 +204,10 @@ class PlanTaskDetailView(DetailView):
     template_name = "preparation/task_detail.html"
     context_object_name = "task"
 
+    def get_queryset(self):
+        # Someone else's task is a 404 for a student.
+        return visibility.tasks_for(self.request.user)
+
 
 # ---------------------------------------------------------------------------
 # Part 4 dashboard (kept so the existing route keeps working)
@@ -214,8 +220,9 @@ def dashboard(request):
     candidate's assessments; prefetching them makes that one query for the
     whole list instead of one per candidate.
     """
+    # A coach sees every candidate's ring; a student sees only their own.
     candidates = (
-        CandidateProfile.objects.select_related("user")
+        visibility.candidates_for(request.user).select_related("user")
         .prefetch_related("assessments")
         .order_by("user__first_name", "user__username")
     )
@@ -243,13 +250,14 @@ def dashboard(request):
         "my_profile": my_profile,
         "skill_count": Skill.objects.count(),
         "candidate_count": len(readiness),
-        "assessment_count": SkillAssessment.objects.count(),
-        "plan_count": PreparationPlan.objects.count(),
-        "task_count": PlanTask.objects.count(),
+        "assessment_count": visibility.assessments_for(request.user).count(),
+        "plan_count": visibility.plans_for(request.user).count(),
+        "task_count": visibility.tasks_for(request.user).count(),
+        "is_coach": visibility.is_coach(request.user),
         "readiness": readiness,
         "gaps": gaps,
         "gap_max": max((g["avg_gap"] for g in gaps), default=0),
-        "plans": PreparationPlan.objects.select_related("candidate__user")[:10],
+        "plans": visibility.plans_for(request.user).select_related("candidate__user")[:10],
     }
     return render(request, "preparation/dashboard.html", context)
 
@@ -278,10 +286,15 @@ class SkillDetailView(DetailView):
 
         # Relationship spanning: reach through SkillAssessment to the
         # candidate and the User behind them, in one query.
-        context["assessments"] = skill.assessments.select_related(
-            "candidate__user"
-        )
-        context["tasks"] = skill.tasks.select_related("plan__candidate__user")
+        # Named rows only for what this user may see; the average below
+        # stays cohort-wide, because an average identifies nobody.
+        user = self.request.user
+        context["assessments"] = visibility.assessments_for(user).filter(
+            skill=skill
+        ).select_related("candidate__user")
+        context["tasks"] = visibility.tasks_for(user).filter(
+            skill=skill
+        ).select_related("plan__candidate__user")
 
         # Aggregation on a single object: how strong is this skill across
         # everyone who has been measured on it?
@@ -302,7 +315,7 @@ class PlanDetailView(DetailView):
     context_object_name = "plan"
 
     def get_queryset(self):
-        return PreparationPlan.objects.select_related("candidate__user")
+        return visibility.plans_for(self.request.user).select_related("candidate__user")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -321,7 +334,7 @@ class CandidateDetailView(DetailView):
     context_object_name = "candidate"
 
     def get_queryset(self):
-        return CandidateProfile.objects.select_related("user")
+        return visibility.candidates_for(self.request.user).select_related("user")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -352,7 +365,7 @@ class CandidateListView(ListView):
 
     def get_queryset(self):
         return (
-            CandidateProfile.objects.select_related("user")
+            visibility.candidates_for(self.request.user).select_related("user")
             .annotate(
                 # distinct=True matters: joining two different related tables
                 # in one query would otherwise multiply the row counts.
@@ -480,8 +493,9 @@ class CandidateSearchView(View):
             # RELATIONSHIP SPANNING: CandidateProfile -> User, via user__.
             # One Q object per field, OR-ed together, so a single box
             # searches name, username, email and target role at once.
+            # A student can only ever find themselves; a coach searches all.
             results = (
-                CandidateProfile.objects.select_related("user")
+                visibility.candidates_for(request.user).select_related("user")
                 .filter(
                     Q(user__first_name__icontains=term)
                     | Q(user__last_name__icontains=term)
@@ -548,8 +562,10 @@ def insights(request):
     ]
 
     # --- GROUPED SUMMARY 2: tasks per plan, with completion ---------------
+    # Per-plan rows name a person, so they follow the visibility rule; the
+    # totals above and the per-skill averages below are anonymous.
     plans = (
-        PreparationPlan.objects.select_related("candidate__user")
+        visibility.plans_for(request.user).select_related("candidate__user")
         .annotate(
             task_total=Count("tasks", distinct=True),
             # A filtered Count: only the tasks whose status is DONE.
@@ -577,7 +593,7 @@ def insights(request):
     # /insights/?role=Data%20Analyst narrows every task to the ones belonging
     # to candidates chasing that role: task -> plan -> candidate -> role.
     role = request.GET.get("role", "").strip()
-    tasks = PlanTask.objects.select_related("plan__candidate__user", "skill")
+    tasks = visibility.tasks_for(request.user).select_related("plan__candidate__user", "skill")
     if role:
         tasks = tasks.filter(plan__candidate__target_role__icontains=role)
 
@@ -692,6 +708,12 @@ class PlanTaskCreateView(CreateView):
     model = PlanTask
     form_class = PlanTaskForm
     template_name = "preparation/task_form.html"
+
+    def get_form(self, form_class=None):
+        # A student may only add tasks to their own plans.
+        form = super().get_form(form_class)
+        form.fields["plan"].queryset = visibility.plans_for(self.request.user)
+        return form
 
 @login_required
 def skill_api(request):
@@ -958,7 +980,7 @@ def export_candidates_csv(request):
     )
     # HttpResponse is a file-like object, so csv writes straight into the
     # response rather than building the whole file in memory first.
-    exports.write_csv(response, exports.candidate_rows())
+    exports.write_csv(response, exports.candidate_rows(visibility.candidates_for(request.user)))
     return response
 
 @login_required
@@ -971,7 +993,7 @@ def export_candidates_json(request):
     six weeks later: without them it is a bare array with no way to tell when
     it was taken or whether it is complete.
     """
-    rows = exports.candidate_rows()
+    rows = exports.candidate_rows(visibility.candidates_for(request.user))
     payload = {
         "generated_at": timezone.localtime().isoformat(),
         "record_count": len(rows),
@@ -998,12 +1020,12 @@ def reports_page(request):
     candidate rows that back the exports are listed underneath, so what you
     see is what you download.
     """
-    rows = exports.candidate_rows()
+    rows = exports.candidate_rows(visibility.candidates_for(request.user))
     context = {
         "totals": exports.report_totals(),
         "by_experience": exports.candidates_by_experience(),
         "by_role": exports.candidates_by_role(),
-        "by_plan": exports.tasks_by_plan(),
+        "by_plan": exports.tasks_by_plan(visibility.plans_for(request.user)),
         "headers": [label for _, label in exports.EXPORT_COLUMNS],
         # Cells are aligned to EXPORT_COLUMNS here rather than looked up by
         # key in the template: Django has no dict-lookup-by-variable filter,
@@ -1194,7 +1216,7 @@ def api_palette(request):
             "group": "Candidate",
             "hint": c.target_role,
         }
-        for c in CandidateProfile.objects.select_related("user").order_by("user__first_name")
+        for c in visibility.candidates_for(request.user).select_related("user").order_by("user__first_name")
     ]
     items += [
         {"label": s.name, "url": s.get_absolute_url(), "group": "Skill",
@@ -1203,7 +1225,7 @@ def api_palette(request):
     ]
     items += [
         {"label": p.title, "url": p.get_absolute_url(), "group": "Plan", "hint": p.focus_role}
-        for p in PreparationPlan.objects.order_by("title")
+        for p in visibility.plans_for(request.user).order_by("title")
     ]
     return JsonResponse({"items": items})
 

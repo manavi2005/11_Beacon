@@ -9,7 +9,8 @@ menu is this list, rendered by one loop in base.html:
     ever written by hand and a renamed route fails loudly, not silently;
   * groups become dropdown menus;
   * the entry for the current page, and its group, are marked active;
-  * "staff_only" entries only appear for staff accounts.
+  * "staff_only" entries (and groups) only appear for coaches (staff), and
+    "student_only" groups only for everyone else - see visibility.py.
 
 To add a page to the menu, add a line here. Nothing else changes.
 """
@@ -19,7 +20,9 @@ from django.urls import NoReverseMatch, reverse
 NAV = [
     {"label": "My plan", "name": "preparation:my_plan"},
     {"label": "Dashboard", "name": "preparation:dashboard"},
-    {"label": "Coaching", "children": [
+    # Coaching is the cohort view: everyone's profiles and search. Students
+    # see their own plan, tasks and profile through My plan instead.
+    {"label": "Coaching", "staff_only": True, "children": [
         {"label": "Candidates", "name": "preparation:candidate_list",
          "hint": "Everyone, with scores"},
         {"label": "Find a candidate", "name": "preparation:candidate_search",
@@ -30,6 +33,14 @@ NAV = [
          "hint": "Every task, week by week"},
         {"label": "New task", "name": "preparation:task_create",
          "hint": "Add a task to a plan"},
+    ]},
+    {"label": "My work", "student_only": True, "children": [
+        {"label": "My tasks", "name": "preparation:task_list",
+         "hint": "Every task in your plan"},
+        {"label": "My plans", "name": "preparation:plan_board",
+         "hint": "Current and past plans"},
+        {"label": "Retake the diagnosis", "name": "preparation:onboarding",
+         "hint": "Rebuild your plan"},
     ]},
     {"label": "Skills", "children": [
         {"label": "Skill catalog", "name": "preparation:skill_catalog_render",
@@ -95,6 +106,10 @@ def build(request):
 
     items = []
     for item in NAV:
+        if item.get("staff_only") and not user.is_staff:
+            continue
+        if item.get("student_only") and user.is_staff:
+            continue
         if "children" in item:
             children = [c for c in (_entry(ch, current, user) for ch in item["children"]) if c]
             if children:

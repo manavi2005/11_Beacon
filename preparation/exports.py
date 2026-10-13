@@ -51,7 +51,7 @@ EXPORT_COLUMNS = [
 ]
 
 
-def export_queryset():
+def export_queryset(candidates=None):
     """Candidates with their counts, ordered, in one query.
 
     select_related pulls the User in the same query instead of one per row.
@@ -62,8 +62,11 @@ def export_queryset():
     distinct=True matters: counting across two different related tables in
     one query multiplies the rows, and the inflated numbers look plausible.
     """
+    # candidates: an already-scoped queryset (visibility.candidates_for), so
+    # a student's export holds only their own row. None = everyone.
+    base = CandidateProfile.objects.all() if candidates is None else candidates
     return (
-        CandidateProfile.objects.select_related("user")
+        base.select_related("user")
         .annotate(
             skills_assessed=Count("assessments", distinct=True),
             average_proficiency=Avg("assessments__proficiency_score"),
@@ -79,7 +82,7 @@ def export_queryset():
     )
 
 
-def candidate_rows():
+def candidate_rows(candidates=None):
     """One flat dict per candidate, in EXPORT_COLUMNS order.
 
     Flat on purpose: a CSV cell cannot hold a nested object, so building the
@@ -90,7 +93,7 @@ def candidate_rows():
     expects for "no value" and is not the same as the string "None".
     """
     rows = []
-    for candidate in export_queryset():
+    for candidate in export_queryset(candidates):
         user = candidate.user
         average = candidate.average_proficiency
         rows.append(
@@ -222,15 +225,16 @@ def candidates_by_role():
     ]
 
 
-def tasks_by_plan():
+def tasks_by_plan(plans=None):
     """Grouped summary 3: tasks per plan, done against all.
 
     This is the assignment's "enrollments per section, active vs all" shape:
     a count and a filtered count of the same relation, side by side.
     """
     rows = []
+    base = PreparationPlan.objects.all() if plans is None else plans
     for plan in (
-        PreparationPlan.objects.select_related("candidate__user")
+        base.select_related("candidate__user")
         .annotate(
             tasks_total=Count("tasks", distinct=True),
             tasks_done=Count(

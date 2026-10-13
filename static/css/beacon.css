@@ -666,7 +666,8 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
    "Continue with Google". It deliberately does not use .btn, which is navy:
    the mark is only licensed on their approved backgrounds.
    --------------------------------------------------------------------------- */
-.oauth { margin: var(--s5) 0 var(--s4); }
+.oauth { margin: 0 0 var(--s4); }
+.oauth__hint { margin: var(--s2) 0 0; font-size: .78rem; color: var(--ink-muted); text-align: center; }
 
 /* A rule with the word "or" sitting in the gap, so the two ways of signing
    in read as alternatives rather than as two steps. */
@@ -674,7 +675,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   display: flex;
   align-items: center;
   gap: var(--s3);
-  margin-bottom: var(--s4);
+  margin: var(--s4) 0 0;
   color: var(--ink-faint);
   font-size: .8rem;
   text-transform: uppercase;
@@ -704,13 +705,14 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   justify-content: center;
   gap: var(--s2);
   width: 100%;
-  padding: var(--s2) var(--s4);
-  min-height: 42px;
+  padding: var(--s3) var(--s4);
+  min-height: 50px;
 
   font-family: inherit;
-  font-size: .92rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #3c4043;
+  box-shadow: 0 2px 6px rgba(60, 64, 67, .12);
 
   background: #fff;
   border: 1px solid #dadce0;
@@ -731,7 +733,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   outline-offset: 2px;
 }
 
-.oauth__icon { width: 18px; height: 18px; flex: 0 0 auto; }
+.oauth__icon { width: 20px; height: 20px; flex: 0 0 auto; }
 
 /* ===========================================================================
    ASSIGNMENT 5 POLISH

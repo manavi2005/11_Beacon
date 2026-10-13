@@ -15,9 +15,15 @@
   <section class="hero-strip">
     <div>
       <p class="hero-strip__eyebrow">{{ greeting }}, {{ user.first_name|default:user.username }}</p>
-      <h1 class="page-title hero-strip__title">Here is where your cohort stands.</h1>
-      <p class="hero-strip__lede">Readiness is measured against what each candidate's target role
-        requires. The widest gaps are where the next week of preparation should go.</p>
+      {% if is_coach %}
+        <h1 class="page-title hero-strip__title">Here is where your cohort stands.</h1>
+        <p class="hero-strip__lede">Readiness is measured against what each candidate's target role
+          requires. The widest gaps are where the next week of preparation should go.</p>
+      {% else %}
+        <h1 class="page-title hero-strip__title">Here is where you stand.</h1>
+        <p class="hero-strip__lede">Your readiness against your target role, and the skills where
+          Beacon's students are furthest behind on average. Only you can see your progress.</p>
+      {% endif %}
     </div>
     <div class="hero-strip__actions">
       {% if my_profile %}
@@ -38,21 +44,23 @@
 
 {% block content %}
   <ul class="stats stats--hero">
-    <li class="stat"><span class="stat__value" data-count="{{ candidate_count }}">{{ candidate_count }}</span>
-        <span class="stat__label">Candidates</span></li>
+    {% if is_coach %}
+      <li class="stat"><span class="stat__value" data-count="{{ candidate_count }}">{{ candidate_count }}</span>
+          <span class="stat__label">Candidates</span></li>
+    {% endif %}
     <li class="stat"><span class="stat__value" data-count="{{ skill_count }}">{{ skill_count }}</span>
         <span class="stat__label">Skills tracked</span></li>
     <li class="stat"><span class="stat__value" data-count="{{ assessment_count }}">{{ assessment_count }}</span>
-        <span class="stat__label">Assessments</span></li>
+        <span class="stat__label">{% if is_coach %}Assessments{% else %}Skills assessed{% endif %}</span></li>
     <li class="stat"><span class="stat__value" data-count="{{ plan_count }}">{{ plan_count }}</span>
-        <span class="stat__label">Plans</span></li>
+        <span class="stat__label">{% if is_coach %}Plans{% else %}My plans{% endif %}</span></li>
     <li class="stat"><span class="stat__value" data-count="{{ task_count }}">{{ task_count }}</span>
-        <span class="stat__label">Tasks</span></li>
+        <span class="stat__label">{% if is_coach %}Tasks{% else %}My tasks{% endif %}</span></li>
   </ul>
 
   <div class="dash-grid">
     <section class="panel">
-      <h2 class="panel__title">Interview readiness</h2>
+      <h2 class="panel__title">{% if is_coach %}Interview readiness{% else %}Your readiness{% endif %}</h2>
       <p class="panel__lede">Average proficiency as a share of what the target role requires.</p>
       <ul class="rings">
         {% for row in readiness %}
@@ -75,8 +83,8 @@
     </section>
 
     <section class="panel">
-      <h2 class="panel__title">Widest skill gaps</h2>
-      <p class="panel__lede">Points below the required level, averaged over everyone assessed.</p>
+      <h2 class="panel__title">Widest skill gaps{% if not is_coach %} across Beacon{% endif %}</h2>
+      <p class="panel__lede">Points below the required level, averaged over everyone assessed. Anonymous.</p>
       <ol class="gapbars">
         {% for gap in gaps %}
           <li class="gapbar">

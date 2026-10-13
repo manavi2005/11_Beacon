@@ -12,13 +12,14 @@
     <h1 class="auth-card__title">Create an account</h1>
     <p class="auth-card__lede">Free, and it takes under a minute.</p>
 
+    {% include "registration/_google_button.html" with google_hint="Your account is created on first sign-in. No password to remember." %}
+
     <form method="post" class="auth-card__form">
       {% csrf_token %}
       {% include "registration/_auth_fields.html" %}
       <button type="submit" class="auth-card__submit">Sign Up</button>
     </form>
 
-    {% include "registration/_google_button.html" %}
 
     <p class="auth-card__switch">Already registered? <a href="{% url 'preparation:login' %}">Log in</a></p>
   </section>
