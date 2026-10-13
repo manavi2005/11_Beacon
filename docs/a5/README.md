@@ -120,8 +120,7 @@ recognises as a LinkedIn export). The upload is read in memory and never
 stored. A sample resume is built in for demos (*Use the sample resume*).
 Tests: `FlexibleGoalsTests`, `ResumeImportTests`.
 
-On the login page the lighthouse beam follows the mouse. The video script
-(`video/script.md`) is built around this journey.
+On the login page the lighthouse beam follows the mouse.
 
 ## Submission checklist
 
@@ -129,4 +128,4 @@ On the login page the lighthouse beam follows the mouse. The video script
 2. GitHub URL: `https://github.com/manavi2005/11_Beacon`
 3. Vega-Lite script: `docs/a5/group-11-vega-lite-API-demo.txt`
 4. Vega-Lite editor screenshot: `docs/screenshots/a5-part3-vega-lite-editor.png`
-5. Demo video: see [`video/`](video/)
+5. Demo video: submitted separately (the recording materials are kept outside the repository).
