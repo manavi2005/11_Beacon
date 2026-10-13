@@ -3,11 +3,11 @@
 Spreadsheets read CSV from a URL directly, so the public API also answers
 ?format=csv with the same rows as the JSON:
 
-    https://simonhwang1998.pythonanywhere.com/api/skills/summary/?format=csv
+    https://manavi2005.pythonanywhere.com/api/skills/summary/?format=csv
 
 Google Sheets - paste into cell A1 of an empty sheet:
 
-    =IMPORTDATA("https://simonhwang1998.pythonanywhere.com/api/skills/summary/?format=csv")
+    =IMPORTDATA("https://manavi2005.pythonanywhere.com/api/skills/summary/?format=csv")
 
   then, in an empty column, the per-category average gap:
 
@@ -36,7 +36,7 @@ from collections import defaultdict
 
 import requests
 
-DEFAULT_API = "https://simonhwang1998.pythonanywhere.com/api/skills/summary/"
+DEFAULT_API = "https://manavi2005.pythonanywhere.com/api/skills/summary/"
 EXPECTED_HEADER = [
     "skill", "category", "learners", "avg_proficiency", "avg_required", "avg_gap", "tasks",
 ]

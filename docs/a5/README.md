@@ -1,7 +1,7 @@
 # Assignment 5: Authentication, a public API, and its uses
 
-Production site: <https://simonhwang1998.pythonanywhere.com/>
-Public API: <https://simonhwang1998.pythonanywhere.com/api/skills/summary/>
+Production site: <https://manavi2005.pythonanywhere.com/> (also deployed at <https://simonhwang1998.pythonanywhere.com/>)
+Public API: <https://manavi2005.pythonanywhere.com/api/skills/summary/>
 
 ## Part 1: Internal authentication
 
@@ -20,6 +20,7 @@ the database. The same Google client has both redirect URIs registered:
 ```
 http://127.0.0.1:8000/accounts/google/login/callback/
 https://simonhwang1998.pythonanywhere.com/accounts/google/login/callback/
+https://manavi2005.pythonanywhere.com/accounts/google/login/callback/
 ```
 
 "Continue with Google" appears on both the login and signup pages
@@ -49,7 +50,7 @@ spreadsheets (see use 2 below).
 ### 3.2 and 3.3: Vega-Lite
 
 [`group-11-vega-lite-API-demo.txt`](group-11-vega-lite-API-demo.txt) is the
-full spec. Its data is `{"url": "https://simonhwang1998.pythonanywhere.com/api/skills/summary/"}`
+full spec. Its data is `{"url": "https://manavi2005.pythonanywhere.com/api/skills/summary/"}`
 with no inline values. It draws a grouped bar chart of current proficiency
 against the required level for every assessed skill, sorted by the widest gap.
 The spec's field names (`skill`, `category`, `learners`, `avg_proficiency`,
@@ -71,7 +72,7 @@ want: "Technical is the weakest area, start with SQL", not a table of skills.
 Output: [`alt_uses/use1_output.txt`](alt_uses/use1_output.txt).
 
 **Use 2: importing into Google Sheets or Excel.**
-`=IMPORTDATA("https://simonhwang1998.pythonanywhere.com/api/skills/summary/?format=csv")`
+`=IMPORTDATA("https://manavi2005.pythonanywhere.com/api/skills/summary/?format=csv")`
 puts the live data in a sheet, and a `QUERY` formula averages the gap per
 category for a chart. The sheet refreshes from the API on its own, so nobody
 has to re-export anything.
@@ -124,7 +125,7 @@ On the login page the lighthouse beam follows the mouse.
 
 ## Submission checklist
 
-1. Public API production URL: `https://simonhwang1998.pythonanywhere.com/api/skills/summary/`
+1. Public API production URL: `https://manavi2005.pythonanywhere.com/api/skills/summary/`
 2. GitHub URL: `https://github.com/manavi2005/11_Beacon`
 3. Vega-Lite script: `docs/a5/group-11-vega-lite-API-demo.txt`
 4. Vega-Lite editor screenshot: `docs/screenshots/a5-part3-vega-lite-editor.png`

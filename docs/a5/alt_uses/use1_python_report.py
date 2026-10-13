@@ -4,7 +4,7 @@ category-level coaching report.
     python use1_python_report.py
     python use1_python_report.py --api http://127.0.0.1:8000/api/skills/summary/
 
-API accessed:  GET https://simonhwang1998.pythonanywhere.com/api/skills/summary/
+API accessed:  GET https://manavi2005.pythonanywhere.com/api/skills/summary/
                (public, no login, JSON array, one row per skill)
 Data used:     category, learners, avg_proficiency, avg_required, avg_gap
 Result:        per-category totals and averages the API does not provide
@@ -21,7 +21,7 @@ from collections import defaultdict
 
 import requests
 
-DEFAULT_API = "https://simonhwang1998.pythonanywhere.com/api/skills/summary/"
+DEFAULT_API = "https://manavi2005.pythonanywhere.com/api/skills/summary/"
 
 
 def fetch(api_url):

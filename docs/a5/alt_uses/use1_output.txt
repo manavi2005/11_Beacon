@@ -1,12 +1,12 @@
-API: https://simonhwang1998.pythonanywhere.com/api/skills/summary/
-Fetched 12 skills, 10 with at least one assessment.
+API: https://manavi2005.pythonanywhere.com/api/skills/summary/
+Fetched 12 skills, 12 with at least one assessment.
 
 Category           Skills  Assessed  Avg prof.  Avg gap   Focus first
 ------------------------------------------------------------------------------------
-Technical               4         7       43.6     27.9   SQL & relational modeling (gap 36.0)
-Behavioral              2         5       54.8     18.2   Handling failure questions (gap 24.5)
-Domain knowledge        2         8       55.9     16.1   Product sense (gap 17.6)
-Communication           2         4       56.2     10.0   Whiteboard communication (gap 13.5)
+Technical               5        12       26.2     48.4   Python fundamentals (gap 80.0)
+Behavioral              3         8       34.2     36.4   STAR-format storytelling (gap 70.0)
+Communication           2         6       37.5     30.0   Whiteboard communication (gap 34.0)
+Domain knowledge        2        10       44.7     27.8   Financial markets basics (gap 28.6)
 
-Across all 24 assessments, candidates sit 18.9 points below what their target roles require.
-Single biggest gap: SQL & relational modeling (36.0 points).
+Across all 36 assessments, candidates sit 36.9 points below what their target roles require.
+Single biggest gap: Python fundamentals (80.0 points).
