@@ -1,0 +1,19 @@
+# Deployment requirements, for a small host such as PythonAnywhere's free tier.
+#
+# This is requirements.txt without torch, transformers and accelerate. Those
+# three come to about 2.5 GB installed, before any model weights, against a
+# 512 MB quota.
+#
+# What is lost: the local screening stage in preparation/local_llm.py. The
+# site notices and skips it. The hosted coach in preparation/coach.py still
+# writes the feedback, which is what the deployed site has always used, and
+# production.py leaves LOCAL_LLM_ENABLED off for the same reason.
+#
+#   pip install -r requirements-production.txt
+Django==5.2.17
+django-allauth[socialaccount]==65.19.7
+matplotlib==3.11.2
+pypdf==6.20.1
+python-dotenv==1.2.4
+requests==2.34.2
+vl-convert-python==1.9.0.post1

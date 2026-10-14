@@ -31,6 +31,14 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 X_FRAME_OPTIONS = "DENY"
 
+# The local transformers model stays off here. Its weights alone are several
+# times PythonAnywhere's 512 MB quota, and a free-tier worker has neither the
+# memory nor the CPU seconds to run a 1.5B model per request. The hosted coach
+# in preparation/coach.py serves the deployed site; screening is skipped and
+# written answers go straight to it. Set LOCAL_LLM_ENABLED=true on a server
+# that can actually hold the model.
+LOCAL_LLM_ENABLED = os.environ.get("LOCAL_LLM_ENABLED", "false").lower() not in ("0", "false", "no", "off")
+
 # LOGIN_URL, LOGIN_REDIRECT_URL and LOGOUT_REDIRECT_URL moved to base.py, so
 # development gets them too. Defined only here, development fell back to
 # Django's default LOGIN_REDIRECT_URL of "/accounts/profile/", which this

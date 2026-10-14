@@ -53,6 +53,7 @@ from .forms import OnboardingForm, PlanTaskForm
 from . import onboarding as onboarding_rules
 from . import resume as resume_parser
 from . import coach
+from . import local_llm
 from . import practice
 from . import visibility
 
@@ -1425,6 +1426,68 @@ def coach_ask(request):
     except (ValueError, AttributeError):
         question = request.POST.get("question", "")
     return JsonResponse(coach.ask(profile, question))
+
+
+# ---------------------------------------------------------------------------
+# ASSIGNMENT 6, PART 2.2 - THE LOCAL MODEL IN A VIEW
+#
+# preparation/local_llm.py holds the weights in this process through the
+# transformers library. These two endpoints are the only places it is reached
+# directly; the grading pipeline in preparation/practice.py uses it on every
+# written submission as the first stage of the hybrid.
+# ---------------------------------------------------------------------------
+@api_login_required
+def local_model_status(request):
+    """/api/local-model/ - is the local model on, and has it loaded yet?
+
+    Safe to call before the weights exist: it reports configuration, and
+    never triggers a download. Checking a deployment this way beats reading
+    settings over somebody's shoulder.
+    """
+    data = local_llm.status()
+    data["label"] = local_llm.engine_label()
+    return JsonResponse(data)
+
+
+@login_required
+@require_POST
+def task_screen(request, pk):
+    """/me/tasks/<pk>/screen/ - run the local model over a draft answer.
+
+    POST {"answer": "..."}; JSON in, JSON out. The same screening the grader
+    runs on submit, exposed on its own so a draft can be checked before it
+    counts as an attempt, and so the local model can be exercised without
+    recording anything.
+
+    Owner-only: the task lookup is filtered by the signed-in user, so
+    somebody else's task is a 404 rather than a 403 that confirms it exists.
+    """
+    task = get_object_or_404(
+        PlanTask.objects.select_related("skill"),
+        pk=pk, plan__candidate__user=request.user,
+    )
+    if not local_llm.enabled():
+        return JsonResponse(
+            {"error": "The local model is switched off on this server.",
+             "status": local_llm.status()},
+            status=503,
+        )
+    try:
+        answer = json.loads(request.body or b"{}").get("answer", "")
+    except (ValueError, AttributeError):
+        answer = request.POST.get("answer", "")
+    answer = (answer or "").strip()
+    if not answer:
+        return JsonResponse({"error": "Write something first."}, status=400)
+
+    try:
+        verdict = local_llm.screen(answer, task.skill.name if task.skill else "", task.title)
+    except local_llm.LocalModelError as exc:
+        # 503, not 500: the feature is unavailable on this machine, the
+        # request was not malformed. Submitting still works, because the
+        # grader falls back without the screen.
+        return JsonResponse({"error": str(exc), "status": local_llm.status()}, status=503)
+    return JsonResponse(verdict)
 
 
 @login_required

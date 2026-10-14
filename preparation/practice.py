@@ -24,7 +24,7 @@ import re
 from django.db import transaction
 from django.utils import timezone
 
-from . import coach
+from . import coach, local_llm
 from .market import _pattern_for
 from .models import PlanTask, SkillAssessment, TaskAttempt
 
@@ -243,17 +243,68 @@ def _ai_grade_written(task, text):
     }
 
 
+def _screen(task, text):
+    """Ask the local model whether this answer is worth grading at all.
+
+    Returns its verdict, or None when the local model is off, missing or
+    unable to answer. Never raises: screening is an optimisation, and a
+    machine without the weights has to grade exactly as it did before.
+    """
+    if not local_llm.enabled():
+        return None
+    try:
+        return local_llm.screen(text, task.skill.name if task.skill else "", task.title)
+    except local_llm.LocalModelError:
+        return None
+
+
 def grade_written(task, text):
-    """(score, feedback, graded_by). AI first, rules if it cannot answer."""
+    """(score, feedback, graded_by). Three engines, in order of cost.
+
+    1. The local transformers model screens the answer. Off topic or empty of
+       content, and we stop here: the hosted model has nothing to work with,
+       so spending a network call on it buys nothing.
+    2. The hosted coach writes the real feedback.
+    3. Beacon's rules, when the hosted model is off, busy or returns junk.
+       If the local model did manage to score the answer, its number is used
+       in place of the rules score, which only counts words and keywords.
+    """
+    screening = _screen(task, text)
+
+    if screening and not (screening["on_topic"] and screening["substantive"]):
+        score, feedback = _rules_grade_written(task, text)
+        reason = ("does not discuss the skill being practised"
+                  if not screening["on_topic"] else "is too thin to grade")
+        feedback["note"] = (
+            f"Screened on this machine by {screening['model']} in "
+            f"{screening['seconds']}s: the answer {reason}, so it was not sent "
+            "to the coach. Rewrite it and submit again."
+        )
+        return min(score, screening["score"]), feedback, TaskAttempt.GradedBy.LOCAL
+
     if coach.llm_enabled():
         try:
             score, feedback = _ai_grade_written(task, text)
+            if screening:
+                feedback["screened_by"] = screening["model"]
             return score, feedback, TaskAttempt.GradedBy.AI
         except (coach.CoachError, ValueError, TypeError) as exc:
             score, feedback = _rules_grade_written(task, text)
+            if screening:
+                feedback["note"] = (
+                    f"{exc} Scored on this machine by {screening['model']} instead."
+                )
+                return screening["score"], feedback, TaskAttempt.GradedBy.LOCAL
             feedback["note"] = f"{exc} Scored by Beacon's rules instead."
             return score, feedback, TaskAttempt.GradedBy.RULES
+
     score, feedback = _rules_grade_written(task, text)
+    if screening:
+        feedback["note"] = (
+            f"The hosted coach is switched off. Scored on this machine by "
+            f"{screening['model']} in {screening['seconds']}s."
+        )
+        return screening["score"], feedback, TaskAttempt.GradedBy.LOCAL
     return score, feedback, TaskAttempt.GradedBy.RULES
 
 

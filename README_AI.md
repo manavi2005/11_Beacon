@@ -4,13 +4,17 @@ How Beacon gets data from a user to a language model and back safely. The model
 choice is backed by the 15-model lab in
 [`llm-test/ai_prototype.ipynb`](llm-test/ai_prototype.ipynb).
 
-Beacon uses text AI for three jobs:
+Beacon uses text AI for four jobs, across two engines: a hosted chat API
+reached over HTTP, and a Hugging Face model whose weights this process loads
+itself with `transformers`.
+
 
 | Job | Where it appears | Code |
 |---|---|---|
 | **Coach advice:** this week's focus, three actions and a practice question, plus a question box | *My plan* | `preparation/coach.py` |
 | **Grading written practice:** a STAR story, a pitch, or an explanation of what was read | Task workspace, `/me/tasks/<id>/` | `preparation/practice.py` |
 | **Reading a resume:** skill evidence to pre-fill onboarding | Onboarding step 1 | `preparation/resume.py` |
+| **Screening written practice before grading:** on topic, substantive, provisional score | Task workspace, on submit and on `POST /me/tasks/<id>/screen/` | `preparation/local_llm.py` (local weights) |
 
 ```
  user input ──► Django view ──► validate & preprocess ──► prompt builder ──► LLM
@@ -107,9 +111,83 @@ free and instant, and they never touch an LLM.
 | Output injecting HTML or script | Model text is rendered with `textContent`. Chat answers are HTML-escaped first and given only bold, italic and list formatting. |
 | A grade being wrong | One attempt moves a skill rating only 40% of the way toward the score, so a single bad grade cannot swing readiness. Every attempt is stored with its before-and-after rating. |
 
-### Configuration
+## 4. The local model
+
+`preparation/local_llm.py` holds a Hugging Face model in this process through
+the `transformers` library. The weights download themselves into the Hugging
+Face cache the first time an answer is screened, so a fresh checkout needs
+nothing beyond `pip install -r requirements.txt`.
+
+**What it does.** It screens a written practice answer before the hosted model
+is asked to write feedback on it: the hybrid shape the assignment describes,
+where the local model filters and the API generates. It returns three fields,
+`on_topic`, `substantive` and a provisional `score`. An answer that is off
+topic or has no real content stops there and never costs an API call, which is
+exactly the input the hosted model would have had nothing to work with on. An
+injection attempt is caught before it reaches the larger model.
+
+**Which model, and why.** `Qwen/Qwen2.5-1.5B-Instruct`, the budget
+recommendation from the lab in `llm-test/ai_prototype.ipynb`. It returned
+valid JSON on every matrix task and placed a weak answer correctly where
+several larger models did not, at about a third of the memory of the 4B tier.
+Screening is a narrow classification job, so the lab's quality-first pick
+would buy accuracy this task does not need. `LOCAL_LLM_MODEL` swaps it for any
+other model from the lab without a code change.
+
+**Prompting.** Few-shot with three graded demonstrations, which is what the
+lab's Route A comparison found for this size of model: examples did not fix
+output format, because format was already reliable at zero-shot. What they
+fixed was judgement, taking the smaller models from 50% to 83% correct at no
+extra latency.
+
+**Measured on an M4 Pro, model already cached:** about 5 seconds for the first
+call including the load, then 0.7 to 1.4 seconds per screen. Generation is
+deterministic (`do_sample=False`), so resubmitting the same text cannot move a
+rating for no reason.
+
+**Loading.** Never at import. A module-level import of `transformers` would
+make every management command and the whole test suite pay for torch, so the
+pipeline is built on first real use, behind a lock because the development
+server is threaded, and reused for the life of the process. A load failure is
+remembered rather than retried, so a machine without the weights does not
+restart a slow download on every request.
+
+**What happens when it is not there.** Nothing breaks. `LOCAL_LLM_ENABLED` is
+off in production and in CI, a missing or unloadable model is caught and
+treated as "no screening", and grading carries on through the hosted coach
+exactly as it did before this existed. `manage.py test` forces it off, so no
+test run can start a multi-gigabyte download by accident.
+
+**Honest limitation.** The screener is lenient on thin answers. Asked to judge
+"I worked on a group project once and there were some problems but we fixed
+them", it answered `substantive: true` with a score of 73. That is the same
+leniency the lab measured in task T3 for models of this size, and it is why
+the provisional score is only ever used as a fallback and never to overrule
+the hosted model's grade. The failure direction is the safe one: a thin answer
+passes the screen and is then graded properly by the larger model, rather than
+being wrongly rejected.
+
+## 5. Configuration
 
 The model and provider are set only in `.env` (`LLM_BASE_URL`, `LLM_MODEL`,
 `LLM_API_KEY`), which is git-ignored, so no key is ever in the repository.
 `LLM_ENABLED=false` switches every AI call to the rule-based fallback. The
 test suite and CI run that way, so they never call a real model.
+
+The local model is configured the same way and needs no key, because there is
+no account behind it: `LOCAL_LLM_ENABLED` to switch it off, `LOCAL_LLM_MODEL`
+to point it at a different Hugging Face model, `LOCAL_LLM_DEVICE` to pin it to
+`cuda`, `mps` or `cpu` on a machine where the default choice is wrong.
+
+`GET /api/local-model/` reports whether it is on, which model is configured
+and whether the weights have loaded yet, without triggering a download. It is
+the quickest way to tell a misconfigured deployment from a slow one.
+
+Two requirements files, because `torch` and `transformers` come to about
+2.5 GB installed before any weights, and PythonAnywhere's free tier allows
+512 MB in total:
+
+| File | For | Contains |
+|---|---|---|
+| `requirements.txt` | Local development, and the grader's machine | Everything, including `torch`, `transformers` and `accelerate` |
+| `requirements-production.txt` | A small host such as PythonAnywhere | The same list without those three |
