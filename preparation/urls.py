@@ -101,6 +101,7 @@ urlpatterns = [
     # page, because a JSON client cannot do anything useful with a redirect
     # to markup.
     path("api/whoami/", views.api_whoami, name="api_whoami"),
+    path("api/local-model/", views.local_model_status, name="local_model_status"),
     # Command palette entries (Ctrl/Cmd+K). Protected: it lists candidates.
     path("api/palette/", views.api_palette, name="api_palette"),
     # Start-from-scratch journey: onboarding, your plan, doing tasks.
@@ -111,4 +112,5 @@ urlpatterns = [
     path("me/coach/", views.coach_advice, name="coach_advice"),
     path("me/coach/ask/", views.coach_ask, name="coach_ask"),
     path("me/tasks/<int:pk>/", views.task_workspace, name="task_workspace"),
+    path("me/tasks/<int:pk>/screen/", views.task_screen, name="task_screen"),
 ]

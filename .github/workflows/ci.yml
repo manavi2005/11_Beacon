@@ -22,6 +22,7 @@ jobs:
       MPLBACKEND: Agg
       # Never call a real LLM from CI; the coach tests mock it.
       LLM_ENABLED: "false"
+      LOCAL_LLM_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v4

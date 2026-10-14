@@ -11,6 +11,7 @@ You never run base.py directly; you run one of the two children, which do
 """
 
 import os
+import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -29,11 +30,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 def load_env(env_path: Path) -> None:
     """Load KEY=VALUE pairs from a .env file into os.environ.
 
-    Written with the standard library only, so the project runs with nothing
-    installed except Django. A production project would use python-dotenv or
-    django-environ instead.
+    python-dotenv when it is installed, which is the normal case and what
+    requirements.txt asks for. The stdlib fallback below keeps the project
+    runnable with nothing but Django present, which is how it started and
+    still how a teammate who has only pip-installed Django will see it.
+
+    Neither path overwrites a variable that is already set, so a real
+    environment variable always beats the file.
     """
     if not env_path.exists():
+        return
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        pass
+    else:
+        load_dotenv(env_path, override=False)
         return
     for raw_line in env_path.read_text().splitlines():
         line = raw_line.strip()
@@ -232,6 +244,41 @@ LLM_KEYLESS_BASE_URL = os.environ.get("LLM_KEYLESS_BASE_URL", "https://text.poll
 LLM_KEYLESS_MODEL = os.environ.get("LLM_KEYLESS_MODEL", "openai")          # = gpt-oss-20b
 LLM_KEYLESS_LABEL = os.environ.get("LLM_KEYLESS_LABEL", "gpt-oss-20b")
 LLM_KEYLESS_PROVIDER = os.environ.get("LLM_KEYLESS_PROVIDER", "Pollinations (free, no key)")
+
+# ---------------------------------------------------------------------------
+# Local model (preparation/local_llm.py)
+# ---------------------------------------------------------------------------
+# The other half of the AI work: weights held in this process by the
+# transformers library instead of a request to somebody's API. It screens a
+# written practice answer before the hosted model is asked to write feedback
+# on it.
+#
+# transformers downloads the weights into the Hugging Face cache on first use,
+# so a fresh checkout needs no setup beyond `pip install -r requirements.txt`.
+# The first screened answer pays for the download, roughly 3 GB for the
+# default model; every one after that is local and free.
+#
+# The model is the lab's budget recommendation from
+# llm-test/ai_prototype.ipynb, where it returned valid JSON on every matrix
+# task at about 0.7 seconds per reply. Override with LOCAL_LLM_MODEL to try
+# another one from the lab without touching code.
+#
+# Off by default in production: torch and the weights are several GB, far
+# beyond PythonAnywhere's 512 MB quota. With it off the hosted coach still
+# answers and nothing on the site changes except the screening stage.
+LOCAL_LLM_ENABLED = os.environ.get("LOCAL_LLM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
+LOCAL_LLM_MODEL = os.environ.get("LOCAL_LLM_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+# Empty lets transformers choose. Set to "cuda", "mps" or "cpu" to pin it.
+LOCAL_LLM_DEVICE = os.environ.get("LOCAL_LLM_DEVICE", "")
+
+# Running the tests never loads real weights. Without this, `manage.py test`
+# on a machine that has transformers installed would download several GB the
+# first time somebody submitted a written answer in a test, which is a
+# surprising thing for a test run to do and slow enough to look like a hang.
+# The local-model tests switch it back on themselves and supply a fake
+# pipeline, so the guard costs no coverage.
+if "test" in sys.argv:
+    LOCAL_LLM_ENABLED = False
 
 # A first-time Google sign-in creates an account with no profile, exactly
 # like the signup form. Send it to onboarding too, instead of the cohort

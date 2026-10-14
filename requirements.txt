@@ -1,6 +1,21 @@
 Django==5.2.17
 django-allauth[socialaccount]==65.19.7
 matplotlib==3.11.2
+pypdf==6.20.1
+python-dotenv==1.2.4
 requests==2.34.2
 vl-convert-python==1.9.0.post1
-pypdf==6.20.1
+
+# Assignment 6, Part 2.2: the local Hugging Face model in preparation/local_llm.py.
+# transformers fetches the weights on first use, so a fresh checkout needs no
+# extra setup. Left unpinned on purpose: torch publishes a different wheel per
+# platform and accelerator, and pinning one build here would make the project
+# refuse to install on half the machines that try it.
+#
+# These three are the heavy ones, roughly 2.5 GB installed before any weights.
+# A 512 MB host such as PythonAnywhere cannot hold them: deploy with
+# requirements-production.txt instead, which is this file without this block,
+# and leave LOCAL_LLM_ENABLED unset so the hosted coach serves the site.
+accelerate>=1.0
+torch>=2.4
+transformers>=4.51

@@ -39,6 +39,9 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
 # 2. install
 pip install -r requirements.txt
+# Includes torch and transformers for the local model in preparation/local_llm.py,
+# about 2.5 GB. On a small host, use requirements-production.txt instead: the
+# same list without those, and the site runs on the hosted coach alone.
 
 # 3. secrets
 cp .env.example .env               # then edit DJANGO_SECRET_KEY
@@ -244,6 +247,7 @@ what keeps a long-running server from accumulating figures it never closes.
 ├── README.md
 ├── manage.py                     # defaults to settings.development
 ├── requirements.txt
+├── requirements-production.txt
 ├── db.sqlite3                    # git-ignored; rebuilt with migrate + seed
 ├── .env                          # local secrets - git-ignored, never committed
 ├── .env.example                  # committed template showing required keys

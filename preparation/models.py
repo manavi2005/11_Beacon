@@ -416,6 +416,7 @@ class TaskAttempt(models.Model):
     class GradedBy(models.TextChoices):
         AUTO = "AUTO", "Auto-graded"
         AI = "AI", "AI coach"
+        LOCAL = "LOCAL", "Local model"
         RULES = "RULES", "Beacon rules"
 
     task = models.ForeignKey(PlanTask, on_delete=models.CASCADE, related_name="attempts")
