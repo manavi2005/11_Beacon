@@ -1210,3 +1210,179 @@ REMINDERS / TODO
   [ ] Terminal screenshot of use1_python_report.py, and a notebook screenshot
       from Jupyter or VS Code.
   [ ] Record the demo video (materials kept locally, not in the repo).
+
+
+--------------------------------------------------------------------------------
+PRODUCTION REFLECTION - LOCAL MODELS VS A HOSTED API
+--------------------------------------------------------------------------------
+
+Sources. "Measured" numbers come from llm-test/matrix_results.csv (Apple M4
+Pro, 24 GB unified memory, bf16 weights via transformers on MPS, five Beacon
+tasks per model) or from counting the tokens in Beacon's real prompts.
+Anything marked "estimate" was not measured and says what it assumes.
+
+
+1. SIZE VS QUALITY: IS A BIGGER MODEL SIGNIFICANTLY BETTER?
+
+  Tier averages over the five lab tasks (measured):
+
+    Tier                  Valid JSON   Quality   Latency   Speed
+    Ultra-Light (<0.5B)        40%       0.26     0.41 s   126 tok/s
+    Light (0.5-1.2B)           67%       0.43     1.10 s    88 tok/s
+    Small (1.2-2B)            100%       0.82     0.73 s    50 tok/s
+    Medium (2-3.5B)           100%       0.91     1.31 s    28 tok/s
+    Large (3.5-4B)            100%       0.99     1.95 s    19 tok/s
+
+  Per model. Params, quality, latency and speed are measured. Memory is
+  ~2 GB per billion params in bf16 (what we ran); the 4-bit column is an
+  estimate at ~0.6 GB per billion (GGUF Q4 plus overhead).
+
+    Model                     Params  Qual  Latency  Speed      bf16   4-bit
+    SmolLM2-135M-Instruct     0.13B   0.00  0.62 s   166 tok/s  0.3 GB ~0.1 GB
+    SmolLM2-360M-Instruct     0.36B   0.00  0.28 s   114 tok/s  0.7 GB ~0.2 GB
+    Qwen2.5-0.5B-Instruct     0.49B   0.79  0.32 s    98 tok/s  1.0 GB ~0.3 GB
+    LFM2-700M                 0.74B   0.70  0.41 s   104 tok/s  1.5 GB ~0.4 GB
+    TinyLlama-1.1B-Chat       1.10B   0.00  2.36 s    91 tok/s  2.2 GB ~0.7 GB
+    LFM2-1.2B                 1.17B   0.60  0.54 s    69 tok/s  2.3 GB ~0.7 GB
+    OLMo-2-0425-1B-Instruct   1.48B   0.72  0.46 s    56 tok/s  3.0 GB ~0.9 GB
+    Qwen2.5-1.5B-Instruct     1.54B   0.93  0.68 s    48 tok/s  3.1 GB ~0.9 GB
+    SmolLM2-1.7B-Instruct     1.71B   0.80  1.05 s    46 tok/s  3.4 GB ~1.0 GB
+    granite-3.1-2b-instruct   2.53B   0.94  1.21 s    30 tok/s  5.1 GB ~1.5 GB
+    Qwen2.5-3B-Instruct       3.09B   0.95  1.35 s    25 tok/s  6.2 GB ~1.9 GB
+    Falcon3-3B-Instruct       3.23B   0.86  1.36 s    29 tok/s  6.5 GB ~1.9 GB
+    Phi-3.5-mini-instruct     3.82B   1.00  2.27 s    19 tok/s  7.6 GB ~2.3 GB
+    Phi-4-mini-instruct       3.84B   0.98  1.92 s    19 tok/s  7.7 GB ~2.3 GB
+    Qwen3-4B-Instruct-2507    4.02B   1.00  1.66 s    19 tok/s  8.0 GB ~2.4 GB
+
+  Not past the Small tier, for Beacon's tasks. The big jump is Light ->
+  Small: valid JSON 67% -> 100%, quality 0.43 -> 0.82. Medium -> Large adds
+  only +0.08 quality (0.91 -> 0.99) for ~49% more latency (1.31 -> 1.95 s)
+  and a third less speed. Family matters as much as size: TinyLlama (1.1B)
+  scored 0, Qwen2.5-0.5B scored 0.79.
+
+  Sweet spot: Qwen2.5-1.5B-Instruct. Quality 0.93, within reach of the
+  Medium tier, at 0.68 s and ~3 GB. It is the model the app runs in
+  preparation/local_llm.py. Qwen3-4B-Instruct (1.00) is the pick when 8 GB
+  and ~1.7 s per reply are acceptable.
+
+  Local running cost (estimate). The laptop draws roughly 40-60 W while
+  generating; at 50 W and $0.16/kWh, generating all day costs ~$0.19/day
+  whichever model it runs. Smaller models finish sooner, so cost per token
+  is what differs:
+
+    1M output tokens at 48 tok/s (Qwen2.5-1.5B) = 5.8 h = 0.29 kWh = ~$0.05
+    1M output tokens at 19 tok/s (Large tier)   = 15 h  = 0.75 kWh = ~$0.12
+
+  Electricity alone for a 4B model on one laptop is already ~40% of
+  what Groq charges per million output tokens ($0.30, below), before the
+  hardware, and the laptop serves one request at a time.
+
+
+2. COST AT 10,000 DAILY USERS
+
+  Tokens per call, counted with the Qwen tokenizer on Beacon's real prompts
+  (measured; gpt-oss uses a different tokenizer, so treat as +/-10%):
+
+    Call                         Input tokens   Output cap   Output, estimate
+    Coach advice (My plan)              720          600              ~250
+    Coach question                      680          400              ~200
+    Grade a written answer      ~290 + answer          400              ~120
+      (a 200-word answer makes it ~420)
+
+  gpt-oss-20b, the model the coach uses, is a reasoning model: its hidden
+  reasoning is billed as output. Estimate +0-150 tokens per call for that.
+
+  Usage per daily user (estimate): 1 advice (cached 6 h, so about once a
+  day), 2 coach questions, 2 graded answers. Quizzes are graded by code
+  and cost nothing.
+
+    Input   720 + 2 x 680 + 2 x 420                 = 2,920 tokens
+    Output  250 + 2 x 200 + 2 x 120, +0-750 reasoning = 890-1,640 tokens
+
+  10,000 users: 29.2M input + 8.9-16.4M output tokens per day.
+
+  Hosted API, at Groq's listed gpt-oss-20b price of $0.075 per 1M input and
+  $0.30 per 1M output (taken from price aggregators on 2026-10-14; Groq's
+  own page did not list it, so confirm before budgeting):
+
+    Input   29.2 x $0.075            = $2.19/day
+    Output  8.9-16.4 x $0.30         = $2.67-4.92/day
+    Total                            = $4.86-7.11/day = ~$150-215/month
+
+  The free tiers we use today (Pollinations, Groq free) are rate-limited
+  and will not carry 50,000 calls a day, so this is a paid plan.
+
+  Self-hosting the same load. Output averages 100-190 tok/s across the day,
+  with peaks several times that. One M4 Pro running Qwen2.5-1.5B makes ~48
+  tok/s for a single request, so a laptop cannot serve it. A cloud GPU with
+  24 GB (e.g. an A10G, roughly $1/hour on demand, estimate) can hold
+  gpt-oss-20b and, with a batching server such as vLLM, the average load:
+  ~$730/month, ~$1,460 with a second one so a failure is not an outage.
+  That is before anyone's time to run it.
+
+  Verdict: the API, by roughly 3-10x. Self-hosting only breaks even if
+  API prices rise 3-10x. The cheapest savings are the ones Beacon already has:
+  advice cached for 6 hours, 20 questions per user per hour, quizzes
+  graded by code and size caps on every input.
+
+
+3. HYBRID: LOCAL MODEL FIRST, API SECOND
+
+  What the app does (preparation/practice.py, grade_written, on machines
+  with LOCAL_LLM_ENABLED):
+
+    1. Local Qwen2.5-1.5B screens a written answer: on topic? substantive?
+       provisional score. 0.7-1.4 s per screen once loaded (measured).
+    2. Off topic or too thin: Beacon's rules give the feedback and the
+       hosted API is never called.
+    3. Otherwise the hosted coach grades it. If the API is off or down,
+       the local score is used instead of the rules.
+
+  Only grading can be screened; advice and questions always need the
+  bigger model. So the saving is a share s of 20,000 grading calls a day,
+  at ~$0.00007-0.00011 per call:
+
+    s = 30%  ->  ~$12-20/month saved
+    s = 60%  ->  ~$25-40/month saved
+
+  We have no measurement of s yet. Against that, screening costs 3.9-7.8
+  hours of model time a day (20,000 x 0.7-1.4 s), a machine to hold the
+  weights, and an extra 0.7-1.4 s on every graded answer.
+
+  So at today's prices the hybrid does not pay for itself in money. It is
+  worth keeping for other reasons: grading keeps working when the API is
+  down or rate-limited, and empty or off-topic text never leaves our
+  server. It becomes a cost win if API prices rise sharply, or if the model
+  can run on a machine we already pay for.
+
+  Fastest triage option measured: Qwen2.5-0.5B at ~0.32 s with valid JSON
+  on every task (quality 0.79). Good enough for routing, but nothing in
+  the lab answered in milliseconds.
+
+
+4. WHEN TO USE A LOCAL MODEL, WHEN TO PAY FOR AN API
+
+  Local model, if:
+    [x] Data must not leave our machines (privacy, regulation, contracts).
+    [x] The load is steady or batch (overnight grading, tagging,
+        extraction), where waiting in a queue is acceptable.
+    [x] The task is narrow, such as classifying, screening or extracting
+        to a fixed JSON shape. Here the lab put a 1.5B model at 0.93
+        against 1.00 for 4B.
+    [x] A machine with spare memory already exists, or the network is
+        unreliable or not allowed.
+
+  Paid API, if:
+    [x] Traffic is spiky or concurrent. One local model answers one
+        request at a time; at ~0.7 s each, 100 simultaneous users means
+        the last waits over a minute.
+    [x] The task needs open-ended writing or judgement, where the lab's
+        quality still rose with size.
+    [x] The host is small. PythonAnywhere's 512 MB cannot hold torch, so
+        the deployed site uses the API with LOCAL_LLM_ENABLED off.
+    [x] Nobody on the team can own GPU servers, upgrades and on-call.
+    [x] The token bill is below the server bill: for Beacon, ~$150-215
+        against ~$730-1,460 a month at 10,000 daily users.
+
+  Either way, keep the rules fallback, so grading and advice still work
+  when a model is unavailable.

@@ -32,8 +32,11 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      # requirements-production.txt is requirements.txt without torch and
+      # transformers. The tests fake the local model, and torch's Linux wheel
+      # pulls several GB of CUDA libraries the runner would never use.
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-production.txt
 
       - name: Django system check
         run: python manage.py check
