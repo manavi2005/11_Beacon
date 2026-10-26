@@ -1,0 +1,27 @@
+# Dependencies for multi_model_system.ipynb.
+#
+# Separate from the Django project's requirements.txt at the repository root:
+# P1-A7 Part 1 is a standalone benchmarking lab and shares no code with the
+# web application.
+#
+#   python3.11 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+#   jupyter lab multi_model_system.ipynb
+#
+# Running the notebook from scratch downloads about 55 GB of model weights
+# into the Hugging Face cache and takes a few hours, most of it download time.
+# The run is resumable: results are appended to benchmark_results.csv after
+# every model and a model already in that file is skipped. Since the committed
+# CSV is complete, re-running the notebook as checked out reads the results
+# and finishes in seconds without touching the network.
+#
+# torch is left unpinned because it publishes a different wheel per platform
+# and accelerator, and pinning one build here would stop the notebook
+# installing on half the machines that try it.
+
+accelerate>=1.0
+ipykernel>=6.29
+pandas>=2.2
+torch>=2.4
+transformers>=4.51
