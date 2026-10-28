@@ -1,0 +1,91 @@
+Model Name,Model Category,Daily Traffic Category,Machines Needed,Total Machine Cost ($/month),API Cost ($/month),Local / API,Cheaper
+SmolLM2-135M-Instruct,Ultra-Light,Prototype,1,1169.28,2.58,453.2,API
+SmolLM2-135M-Instruct,Ultra-Light,Early Startup,1,1169.28,25.84,45.3,API
+SmolLM2-135M-Instruct,Ultra-Light,Growing Product,1,1169.28,258.42,4.5,API
+SmolLM2-135M-Instruct,Ultra-Light,Large Platform,2,2338.56,2584.18,0.9,Local
+SmolLM2-135M-Instruct,Ultra-Light,Mass Consumer App,20,23385.6,25841.76,0.9,Local
+SmolLM2-135M-Instruct,Ultra-Light,Global Platform,191,223332.48,258417.59,0.9,Local
+SmolLM2-360M-Instruct,Ultra-Light,Prototype,1,1169.28,2.09,559.5,API
+SmolLM2-360M-Instruct,Ultra-Light,Early Startup,1,1169.28,20.87,56.0,API
+SmolLM2-360M-Instruct,Ultra-Light,Growing Product,1,1169.28,208.66,5.6,API
+SmolLM2-360M-Instruct,Ultra-Light,Large Platform,2,2338.56,2086.56,1.1,API
+SmolLM2-360M-Instruct,Ultra-Light,Mass Consumer App,12,14031.36,20865.56,0.7,Local
+SmolLM2-360M-Instruct,Ultra-Light,Global Platform,120,140313.6,208655.56,0.7,Local
+Qwen2.5-0.5B-Instruct,Ultra-Light,Prototype,1,1169.28,1.87,625.3,API
+Qwen2.5-0.5B-Instruct,Ultra-Light,Early Startup,1,1169.28,18.73,62.4,API
+Qwen2.5-0.5B-Instruct,Ultra-Light,Growing Product,1,1169.28,187.27,6.2,API
+Qwen2.5-0.5B-Instruct,Ultra-Light,Large Platform,2,2338.56,1872.72,1.2,API
+Qwen2.5-0.5B-Instruct,Ultra-Light,Mass Consumer App,13,15200.64,18727.19,0.8,Local
+Qwen2.5-0.5B-Instruct,Ultra-Light,Global Platform,121,141482.88,187271.87,0.8,Local
+LFM2-700M,Light,Prototype,1,1169.28,2.02,578.9,API
+LFM2-700M,Light,Early Startup,1,1169.28,20.17,58.0,API
+LFM2-700M,Light,Growing Product,1,1169.28,201.67,5.8,API
+LFM2-700M,Light,Large Platform,2,2338.56,2016.73,1.2,API
+LFM2-700M,Light,Mass Consumer App,16,18708.48,20167.27,0.9,Local
+LFM2-700M,Light,Global Platform,152,177730.56,201672.74,0.9,Local
+TinyLlama-1.1B-Chat-v1.0,Light,Prototype,1,1169.28,2.86,408.8,API
+TinyLlama-1.1B-Chat-v1.0,Light,Early Startup,1,1169.28,28.58,40.9,API
+TinyLlama-1.1B-Chat-v1.0,Light,Growing Product,1,1169.28,285.84,4.1,API
+TinyLlama-1.1B-Chat-v1.0,Light,Large Platform,4,4677.12,2858.36,1.6,API
+TinyLlama-1.1B-Chat-v1.0,Light,Mass Consumer App,37,43263.36,28583.58,1.5,API
+TinyLlama-1.1B-Chat-v1.0,Light,Global Platform,367,429125.76,285835.81,1.5,API
+LFM2-1.2B,Light,Prototype,1,1169.28,1.89,618.7,API
+LFM2-1.2B,Light,Early Startup,1,1169.28,18.86,62.0,API
+LFM2-1.2B,Light,Growing Product,1,1169.28,188.57,6.2,API
+LFM2-1.2B,Light,Large Platform,2,2338.56,1885.7,1.2,API
+LFM2-1.2B,Light,Mass Consumer App,17,19877.76,18856.99,1.1,API
+LFM2-1.2B,Light,Global Platform,167,195269.76,188569.87,1.0,API
+OLMo-2-0425-1B-Instruct,Small,Prototype,1,1169.28,1.79,653.2,API
+OLMo-2-0425-1B-Instruct,Small,Early Startup,1,1169.28,17.88,65.4,API
+OLMo-2-0425-1B-Instruct,Small,Growing Product,1,1169.28,178.85,6.5,API
+OLMo-2-0425-1B-Instruct,Small,Large Platform,2,2338.56,1788.45,1.3,API
+OLMo-2-0425-1B-Instruct,Small,Mass Consumer App,17,19877.76,17884.51,1.1,API
+OLMo-2-0425-1B-Instruct,Small,Global Platform,170,198777.6,178845.13,1.1,API
+Qwen2.5-1.5B-Instruct,Small,Prototype,1,1169.28,1.86,628.6,API
+Qwen2.5-1.5B-Instruct,Small,Early Startup,1,1169.28,18.6,62.9,API
+Qwen2.5-1.5B-Instruct,Small,Growing Product,1,1169.28,185.97,6.3,API
+Qwen2.5-1.5B-Instruct,Small,Large Platform,3,3507.84,1859.73,1.9,API
+Qwen2.5-1.5B-Instruct,Small,Mass Consumer App,22,25724.16,18597.35,1.4,API
+Qwen2.5-1.5B-Instruct,Small,Global Platform,215,251395.2,185973.47,1.4,API
+SmolLM2-1.7B-Instruct,Small,Prototype,1,1169.28,1.96,596.6,API
+SmolLM2-1.7B-Instruct,Small,Early Startup,1,1169.28,19.56,59.8,API
+SmolLM2-1.7B-Instruct,Small,Growing Product,1,1169.28,195.62,6.0,API
+SmolLM2-1.7B-Instruct,Small,Large Platform,3,3507.84,1956.22,1.8,API
+SmolLM2-1.7B-Instruct,Small,Mass Consumer App,29,33909.12,19562.25,1.7,API
+SmolLM2-1.7B-Instruct,Small,Global Platform,284,332075.52,195622.45,1.7,API
+granite-3.1-2b-instruct,Medium,Prototype,1,1169.28,1.94,602.7,API
+granite-3.1-2b-instruct,Medium,Early Startup,1,1169.28,19.43,60.2,API
+granite-3.1-2b-instruct,Medium,Growing Product,1,1169.28,194.33,6.0,API
+granite-3.1-2b-instruct,Medium,Large Platform,5,5846.4,1943.26,3.0,API
+granite-3.1-2b-instruct,Medium,Mass Consumer App,41,47940.48,19432.58,2.5,API
+granite-3.1-2b-instruct,Medium,Global Platform,409,478235.52,194325.78,2.5,API
+Qwen2.5-3B-Instruct,Medium,Prototype,1,1169.28,1.83,639.0,API
+Qwen2.5-3B-Instruct,Medium,Early Startup,1,1169.28,18.32,63.8,API
+Qwen2.5-3B-Instruct,Medium,Growing Product,1,1169.28,183.17,6.4,API
+Qwen2.5-3B-Instruct,Medium,Large Platform,4,4677.12,1831.69,2.6,API
+Qwen2.5-3B-Instruct,Medium,Mass Consumer App,40,46771.2,18316.92,2.6,API
+Qwen2.5-3B-Instruct,Medium,Global Platform,397,464204.16,183169.22,2.5,API
+Falcon3-3B-Instruct,Medium,Prototype,1,1169.28,1.88,622.0,API
+Falcon3-3B-Instruct,Medium,Early Startup,1,1169.28,18.77,62.3,API
+Falcon3-3B-Instruct,Medium,Growing Product,1,1169.28,187.7,6.2,API
+Falcon3-3B-Instruct,Medium,Large Platform,5,5846.4,1877.05,3.1,API
+Falcon3-3B-Instruct,Medium,Mass Consumer App,46,53786.88,18770.47,2.9,API
+Falcon3-3B-Instruct,Medium,Global Platform,457,534360.96,187704.69,2.8,API
+Phi-3.5-mini-instruct,Large,Prototype,1,1169.28,2.69,434.7,API
+Phi-3.5-mini-instruct,Large,Early Startup,1,1169.28,26.87,43.5,API
+Phi-3.5-mini-instruct,Large,Growing Product,1,1169.28,268.68,4.4,API
+Phi-3.5-mini-instruct,Large,Large Platform,7,8184.96,2686.75,3.0,API
+Phi-3.5-mini-instruct,Large,Mass Consumer App,61,71326.08,26867.55,2.7,API
+Phi-3.5-mini-instruct,Large,Global Platform,606,708583.68,268675.48,2.6,API
+Phi-4-mini-instruct,Large,Prototype,1,1169.28,2.69,434.7,API
+Phi-4-mini-instruct,Large,Early Startup,1,1169.28,26.89,43.5,API
+Phi-4-mini-instruct,Large,Growing Product,1,1169.28,268.86,4.3,API
+Phi-4-mini-instruct,Large,Large Platform,7,8184.96,2688.6,3.0,API
+Phi-4-mini-instruct,Large,Mass Consumer App,61,71326.08,26886.02,2.7,API
+Phi-4-mini-instruct,Large,Global Platform,608,710922.24,268860.18,2.6,API
+Qwen3-4B-Instruct-2507,Large,Prototype,1,1169.28,0.56,2088.0,API
+Qwen3-4B-Instruct-2507,Large,Early Startup,1,1169.28,5.6,208.8,API
+Qwen3-4B-Instruct-2507,Large,Growing Product,1,1169.28,56.01,20.9,API
+Qwen3-4B-Instruct-2507,Large,Large Platform,6,7015.68,560.08,12.5,API
+Qwen3-4B-Instruct-2507,Large,Mass Consumer App,51,59633.28,5600.83,10.6,API
+Qwen3-4B-Instruct-2507,Large,Global Platform,505,590486.4,56008.31,10.5,API

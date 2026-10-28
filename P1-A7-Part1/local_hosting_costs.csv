@@ -1,0 +1,91 @@
+Model Name,Model Category,Daily Traffic Category,Avg Tokens per User,Total Daily Token Load,"Per Machine Cost (Cloud, $/month)",Machines Needed,Total Machine Cost ($/month)
+SmolLM2-135M-Instruct,Ultra-Light,Prototype,1808,1808026.644,1169.28,1,1169.28
+SmolLM2-135M-Instruct,Ultra-Light,Early Startup,1808,18080266.44,1169.28,1,1169.28
+SmolLM2-135M-Instruct,Ultra-Light,Growing Product,1808,180802664.4,1169.28,1,1169.28
+SmolLM2-135M-Instruct,Ultra-Light,Large Platform,1808,1808026644.0,1169.28,2,2338.56
+SmolLM2-135M-Instruct,Ultra-Light,Mass Consumer App,1808,18080266440.0,1169.28,20,23385.6
+SmolLM2-135M-Instruct,Ultra-Light,Global Platform,1808,180802664400.0,1169.28,191,223332.48
+SmolLM2-360M-Instruct,Ultra-Light,Prototype,1670,1669798.768,1169.28,1,1169.28
+SmolLM2-360M-Instruct,Ultra-Light,Early Startup,1670,16697987.68,1169.28,1,1169.28
+SmolLM2-360M-Instruct,Ultra-Light,Growing Product,1670,166979876.79999998,1169.28,1,1169.28
+SmolLM2-360M-Instruct,Ultra-Light,Large Platform,1670,1669798768.0,1169.28,2,2338.56
+SmolLM2-360M-Instruct,Ultra-Light,Mass Consumer App,1670,16697987679.999998,1169.28,12,14031.36
+SmolLM2-360M-Instruct,Ultra-Light,Global Platform,1670,166979876800.0,1169.28,120,140313.6
+Qwen2.5-0.5B-Instruct,Ultra-Light,Prototype,1610,1610399.632,1169.28,1,1169.28
+Qwen2.5-0.5B-Instruct,Ultra-Light,Early Startup,1610,16103996.319999998,1169.28,1,1169.28
+Qwen2.5-0.5B-Instruct,Ultra-Light,Growing Product,1610,161039963.2,1169.28,1,1169.28
+Qwen2.5-0.5B-Instruct,Ultra-Light,Large Platform,1610,1610399632.0,1169.28,2,2338.56
+Qwen2.5-0.5B-Instruct,Ultra-Light,Mass Consumer App,1610,16103996319.999998,1169.28,13,15200.64
+Qwen2.5-0.5B-Instruct,Ultra-Light,Global Platform,1610,161039963200.0,1169.28,121,141482.88
+LFM2-700M,Light,Prototype,1650,1650402.0599999998,1169.28,1,1169.28
+LFM2-700M,Light,Early Startup,1650,16504020.6,1169.28,1,1169.28
+LFM2-700M,Light,Growing Product,1650,165040206.0,1169.28,1,1169.28
+LFM2-700M,Light,Large Platform,1650,1650402060.0,1169.28,2,2338.56
+LFM2-700M,Light,Mass Consumer App,1650,16504020599.999998,1169.28,16,18708.48
+LFM2-700M,Light,Global Platform,1650,165040206000.0,1169.28,152,177730.56
+TinyLlama-1.1B-Chat-v1.0,Light,Prototype,1884,1884188.352,1169.28,1,1169.28
+TinyLlama-1.1B-Chat-v1.0,Light,Early Startup,1884,18841883.52,1169.28,1,1169.28
+TinyLlama-1.1B-Chat-v1.0,Light,Growing Product,1884,188418835.2,1169.28,1,1169.28
+TinyLlama-1.1B-Chat-v1.0,Light,Large Platform,1884,1884188352.0,1169.28,4,4677.12
+TinyLlama-1.1B-Chat-v1.0,Light,Mass Consumer App,1884,18841883520.0,1169.28,37,43263.36
+TinyLlama-1.1B-Chat-v1.0,Light,Global Platform,1884,188418835200.0,1169.28,367,429125.76
+LFM2-1.2B,Light,Prototype,1614,1614005.1879999998,1169.28,1,1169.28
+LFM2-1.2B,Light,Early Startup,1614,16140051.879999999,1169.28,1,1169.28
+LFM2-1.2B,Light,Growing Product,1614,161400518.79999998,1169.28,1,1169.28
+LFM2-1.2B,Light,Large Platform,1614,1614005187.9999998,1169.28,2,2338.56
+LFM2-1.2B,Light,Mass Consumer App,1614,16140051879.999998,1169.28,17,19877.76
+LFM2-1.2B,Light,Global Platform,1614,161400518800.0,1169.28,167,195269.76
+OLMo-2-0425-1B-Instruct,Small,Prototype,1587,1586992.0219999999,1169.28,1,1169.28
+OLMo-2-0425-1B-Instruct,Small,Early Startup,1587,15869920.219999999,1169.28,1,1169.28
+OLMo-2-0425-1B-Instruct,Small,Growing Product,1587,158699202.2,1169.28,1,1169.28
+OLMo-2-0425-1B-Instruct,Small,Large Platform,1587,1586992022.0,1169.28,2,2338.56
+OLMo-2-0425-1B-Instruct,Small,Mass Consumer App,1587,15869920220.0,1169.28,17,19877.76
+OLMo-2-0425-1B-Instruct,Small,Global Platform,1587,158699202200.0,1169.28,170,198777.6
+Qwen2.5-1.5B-Instruct,Small,Prototype,1607,1606792.964,1169.28,1,1169.28
+Qwen2.5-1.5B-Instruct,Small,Early Startup,1607,16067929.64,1169.28,1,1169.28
+Qwen2.5-1.5B-Instruct,Small,Growing Product,1607,160679296.4,1169.28,1,1169.28
+Qwen2.5-1.5B-Instruct,Small,Large Platform,1607,1606792964.0,1169.28,3,3507.84
+Qwen2.5-1.5B-Instruct,Small,Mass Consumer App,1607,16067929640.0,1169.28,22,25724.16
+Qwen2.5-1.5B-Instruct,Small,Global Platform,1607,160679296400.0,1169.28,215,251395.2
+SmolLM2-1.7B-Instruct,Small,Prototype,1634,1633595.7079999999,1169.28,1,1169.28
+SmolLM2-1.7B-Instruct,Small,Early Startup,1634,16335957.079999998,1169.28,1,1169.28
+SmolLM2-1.7B-Instruct,Small,Growing Product,1634,163359570.79999998,1169.28,1,1169.28
+SmolLM2-1.7B-Instruct,Small,Large Platform,1634,1633595707.9999998,1169.28,3,3507.84
+SmolLM2-1.7B-Instruct,Small,Mass Consumer App,1634,16335957079.999998,1169.28,29,33909.12
+SmolLM2-1.7B-Instruct,Small,Global Platform,1634,163359570799.99997,1169.28,284,332075.52
+granite-3.1-2b-instruct,Medium,Prototype,1630,1629993.8379999998,1169.28,1,1169.28
+granite-3.1-2b-instruct,Medium,Early Startup,1630,16299938.379999999,1169.28,1,1169.28
+granite-3.1-2b-instruct,Medium,Growing Product,1630,162999383.79999998,1169.28,1,1169.28
+granite-3.1-2b-instruct,Medium,Large Platform,1630,1629993837.9999998,1169.28,5,5846.4
+granite-3.1-2b-instruct,Medium,Mass Consumer App,1630,16299938379.999998,1169.28,41,47940.48
+granite-3.1-2b-instruct,Medium,Global Platform,1630,162999383800.0,1169.28,409,478235.52
+Qwen2.5-3B-Instruct,Medium,Prototype,1599,1599003.3839999998,1169.28,1,1169.28
+Qwen2.5-3B-Instruct,Medium,Early Startup,1599,15990033.839999998,1169.28,1,1169.28
+Qwen2.5-3B-Instruct,Medium,Growing Product,1599,159900338.39999998,1169.28,1,1169.28
+Qwen2.5-3B-Instruct,Medium,Large Platform,1599,1599003383.9999998,1169.28,4,4677.12
+Qwen2.5-3B-Instruct,Medium,Mass Consumer App,1599,15990033839.999998,1169.28,40,46771.2
+Qwen2.5-3B-Instruct,Medium,Global Platform,1599,159900338400.0,1169.28,397,464204.16
+Falcon3-3B-Instruct,Medium,Prototype,1612,1611601.9279999998,1169.28,1,1169.28
+Falcon3-3B-Instruct,Medium,Early Startup,1612,16116019.279999997,1169.28,1,1169.28
+Falcon3-3B-Instruct,Medium,Growing Product,1612,161160192.79999998,1169.28,1,1169.28
+Falcon3-3B-Instruct,Medium,Large Platform,1612,1611601927.9999998,1169.28,5,5846.4
+Falcon3-3B-Instruct,Medium,Mass Consumer App,1612,16116019279.999998,1169.28,46,53786.88
+Falcon3-3B-Instruct,Medium,Global Platform,1612,161160192799.99997,1169.28,457,534360.96
+Phi-3.5-mini-instruct,Large,Prototype,1622,1622384.94,1169.28,1,1169.28
+Phi-3.5-mini-instruct,Large,Early Startup,1622,16223849.399999999,1169.28,1,1169.28
+Phi-3.5-mini-instruct,Large,Growing Product,1622,162238494.0,1169.28,1,1169.28
+Phi-3.5-mini-instruct,Large,Large Platform,1622,1622384940.0,1169.28,7,8184.96
+Phi-3.5-mini-instruct,Large,Mass Consumer App,1622,16223849400.0,1169.28,61,71326.08
+Phi-3.5-mini-instruct,Large,Global Platform,1622,162238494000.0,1169.28,606,708583.68
+Phi-4-mini-instruct,Large,Prototype,1623,1623000.6119999997,1169.28,1,1169.28
+Phi-4-mini-instruct,Large,Early Startup,1623,16230006.119999997,1169.28,1,1169.28
+Phi-4-mini-instruct,Large,Growing Product,1623,162300061.2,1169.28,1,1169.28
+Phi-4-mini-instruct,Large,Large Platform,1623,1623000611.9999998,1169.28,7,8184.96
+Phi-4-mini-instruct,Large,Mass Consumer App,1623,16230006119.999998,1169.28,61,71326.08
+Phi-4-mini-instruct,Large,Global Platform,1623,162300061199.99997,1169.28,608,710922.24
+Qwen3-4B-Instruct-2507,Large,Prototype,1591,1591381.2319999998,1169.28,1,1169.28
+Qwen3-4B-Instruct-2507,Large,Early Startup,1591,15913812.32,1169.28,1,1169.28
+Qwen3-4B-Instruct-2507,Large,Growing Product,1591,159138123.2,1169.28,1,1169.28
+Qwen3-4B-Instruct-2507,Large,Large Platform,1591,1591381232.0,1169.28,6,7015.68
+Qwen3-4B-Instruct-2507,Large,Mass Consumer App,1591,15913812320.0,1169.28,51,59633.28
+Qwen3-4B-Instruct-2507,Large,Global Platform,1591,159138123200.0,1169.28,505,590486.4

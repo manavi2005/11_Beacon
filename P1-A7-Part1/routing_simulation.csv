@@ -1,0 +1,6 @@
+Scenario,Situation,Routed: Local share,Routed: Retried (low confidence),Routed: Local overflow,Routed: GPU machines,Routed: Mean latency (s),Routed: Mean quality (1-10),Routed: API $/day,Routed: Total $/day,All-granite (single model) $/day,All-granite GPU machines,All-granite quality,All-granite latency (s)
+Normal operation,"Standard traffic, all five jobs",40%,0.0%,0%,10,0.87,9.39,124.27,514.03,1598.02,41,9.23,2.02
+Peak usage hours,"Sunday before interview week: 3x the normal peak, fleet unchanged",40%,0.0%,63%,10,0.77,8.79,124.27,514.03,1680.76,41,8.74,1.57
+High-complexity queries,"Long resumes and multi-skill plans: 2x extraction and summaries, 3x plans",44%,0.0%,0%,14,1.07,9.41,126.59,672.26,1987.78,51,9.35,2.42
+Cost optimization,Shrink the GPU fleet: smallest model that passes each job,40%,4.0%,0%,6,0.67,9.15,124.27,358.13,1598.02,41,9.23,2.02
+System overload / API outage,Provider down; the owned fleet absorbs everything,100%,0.0%,65%,10,0.82,7.15,0.0,389.76,1598.02,41,9.23,2.02

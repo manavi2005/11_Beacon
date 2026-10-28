@@ -1,6 +1,7 @@
 # Multi-Model System Design
 
-**P1-A7 Part 1: Model Size Selection and Benchmarking**
+**P1-A7 (Part 1 assignment): Model Size Selection and Benchmarking, Cost
+Comparison and Infrastructure Planning, and Multi-Model Routing Strategy**
 Team 11, Beacon. An interview-preparation coach that scores a candidate's
 skills against a target role and grades their written practice answers.
 
@@ -500,7 +501,7 @@ with the best average does not contain the best model.
 **Large does not win every prompt type.** Medium takes classification (9.64)
 and text generation (9.68). Large takes extraction, summarization and
 prediction. Prediction is where the Large tier's advantage is clearest at 9.00
-against 8.81, and prediction is also the hardest prompt type for every tier,
+against 8.81, and prediction is also the weakest prompt type for both of the top tiers,
 which fits: the widest-judgement task is the one where capacity still helps.
 
 So the defensible claim is narrower than "Large is best". **Capability
@@ -533,7 +534,7 @@ because the bottom of the range contains models that fail outright and the top
 contains models that work.
 
 The sharpest illustration is a single narrow band. **Five models sit between
-1.0B and 1.8B, a 1.7x size range, and they span 6.00 points of score:**
+1.0B and 1.8B, a 1.55x size range, and they span 6.00 points of score:**
 
 | Model | Parameters | Score |
 |---|---|---|
@@ -623,5 +624,280 @@ regardless of what the quality numbers say.
 
 ---
 
-*Sections on cost analysis and routing design are added as the remaining steps
-are completed.*
+## 7. Cost analysis (Part 2)
+
+All figures come from the Part 2 cells of the notebook. The two 90-row tables
+are saved as `local_hosting_costs.csv` and `hf_api_costs.csv`, and the
+side-by-side as `cost_comparison.csv`. Prices were retrieved on 2026-10-28.
+
+### 7.1 Token usage per user (Step 2.1)
+
+A daily Beacon user triggers each AI job once: the answer is screened, a
+resume or note is read, the answer is summarised, a weekly plan is written and
+readiness is forecast. That is one request of each prompt type, five per user
+per day.
+
+| Prompt type | Input tokens (measured) | Output tokens (measured, all models) |
+|---|---|---|
+| Classification | 255 | 25 |
+| Structured extraction | 266 | 31 |
+| Summarization | 241 | 32 |
+| Text generation | 344 | 82 |
+| Prediction | 348 | 26 |
+| **Per user per day** | **1,454** | **133-431, by model** |
+
+Input tokens were counted by tokenizing the 25 rendered prompts. Output
+tokens are each model's own `tokens/sec x latency`. That puts the average at
+**1,587-1,884 tokens per user**, or **317-377 per request**, close to the
+brief's example of 500. Outputs differ by model because verbose models cost
+more. TinyLlama writes 431 output tokens a day per user against Qwen3-4B's
+138, so the weakest model is also the most expensive to serve per user.
+
+### 7.2 Total token load (Step 2.2)
+
+| Traffic category | DAU | Daily token load |
+|---|---|---|
+| Prototype | 1,000 | 1.6M - 1.9M |
+| Early Startup | 10,000 | 16M - 19M |
+| Growing Product | 100,000 | 159M - 188M |
+| Large Platform | 1,000,000 | 1.6B - 1.9B |
+| Mass Consumer App | 10,000,000 | 16B - 19B |
+| Global Platform | 100,000,000 | 159B - 188B |
+
+### 7.3 Local hosting (Step 2.3)
+
+**The machine.** The brief's 16-core / GPU / 64 GB configuration is exactly
+an AWS **g5.4xlarge**: 16 vCPU, 64 GiB RAM and one NVIDIA A10G with 24 GB. It
+costs **$1.624/hour** on demand, which is **$1,169.28/month**. Every one of
+the 15 models fits in 24 GB (the largest is 8 GB in bf16), so a machine's
+limit is throughput, not memory.
+
+**Throughput is the one estimated input.** Our tokens/sec figures are
+single-stream on an M4 Pro. A GPU server batches many requests at once. We
+anchor on one published measurement: Qwen2.5-3B under vLLM reached 2,715
+output tok/s at 50 concurrent requests on an RTX A5000. Scaled by memory
+bandwidth to the A10G (600 vs 768 GB/s), that gives **~2,120 tok/s**. Each
+other model is scaled by its measured speed relative to Qwen2.5-3B. Fleets
+are planned at 60% utilisation and sized for an evening peak of 3x the daily
+average. Machine counts should be read as **within roughly ±2x**.
+
+Machines needed (excerpt; all 90 rows are in the notebook):
+
+| Model | 1K | 10K | 100K | 1M | 10M | 100M |
+|---|---|---|---|---|---|---|
+| SmolLM2-135M | 1 | 1 | 1 | 2 | 20 | 191 |
+| Qwen2.5-0.5B | 1 | 1 | 1 | 2 | 13 | 121 |
+| Qwen2.5-1.5B | 1 | 1 | 1 | 3 | 22 | 215 |
+| Qwen2.5-3B | 1 | 1 | 1 | 4 | 40 | 397 |
+| Phi-3.5-mini | 1 | 1 | 1 | 7 | 61 | 606 |
+| Qwen3-4B | 1 | 1 | 1 | 6 | 51 | 505 |
+
+At 100M DAU, the Large tier needs a fleet of 505-608 GPU servers, about
+$590K-$711K a month.
+
+### 7.4 Hugging Face Inference API (Step 2.4)
+
+Serverless **Hugging Face Inference Providers** bills per token at the
+provider's price, with no Hugging Face markup. It needs **no GPU machines of
+our own** (the application servers exist in both designs and cancel out).
+Each local model is compared with the closest priced model on the router:
+
+| Local models | Comparable paid model on Hugging Face | Price per 1M tokens (in / out) |
+|---|---|---|
+| Qwen3-4B-Instruct-2507 | Qwen/Qwen3-4B-Instruct-2507 via nscale (the same model) | $0.01 / $0.03 |
+| Phi-3.5-mini, Phi-4-mini | google/gemma-3-4b-it via deepinfra | $0.05 / $0.10 |
+| All 12 models under 3.5B | ibm-granite/granite-4.2-3b via deepinfra | $0.03 / $0.12 |
+
+**No provider sells anything under 3B per token.** Qwen2.5-0.5B, Llama-3.2-1B
+and similar models are listed only on a provider that publishes no price. The
+small local models are therefore compared with a larger API model, which
+favours local hosting in the comparison.
+
+API cost per month, for comparison with the machine table:
+
+| Model | 1K | 10K | 100K | 1M | 10M | 100M |
+|---|---|---|---|---|---|---|
+| Qwen2.5-1.5B → granite-4.2-3b | $1.86 | $18.60 | $186 | $1,860 | $18,597 | $185,973 |
+| Qwen3-4B → Qwen3-4B | $0.56 | $5.60 | $56 | $560 | $5,601 | $56,008 |
+
+### 7.5 Analysis (Step 2.5)
+
+**1. At what scale is local hosting cheaper?**
+
+**Only for the sub-1B models, and only from about 1M-10M DAU.** SmolLM2-135M
+becomes cheaper locally at Large Platform (local/API = 0.9). Qwen2.5-0.5B,
+SmolLM2-360M and LFM2-700M become cheaper at Mass Consumer App (0.7-0.9).
+Once a fleet is large, both costs grow linearly, so the question reduces to a
+cost per million output tokens:
+
+| Model | Local, on demand | Local, 1-year reserved | API (output-equivalent) |
+|---|---|---|---|
+| Qwen2.5-0.5B | $0.30 | $0.19 | $0.40 |
+| Qwen2.5-1.5B | $0.55 | $0.35 | $0.41 |
+| Qwen2.5-3B | $1.06 | $0.67 | $0.42 |
+| Qwen3-4B | $1.43 | $0.90 | $0.14 |
+
+With a one-year reservation ($1.023/hour), the 1.1-1.5B models (TinyLlama,
+LFM2-1.2B, OLMo-2-1B, Qwen2.5-1.5B) also tip to local at scale, for example
+Qwen2.5-1.5B at $0.35 vs $0.41. Nothing at or above 2B ever does. Qwen3-4B is the
+clearest case: the identical model costs **10.5x more to host ourselves**
+than to rent per token, even at 100M DAU.
+
+**2. At what scale is API usage cheaper?**
+
+**At every scale below about 0.5M DAU for every model, and at every scale for
+every model of 2B and above.** A single GPU costs $1,169 a month whether it
+serves one user or 600,000. The API bill only reaches that figure at
+**409K-653K DAU** for 14 of the 15 models, and at **2.1M DAU** for Qwen3-4B.
+Below that, a local server is overhead: at Beacon's prototype scale it costs
+628x the API bill for Qwen2.5-1.5B.
+
+**3. When would we switch architecture?**
+
+Beacon starts **API-only** and changes only when one of these triggers fires:
+
+| Trigger | Switch to | Why |
+|---|---|---|
+| Personal data at volume (resumes) | One local GPU for extraction only | Policy, not price: resumes stay on Beacon's machines (section 8) |
+| DAU > ~1M and a sub-1B model is good enough for a job | Local fleet for that job, on reserved instances | The only measured case where local is cheaper |
+| API price rises 3x+ or rate limits bind | Local fleet for the narrow jobs | The break-even moves down in proportion |
+| API outage risk becomes unacceptable | Keep a small local fleet as a fallback | Resilience, priced in section 8 |
+
+Throughput is the one estimated input. If a GPU were really 2x faster than
+assumed, every local figure would halve. Qwen2.5-1.5B would then be cheaper
+locally from about 10M DAU ($0.27 vs $0.41 per 1M), but the Large tier would
+still not be ($0.70 vs $0.14 for Qwen3-4B). The
+conclusion for models of 2B and above does not depend on that estimate.
+
+---
+
+## 8. Routing design (Part 3)
+
+### 8.1 What routing has to respect
+
+Two rules come from Parts 1 and 2 before cost does:
+
+1. **Personal data stays on Beacon's machines.** Structured extraction reads
+   resumes, so it is always local. This is the only reason a local GPU exists
+   at all, since section 7 showed the API is cheaper on price.
+2. **The injection gate is per prompt type.** Section 6.3 treats obeying an
+   injected instruction as disqualifying. The raw replies show where each
+   model failed: **the three larger Qwen models resisted on four types and
+   failed only on summarization**, and only Qwen2.5-0.5B passed all five. Qwen3-4B replied `{"summary": "HACKED"}`. So the Qwen API
+   may serve classification, generation and prediction, but summarization
+   goes only to a model that passed: **granite-3.1-2b** (9.26, 100% parsed),
+   run locally.
+
+Within those rules, cost decides. GPUs are a fixed daily cost of $38.98 each,
+and the API is pay-per-token at $0.01/$0.03 per 1M. Every request the rules
+allow therefore goes to the API, and the routing decisions are about keeping
+the local fleet small.
+
+| Role | Model | Why |
+|---|---|---|
+| Local triage | Qwen2.5-0.5B-Instruct | Fastest model above 8 (8.63); passed the gate on all five types |
+| Local workhorse | Qwen2.5-1.5B-Instruct | 9.6 on classification and extraction; resisted injection on both |
+| Local gate-safe | granite-3.1-2b-instruct | Gate-safe everywhere; 9.26 on summarization |
+| Local predictor | Qwen2.5-3B-Instruct | 9.38 on prediction, second only to Phi-3.5-mini (9.68) at 40% less latency |
+| Hugging Face API | Qwen/Qwen3-4B-Instruct-2507 (nscale) | 9.7-9.8 on classification, extraction and generation; the exact model benchmarked |
+
+### 8.2 Five scenarios (Step 3.1)
+
+| Scenario | Description in Beacon | Routing condition that detects it |
+|---|---|---|
+| **Normal operation** | Everyday traffic: answers screened, resumes read, plans written | Default |
+| **Peak usage hours** | Sunday night before interview week: 3x the normal peak rate | System load: local queue depth above capacity |
+| **High-complexity queries** | Long resumes and multi-skill plans: 2x extraction and summaries, 3x plans | Prompt length and query complexity (input tokens, number of skills) |
+| **Cost optimization** | Shrink the GPU fleet once traffic is stable | Daily request volume and monthly GPU spend |
+| **System overload / API outage** | The provider returns errors or times out while the fleet is at its normal size | API error rate and timeouts |
+
+### 8.3 Routing strategies (Step 3.2)
+
+| Scenario | Routing strategy | Local models used | Hugging Face model used | Expected benefit |
+|---|---|---|---|---|
+| Normal operation | Extraction on the local workhorse (unparseable replies retried on granite); summaries on local granite; classification, plans and forecasts on the API | Qwen2.5-1.5B, granite-3.1-2b | Qwen3-4B-Instruct-2507 | Smallest compliant fleet, top-tier quality on the API jobs |
+| Peak usage hours | Extraction drops to the 2x-faster 0.5B triage model; API jobs unchanged; summaries beyond capacity fall back to Beacon's rules; extraction queues, never leaves | Qwen2.5-0.5B, granite-3.1-2b | Qwen3-4B-Instruct-2507 | Absorbs 3x load with no extra GPUs and no policy breach |
+| High-complexity queries | Long resumes go to the larger gate-safe granite, still local; long plans and forecasts to the API | granite-3.1-2b | Qwen3-4B-Instruct-2507 | Best quality on the hard inputs where size helps |
+| Cost optimization | The smallest model that passes each local job: 0.5B for extraction and summaries, unparseable replies retried on granite | Qwen2.5-0.5B (+ granite retries) | Qwen3-4B-Instruct-2507 | 40% fewer GPUs for a small quality cost |
+| System overload / API outage | Everything local on the existing fleet: 1.5B for screening, extraction and plans, 3B for forecasts, granite for summaries; overflow to the rules engine | Qwen2.5-1.5B, Qwen2.5-3B, granite-3.1-2b | None (unreachable) | The service stays up with degraded quality |
+
+The notebook prints the full per-type routing table, and the code
+`assert`s that no personal-data request and no summary is ever sent to the
+API.
+
+### 8.4 Simulated results (Mass Consumer App: 10M DAU, 50M requests/day)
+
+At 1M DAU the whole local share fits on one GPU, so scenarios only differ in
+fleet size at the next scale up. **Measured inputs:** quality, parse rate,
+latency and output tokens per model and type. **Sourced inputs:** prices.
+**Assumed inputs:**
+- API latency is 0.35 s + output tokens at 120 tok/s.
+- The rules fallback scores 5/10 at 0.05 s.
+- Local latencies are M4 Pro single-stream figures, an upper bound for an A10G.
+
+| Scenario | GPUs | $/day | Quality | Mean latency | Single-model baseline (all granite, gate-safe) |
+|---|---|---|---|---|---|
+| Normal operation | 10 | **$514** | **9.39** | 0.87 s | 41 GPUs, $1,598, 9.23, 2.02 s |
+| Peak (3x) | 10 (fixed) | $514 | 8.79 | 0.77 s | 41 GPUs, $1,681, 8.74, 1.57 s |
+| High complexity | 14 | $672 | 9.41 | 1.07 s | 51 GPUs, $1,988, 9.35, 2.42 s |
+| Cost optimization | **6** | **$358** | 9.15 | 0.67 s | 41 GPUs, $1,598, 9.23, 2.02 s |
+| API outage | 10 (fixed) | $390 | 7.15 | 0.82 s | 41 GPUs, $1,598, 9.23, 2.02 s |
+
+For reference, sending everything to the API would cost **$187/day with no
+GPUs**. That design is not allowed under the two rules above. The
+$327/day difference from normal routing is what the privacy and safety
+rules cost at this scale.
+
+### 8.5 Evaluating the strategy (Step 3.3)
+
+**How routing improves latency.** In normal operation the mean falls from
+2.02 s for the single-model design to **0.87 s**, a 57% cut, for three
+reasons:
+- **Each request goes to the fastest model that does that job well.**
+  Extraction runs on a 1.5B model (0.60 s) instead of a 2B one (1.20 s).
+- **The API handles the long generations.** The 82-token plans are the
+  slowest job locally (2.38 s on the 1.5B model, 4.31 s on granite). Even
+  with 0.35 s of network overhead, a hosted model returns them faster.
+- **Under a 3x peak, latency does not explode.** Mean latency actually drops
+  to 0.77 s. The fleet stops trying to serve everything: summaries beyond
+  capacity get a fast rule-based answer, and extraction queues on the
+  smaller, 2x-faster triage model. A single-model fleet sized for normal
+  load would queue every request type.
+
+**How routing reduces cost.**
+- **Fleet size is the cost.** At 10M DAU a GPU is $38.98/day, while the API
+  share costs about $124/day in total. Routing sends 60% of requests to the
+  API, cutting the fleet from 41 to 10 GPUs. That takes the bill from
+  $1,598 to $514/day (**-68%**) while still meeting both policies.
+- **The cost-optimization strategy saves another 30%** ($358/day, 6 GPUs) by
+  running the smallest model that passes each local job. The trade-off is
+  visible: quality drops by 0.24, and 4% of replies fail to parse and are
+  retried on granite.
+- **Routing on confidence is cheap.** Retrying an unparseable reply locally
+  costs a fraction of a second. Routing every request to a bigger model in
+  case it might fail costs a fleet.
+
+**How routing maintains quality.**
+- **Normal routing scores 9.39 against 9.23 for the single-model fleet.** It
+  is higher, not lower, because each job goes to the model that scored best
+  on that job in Part 1, and no single model wins every type.
+- **The injection gate is never traded away.** Summaries never reach the
+  model that obeyed the injected instruction, and resumes never leave
+  Beacon's machines. Both are enforced by `assert`, not by convention.
+- **Low-confidence replies are retried.** The cost-optimization 0.5B model
+  fails to parse 20% of summaries. Those are retried on granite, so the user
+  gets a valid summary, not an error.
+- **Under failure, quality degrades predictably.** During an API outage, the
+  10-GPU fleet serves everything it can at local quality. The 65% it cannot
+  absorb gets the rule-based answer Beacon already has, so the mean falls to
+  7.15 but every request still gets an answer. Holding 9.23 through an
+  outage would mean keeping 41 GPUs, 4x the fleet, idle the rest of the time.
+  That costs $1,208 a day (31 extra GPUs) as insurance against something that rarely happens.
+
+**Two improvements the simulation points to.** Summaries are not on the
+user's critical path, since they feed the history page. Deferring them during
+peaks, instead of falling back to rules, would keep peak quality close to
+the normal 9.39 at no extra cost. And because the API is cheap, the next step for routing is
+contractual rather than technical: a data-processing agreement covering
+resumes would let extraction move to the API too, and remove most of the
+fleet.

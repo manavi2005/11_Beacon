@@ -1,0 +1,91 @@
+Local LLM Model Size,Comparable Paid Model Hosted on Hugging Face,Cost of Paid API per Token,Daily Traffic Category,Total Daily Token Load,Estimated API Cost ($/day),Machines Required (API infrastructure),Total Cost ($/month)
+SmolLM2-135M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1808026.644,0.08613919728,0,2.58
+SmolLM2-135M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,18080266.44,0.8613919728,0,25.84
+SmolLM2-135M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,180802664.4,8.613919728,0,258.42
+SmolLM2-135M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1808026644.0,86.13919728,0,2584.18
+SmolLM2-135M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,18080266440.0,861.3919728,0,25841.76
+SmolLM2-135M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,180802664400.0,8613.919728,0,258417.59
+SmolLM2-360M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1669798.768,0.06955185216,0,2.09
+SmolLM2-360M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16697987.68,0.6955185215999999,0,20.87
+SmolLM2-360M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,166979876.79999998,6.955185216,0,208.66
+SmolLM2-360M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1669798768.0,69.55185216,0,2086.56
+SmolLM2-360M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16697987679.999998,695.5185216,0,20865.56
+SmolLM2-360M-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,166979876800.0,6955.185216,0,208655.56
+Qwen2.5-0.5B-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1610399.632,0.06242395584,0,1.87
+Qwen2.5-0.5B-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16103996.319999998,0.6242395584,0,18.73
+Qwen2.5-0.5B-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,161039963.2,6.242395584,0,187.27
+Qwen2.5-0.5B-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1610399632.0,62.423955840000005,0,1872.72
+Qwen2.5-0.5B-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16103996319.999998,624.2395584,0,18727.19
+Qwen2.5-0.5B-Instruct (Ultra-Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,161039963200.0,6242.395584,0,187271.87
+LFM2-700M (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1650402.0599999998,0.0672242472,0,2.02
+LFM2-700M (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16504020.6,0.6722424720000001,0,20.17
+LFM2-700M (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,165040206.0,6.722424719999999,0,201.67
+LFM2-700M (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1650402060.0,67.22424720000001,0,2016.73
+LFM2-700M (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16504020599.999998,672.242472,0,20167.27
+LFM2-700M (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,165040206000.0,6722.42472,0,201672.74
+TinyLlama-1.1B-Chat-v1.0 (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1884188.352,0.09527860224000001,0,2.86
+TinyLlama-1.1B-Chat-v1.0 (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,18841883.52,0.9527860223999999,0,28.58
+TinyLlama-1.1B-Chat-v1.0 (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,188418835.2,9.527860224,0,285.84
+TinyLlama-1.1B-Chat-v1.0 (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1884188352.0,95.27860224,0,2858.36
+TinyLlama-1.1B-Chat-v1.0 (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,18841883520.0,952.7860224,0,28583.58
+TinyLlama-1.1B-Chat-v1.0 (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,188418835200.0,9527.860224,0,285835.81
+LFM2-1.2B (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1614005.1879999998,0.06285662256,0,1.89
+LFM2-1.2B (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16140051.879999999,0.6285662256,0,18.86
+LFM2-1.2B (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,161400518.79999998,6.285662256,0,188.57
+LFM2-1.2B (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1614005187.9999998,62.856622560000005,0,1885.7
+LFM2-1.2B (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16140051879.999998,628.5662256,0,18856.99
+LFM2-1.2B (Light),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,161400518800.0,6285.662256,0,188569.87
+OLMo-2-0425-1B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1586992.0219999999,0.05961504264,0,1.79
+OLMo-2-0425-1B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,15869920.219999999,0.5961504264,0,17.88
+OLMo-2-0425-1B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,158699202.2,5.961504264,0,178.85
+OLMo-2-0425-1B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1586992022.0,59.61504264,0,1788.45
+OLMo-2-0425-1B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,15869920220.0,596.1504264,0,17884.51
+OLMo-2-0425-1B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,158699202200.0,5961.504264,0,178845.13
+Qwen2.5-1.5B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1606792.964,0.06199115567999999,0,1.86
+Qwen2.5-1.5B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16067929.64,0.6199115568,0,18.6
+Qwen2.5-1.5B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,160679296.4,6.199115568,0,185.97
+Qwen2.5-1.5B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1606792964.0,61.99115568,0,1859.73
+Qwen2.5-1.5B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16067929640.0,619.9115568,0,18597.35
+Qwen2.5-1.5B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,160679296400.0,6199.115568,0,185973.47
+SmolLM2-1.7B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1633595.7079999999,0.06520748496,0,1.96
+SmolLM2-1.7B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16335957.079999998,0.6520748496,0,19.56
+SmolLM2-1.7B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,163359570.79999998,6.5207484959999995,0,195.62
+SmolLM2-1.7B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1633595707.9999998,65.20748496,0,1956.22
+SmolLM2-1.7B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16335957079.999998,652.0748496,0,19562.25
+SmolLM2-1.7B-Instruct (Small),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,163359570799.99997,6520.748496,0,195622.45
+granite-3.1-2b-instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1629993.8379999998,0.06477526056,0,1.94
+granite-3.1-2b-instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16299938.379999999,0.6477526056,0,19.43
+granite-3.1-2b-instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,162999383.79999998,6.477526056,0,194.33
+granite-3.1-2b-instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1629993837.9999998,64.77526056,0,1943.26
+granite-3.1-2b-instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16299938379.999998,647.7526056,0,19432.58
+granite-3.1-2b-instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,162999383800.0,6477.526056,0,194325.78
+Qwen2.5-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1599003.3839999998,0.06105640608,0,1.83
+Qwen2.5-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,15990033.839999998,0.6105640608,0,18.32
+Qwen2.5-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,159900338.39999998,6.105640608,0,183.17
+Qwen2.5-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1599003383.9999998,61.056406079999995,0,1831.69
+Qwen2.5-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,15990033839.999998,610.5640608,0,18316.92
+Qwen2.5-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,159900338400.0,6105.640608,0,183169.22
+Falcon3-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Prototype,1611601.9279999998,0.06256823136,0,1.88
+Falcon3-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Early Startup,16116019.279999997,0.6256823136,0,18.77
+Falcon3-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Growing Product,161160192.79999998,6.2568231359999995,0,187.7
+Falcon3-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Large Platform,1611601927.9999998,62.56823136,0,1877.05
+Falcon3-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Mass Consumer App,16116019279.999998,625.6823136,0,18770.47
+Falcon3-3B-Instruct (Medium),ibm-granite/granite-4.2-3b (deepinfra),"$0.03/M in, $0.12/M out",Global Platform,161160192799.99997,6256.823136,0,187704.69
+Phi-3.5-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Prototype,1622384.94,0.089558494,0,2.69
+Phi-3.5-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Early Startup,16223849.399999999,0.89558494,0,26.87
+Phi-3.5-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Growing Product,162238494.0,8.9558494,0,268.68
+Phi-3.5-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Large Platform,1622384940.0,89.558494,0,2686.75
+Phi-3.5-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Mass Consumer App,16223849400.0,895.58494,0,26867.55
+Phi-3.5-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Global Platform,162238494000.0,8955.8494,0,268675.48
+Phi-4-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Prototype,1623000.6119999997,0.08962006119999999,0,2.69
+Phi-4-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Early Startup,16230006.119999997,0.896200612,0,26.89
+Phi-4-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Growing Product,162300061.2,8.96200612,0,268.86
+Phi-4-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Large Platform,1623000611.9999998,89.62006120000001,0,2688.6
+Phi-4-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Mass Consumer App,16230006119.999998,896.200612,0,26886.02
+Phi-4-mini-instruct (Large),google/gemma-3-4b-it (deepinfra),"$0.05/M in, $0.1/M out",Global Platform,162300061199.99997,8962.00612,0,268860.18
+Qwen3-4B-Instruct-2507 (Large),"Qwen/Qwen3-4B-Instruct-2507 (nscale), the same model","$0.01/M in, $0.03/M out",Prototype,1591381.2319999998,0.01866943696,0,0.56
+Qwen3-4B-Instruct-2507 (Large),"Qwen/Qwen3-4B-Instruct-2507 (nscale), the same model","$0.01/M in, $0.03/M out",Early Startup,15913812.32,0.18669436959999997,0,5.6
+Qwen3-4B-Instruct-2507 (Large),"Qwen/Qwen3-4B-Instruct-2507 (nscale), the same model","$0.01/M in, $0.03/M out",Growing Product,159138123.2,1.866943696,0,56.01
+Qwen3-4B-Instruct-2507 (Large),"Qwen/Qwen3-4B-Instruct-2507 (nscale), the same model","$0.01/M in, $0.03/M out",Large Platform,1591381232.0,18.669436960000002,0,560.08
+Qwen3-4B-Instruct-2507 (Large),"Qwen/Qwen3-4B-Instruct-2507 (nscale), the same model","$0.01/M in, $0.03/M out",Mass Consumer App,15913812320.0,186.6943696,0,5600.83
+Qwen3-4B-Instruct-2507 (Large),"Qwen/Qwen3-4B-Instruct-2507 (nscale), the same model","$0.01/M in, $0.03/M out",Global Platform,159138123200.0,1866.943696,0,56008.31
