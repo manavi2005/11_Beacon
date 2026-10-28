@@ -1,0 +1,6 @@
+Question,Text,SLM Response Without RAG,Correct,Quality (1-10)
+Q1,what does lumen pro cost,small language models can run on local computers.,False,2
+Q2,how long is the free trial,inference uses previously learned parameters.,False,2
+Q3,when are refunds paid back,the university offers courses in informatics.,False,2
+Q4,when is support open,traches artificial intelligence systems.,False,2
+Q5,how many mock interviews,tartup applications use models and views.,False,2

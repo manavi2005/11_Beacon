@@ -1,0 +1,21 @@
+Condition,Question,Answer,score,accuracy,relevance,clarity,correct,consistency,invented
+Baseline SLM,Q1,small language models can run on local computers.,2,0,0.0,2.0,False,1.0,True
+SLM + RAG,Q1,small language models can run on local computers.,2,0,0.0,2.0,False,1.0,True
+Fine-Tuned SLM,Q1,the lumen pro plan costs nine dollars a month.,10,6,2.0,2.0,True,1.0,False
+RAG + Fine-Tuned (extra),Q1,the pro plan at any time.,3,0,0.57,2.0,False,1.0,True
+Baseline SLM,Q2,inference uses previously learned parameters.,2,0,0.0,2.0,False,1.0,True
+SLM + RAG,Q2,ming,1,0,0.0,0.0,False,1.0,False
+Fine-Tuned SLM,Q2,new users get a seven day free trial.,10,6,2.0,2.0,True,1.0,False
+RAG + Fine-Tuned (extra),Q2,new users get a seven day free trial.,10,6,2.0,2.0,True,1.0,False
+Baseline SLM,Q3,the university offers courses in informatics.,2,0,0.0,2.0,False,1.0,True
+SLM + RAG,Q3,the professor teaches artificial intelligence.,2,0,0.0,2.0,False,1.0,True
+Fine-Tuned SLM,Q3,refunds are paid back within five days.,10,6,2.0,2.0,True,1.0,False
+RAG + Fine-Tuned (extra),Q3,refiars a mont aree deven days.,1,0,0.33,0.67,False,1.0,False
+Baseline SLM,Q4,traches artificial intelligence systems.,2,0,0.0,1.5,False,1.0,True
+SLM + RAG,Q4,training changes the weights of a neural network.,2,0,0.0,2.0,False,1.0,True
+Fine-Tuned SLM,Q4,support is open from nine to five on weekdays.,10,6,2.0,2.0,True,1.0,False
+RAG + Fine-Tuned (extra),Q4,pro mock interviews each week.,2,0,0.0,2.0,False,1.0,True
+Baseline SLM,Q5,tartup applications use models and views.,2,0,0.0,1.67,False,1.0,True
+SLM + RAG,Q5,tartup applications use models and views.,2,0,0.0,1.67,False,1.0,True
+Fine-Tuned SLM,Q5,pro members get two mock interviews each week.,10,6,2.0,2.0,True,1.0,False
+RAG + Fine-Tuned (extra),Q5,pro members get two mock interviews each week.,10,6,2.0,2.0,True,1.0,False

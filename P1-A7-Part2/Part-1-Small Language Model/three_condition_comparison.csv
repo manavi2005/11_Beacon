@@ -1,0 +1,6 @@
+Question,Baseline SLM,SLM + RAG,Fine-Tuned SLM,RAG + Fine-Tuned (extra)
+Q1: what does lumen pro cost,small language models can run on local computers. [2/10],small language models can run on local computers. [2/10],the lumen pro plan costs nine dollars a month. [10/10],the pro plan at any time. [3/10]
+Q2: how long is the free trial,inference uses previously learned parameters. [2/10],ming [1/10],new users get a seven day free trial. [10/10],new users get a seven day free trial. [10/10]
+Q3: when are refunds paid back,the university offers courses in informatics. [2/10],the professor teaches artificial intelligence. [2/10],refunds are paid back within five days. [10/10],refiars a mont aree deven days. [1/10]
+Q4: when is support open,traches artificial intelligence systems. [2/10],training changes the weights of a neural network. [2/10],support is open from nine to five on weekdays. [10/10],pro mock interviews each week. [2/10]
+Q5: how many mock interviews,tartup applications use models and views. [2/10],tartup applications use models and views. [2/10],pro members get two mock interviews each week. [10/10],pro members get two mock interviews each week. [10/10]

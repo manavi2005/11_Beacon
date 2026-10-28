@@ -1,0 +1,61 @@
+Question,Top-K,Retrieved Documents,Model input,Fact in window,Generated Response,Response Quality (1-10),Correct,Seconds
+Q1,1,LP-01,"the lu
+what does lumen pro cost
+",False,small language models can run on local computers.,2,False,0.025
+Q1,2,"LP-01, LP-07","the lu
+what does lumen pro cost
+",False,small language models can run on local computers.,2,False,0.027
+Q1,3,"LP-01, LP-07, LP-05","the lu
+what does lumen pro cost
+",False,small language models can run on local computers.,2,False,0.026
+Q1,5,"LP-01, LP-07, LP-05, LP-06, LP-04","the lu
+what does lumen pro cost
+",False,small language models can run on local computers.,2,False,0.026
+Q2,1,LP-02,"new 
+how long is the free trial
+",False,ming,1,False,0.003
+Q2,2,"LP-02, LP-07","new 
+how long is the free trial
+",False,ming,1,False,0.003
+Q2,3,"LP-02, LP-07, LP-06","new 
+how long is the free trial
+",False,ming,1,False,0.003
+Q2,5,"LP-02, LP-07, LP-06, LP-05, LP-04","new 
+how long is the free trial
+",False,ming,1,False,0.003
+Q3,1,LP-03,"refu
+when are refunds paid back
+",False,the professor teaches artificial intelligence.,2,False,0.026
+Q3,2,"LP-03, LP-07","refu
+when are refunds paid back
+",False,the professor teaches artificial intelligence.,2,False,0.027
+Q3,3,"LP-03, LP-07, LP-06","refu
+when are refunds paid back
+",False,the professor teaches artificial intelligence.,2,False,0.026
+Q3,5,"LP-03, LP-07, LP-06, LP-05, LP-04","refu
+when are refunds paid back
+",False,the professor teaches artificial intelligence.,2,False,0.027
+Q4,1,LP-04,"support is
+when is support open
+",False,trage uage models predict the next token.,1,False,0.024
+Q4,2,"LP-04, LP-07","support is
+when is support open
+",False,trage uage models predict the next token.,1,False,0.023
+Q4,3,"LP-04, LP-07, LP-06","support is
+when is support open
+",False,trage uage models predict the next token.,1,False,0.022
+Q4,5,"LP-04, LP-07, LP-06, LP-05, LP-03","support is
+when is support open
+",False,trage uage models predict the next token.,1,False,0.021
+Q5,1,LP-05,"pro me
+how many mock interviews
+",False,tartup applications use models and views.,2,False,0.022
+Q5,2,"LP-05, LP-07","pro me
+how many mock interviews
+",False,tartup applications use models and views.,2,False,0.022
+Q5,3,"LP-05, LP-07, LP-06","pro me
+how many mock interviews
+",False,tartup applications use models and views.,2,False,0.022
+Q5,5,"LP-05, LP-07, LP-06, LP-04, LP-03","pro me
+how many mock interviews
+",False,tartup applications use models and views.,2,False,0.022

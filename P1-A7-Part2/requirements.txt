@@ -1,5 +1,5 @@
-torch==2.10.0
-transformers==5.2.0
+torch>=2.10   # run with 2.14.1
+transformers>=5.2
 huggingface_hub==1.4.1
 safetensors==0.7.0
 python-dotenv==1.2.4
@@ -7,3 +7,8 @@ openai==2.24.0
 sentence-transformers==5.2.3
 scikit-learn==1.7.2
 ollama
+# Used by slm_training_20261025.ipynb (Parts 1-4)
+pandas
+matplotlib
+psutil
+ipykernel

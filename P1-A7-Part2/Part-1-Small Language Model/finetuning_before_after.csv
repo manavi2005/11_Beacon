@@ -1,0 +1,6 @@
+Question,Before Fine-Tuning,Score before,After Fine-Tuning,Score after,Correct after
+Q1,small language models can run on local computers.,2,the lumen pro plan costs nine dollars a month.,10,True
+Q2,inference uses previously learned parameters.,2,new users get a seven day free trial.,10,True
+Q3,the university offers courses in informatics.,2,refunds are paid back within five days.,10,True
+Q4,traches artificial intelligence systems.,2,support is open from nine to five on weekdays.,10,True
+Q5,tartup applications use models and views.,2,pro members get two mock interviews each week.,10,True

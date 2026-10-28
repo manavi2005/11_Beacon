@@ -1,0 +1,61 @@
+Question,Top-K,Retrieved Documents,Model input,Fact in window,Generated Response,Response Quality (1-10),Correct
+Q1,1,LP-01,"nine dollars a m
+lumen pro cost
+",True,small language models can run on local computers.,2,False
+Q1,2,"LP-01, LP-07","nine do plan at
+lumen pro cost
+",False,small language models can run on local computers.,2,False
+Q1,3,"LP-01, LP-07, LP-05","nine plan memb
+lumen pro cost
+",False,small language models can run on local computers.,2,False
+Q1,5,"LP-01, LP-07, LP-05, LP-06, LP-04","ni pl me st su
+lumen pro cost
+",False,small language models can run on local computers.,2,False
+Q2,1,LP-02,"sers get a seven day
+free trial
+",True,ming,1,False
+Q2,2,"LP-02, LP-07","seven day you can c
+free trial
+",True,inference uses previously learned parameters.,2,False
+Q2,3,"LP-02, LP-07, LP-06","en day you ca studen
+free trial
+",False,ming,1,False
+Q2,5,"LP-02, LP-07, LP-06, LP-05, LP-04","day you stu pro sup
+free trial
+",False,inference uses previously learned parameters.,2,False
+Q3,1,LP-03,"within five d
+refunds paid back
+",False,the professor teaches artificial intelligence.,2,False
+Q3,2,"LP-03, LP-07","within you ca
+refunds paid back
+",False,the professor teaches artificial intelligence.,2,False
+Q3,3,"LP-03, LP-07, LP-06","wit you stu
+refunds paid back
+",False,students crers use attention mechanisms.,2,False
+Q3,5,"LP-03, LP-07, LP-06, LP-05, LP-04","w y s p s
+refunds paid back
+",False,the professor teaches artificial intelligence.,2,False
+Q4,1,LP-04,"from nine to five 
+support open
+",True,training changes the weights of a neural network.,2,False
+Q4,2,"LP-04, LP-07","from nin you can 
+support open
+",False,trage uage models predict the next token.,1,False
+Q4,3,"LP-04, LP-07, LP-06","from  you c stude
+support open
+",False,trage uage models predict the next token.,1,False
+Q4,5,"LP-04, LP-07, LP-06, LP-05, LP-03","fr yo st pr re
+support open
+",False,trage uage models predict the next token.,1,False
+Q5,1,LP-05,"each week
+mock interviews
+",False,tartup applications use models and views.,2,False
+Q5,2,"LP-05, LP-07","each we you can
+mock interviews
+",False,tartup applications use models and views.,2,False
+Q5,3,"LP-05, LP-07, LP-06","each you  stud
+mock interviews
+",False,tartup applications use models and views.,2,False
+Q5,5,"LP-05, LP-07, LP-06, LP-04, LP-03","ea yo st su re
+mock interviews
+",False,tartup applications use models and views.,2,False

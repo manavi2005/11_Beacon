@@ -1,0 +1,19 @@
+{
+  "company": "Lumen Prep, a fictional interview-preparation startup invented for this assignment. None of these facts appear in the SLM training corpus.",
+  "documents": [
+    {"id": "LP-01", "title": "Pricing",            "text": "the lumen pro plan costs nine dollars a month."},
+    {"id": "LP-02", "title": "Free trial",         "text": "new users get a seven day free trial."},
+    {"id": "LP-03", "title": "Refund policy",      "text": "refunds are paid back within five days."},
+    {"id": "LP-04", "title": "Support hours",      "text": "support is open from nine to five on weekdays."},
+    {"id": "LP-05", "title": "Mock interviews",    "text": "pro members get two mock interviews each week."},
+    {"id": "LP-06", "title": "Student discount",   "text": "students with a school email get half off."},
+    {"id": "LP-07", "title": "Cancellation",       "text": "you can cancel the pro plan at any time."}
+  ],
+  "questions": [
+    {"id": "Q1", "question": "what does lumen pro cost",   "source": "LP-01", "key_facts": ["nine dollars"]},
+    {"id": "Q2", "question": "how long is the free trial", "source": "LP-02", "key_facts": ["seven day"]},
+    {"id": "Q3", "question": "when are refunds paid back", "source": "LP-03", "key_facts": ["five days"]},
+    {"id": "Q4", "question": "when is support open",       "source": "LP-04", "key_facts": ["nine to five"]},
+    {"id": "Q5", "question": "how many mock interviews",   "source": "LP-05", "key_facts": ["two mock"]}
+  ]
+}
