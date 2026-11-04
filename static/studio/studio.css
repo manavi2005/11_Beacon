@@ -445,8 +445,8 @@ input[type="range"] { width: 100%; accent-color: var(--beam-1); }
 .oauth__hint code { font-size: 11.5px; }
 .oauth__divider { display: flex; align-items: center; gap: 12px; color: var(--text-3); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; margin: 18px 0 4px; }
 .oauth__divider::before, .oauth__divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.auth2__top { position: absolute; left: 0; right: 0; top: 0; max-width: none; z-index: 2; }
-.auth2__story { padding-top: 110px; }
+.auth2__top { max-width: none; border-bottom: 1px solid var(--line); }
+.page-auth .auth2 { min-height: calc(100vh - 90px); }
 
 /* ---------- Coach chat ---------- */
 .chat { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; min-height: calc(100vh - 140px); }
@@ -467,3 +467,4 @@ input[type="range"] { width: 100%; accent-color: var(--beam-1); }
 .bubble p { margin: 0 0 10px; } .bubble p:last-child { margin-bottom: 0; }
 .bubble ul { margin: 0 0 10px; padding-left: 20px; } .bubble li { margin: 4px 0; }
 .bubble strong { color: #ffd9a8; }
+.topbar .rail__brand { display: flex; }
