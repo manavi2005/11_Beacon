@@ -355,3 +355,23 @@ class CircuitBreakerTests(TestCase):
             with self.assertRaises(ai.Unavailable):
                 ai.ask_json("s", "u")
             self.assertTrue(ai.enabled())
+
+
+@override_settings(LLM_ENABLED=False)
+class AiBudgetTests(TestCase):
+    def test_ai_actions_are_capped_per_hour(self):
+        from django.core.cache import cache
+        from . import views
+        cache.clear()
+        User.objects.create_user("b", password="pw-12345")
+        self.client.login(username="b", password="pw-12345")
+        with self.settings():
+            original = views.AI_ACTIONS_PER_HOUR
+            views.AI_ACTIONS_PER_HOUR = 2
+            try:
+                codes = [post_json(self.client, reverse("studio:start_blueprint"), {"role": "Baker"}).status_code
+                         for _ in range(3)]
+            finally:
+                views.AI_ACTIONS_PER_HOUR = original
+        self.assertEqual(codes, [200, 200, 429])
+        cache.clear()
