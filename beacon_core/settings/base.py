@@ -10,6 +10,7 @@ You never run base.py directly; you run one of the two children, which do
 `from .base import *`.
 """
 
+import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -356,3 +357,7 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() not in ("0", "false", "no", "off")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Beacon <no-reply@beacon.local>")
+
+# Serve the web app manifest with its proper type, so phones offer
+# "Add to Home Screen" with Beacon's name and icon.
+mimetypes.add_type("application/manifest+json", ".webmanifest")

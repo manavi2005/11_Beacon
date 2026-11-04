@@ -9,7 +9,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{% static 'studio/studio.css' %}">
-  <link rel="icon" href="{% static 'img/beacon-logo.svg' %}" type="image/svg+xml">
+  <link rel="icon" href="{% static 'studio/icons/icon-192.png' %}" type="image/png">
+  <link rel="apple-touch-icon" href="{% static 'studio/icons/apple-touch-icon.png' %}">
+  <link rel="manifest" href="{% static 'studio/manifest.webmanifest' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="{% block description %}Walk into your next interview ready, for any career. Ten minutes a day of practice that adapts to you.{% endblock %}">
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
