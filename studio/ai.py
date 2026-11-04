@@ -19,8 +19,8 @@ Unavailable = coach.CoachError
 # falls back to the offline coach at once instead of waiting on a timeout.
 DOWN_KEY = "studio:ai-down"
 DOWN_SECONDS = 300
-_UNREACHABLE = ("could not be reached", "took too long", "HTTP 401", "HTTP 403",
-                "HTTP 404", "HTTP 5")
+# A single slow reply is not an outage, so timeouts don't trip it.
+_UNREACHABLE = ("could not be reached", "HTTP 401", "HTTP 403", "HTTP 404", "HTTP 5")
 
 
 def enabled():
@@ -40,7 +40,7 @@ def label():
     return coach.engine_label()
 
 
-def ask_json(system, user, *, max_tokens=3000, timeout=60, temperature=0.6):
+def ask_json(system, user, *, max_tokens=6000, timeout=60, temperature=0.6):
     """Return the model's reply parsed as a JSON object, or raise Unavailable."""
     if not enabled():
         raise Unavailable("AI is switched off.")
@@ -52,7 +52,7 @@ def ask_json(system, user, *, max_tokens=3000, timeout=60, temperature=0.6):
     return parse_json(text)
 
 
-def ask_text(system, messages, *, max_tokens=1200, timeout=45, temperature=0.7):
+def ask_text(system, messages, *, max_tokens=3000, timeout=45, temperature=0.7):
     if not enabled():
         raise Unavailable("AI is switched off.")
     return _call(

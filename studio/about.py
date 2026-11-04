@@ -41,7 +41,7 @@ def read_background(text):
             "3. Suggest 6 realistic roles they could interview for next, ordered by fit, staying "
             "in or adjacent to their own field, each with one short sentence on why it fits them.\n"
             'Return {"summary", "stage", "roles": [{"title", "why"}]}',
-            max_tokens=2000, temperature=0.5,
+            max_tokens=5000, temperature=0.5,
         )
     except ai.Unavailable:
         return {"summary": _plain_summary(text), "stage": "", "roles": []}
@@ -72,7 +72,7 @@ def estimate_levels(background, bp):
             "Be conservative: a mention is not mastery.\n"
             f"Skills: {names}\n"
             'Return {"levels": {"<skill name>": integer}}',
-            max_tokens=1200, temperature=0.2,
+            max_tokens=4000, temperature=0.2,
         )
     except ai.Unavailable:
         return {}

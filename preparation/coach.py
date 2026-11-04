@@ -249,6 +249,9 @@ def _chat(messages, *, json_mode=False, max_tokens=600, patient=False, timeout=N
     }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
+    effort = getattr(settings, "LLM_REASONING_EFFORT", "")
+    if effort and not cfg["keyless"]:
+        body["reasoning_effort"] = effort
     headers = {"Authorization": f"Bearer {cfg['key']}"} if cfg["key"] else {}
     # The free keyless tier allows roughly one request every few seconds per
     # server, and says so with 402/429. One short wait and retry covers the
