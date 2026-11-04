@@ -57,10 +57,16 @@ KIND_BRIEF = {
 LEVEL_WORDS = {1: "foundational", 2: "intermediate", 3: "advanced"}
 
 
+def card_stage(profile):
+    return profile.get_experience_level_display()
+
+
 def difficulty_for(memory):
-    if memory.strength >= 75:
+    """Harder questions as you approach your own bar (which is stage-relative)."""
+    ratio = memory.strength / memory.required if memory.required else memory.strength / 100
+    if ratio >= 0.95:
         return 3
-    if memory.strength >= 45:
+    if ratio >= 0.6:
         return 2
     return 1
 
@@ -89,7 +95,8 @@ def _generate(profile, skill, kind, difficulty, is_review):
         about.tailor_line(profile),
         "Where it fits, connect the question to their own background.",
         f"Skill: {skill.name}" + (f" ({skill.description})" if skill.description else "") + ".",
-        f"Pitch it at a {LEVEL_WORDS[difficulty]} level for this candidate.",
+        f"Pitch it at a {LEVEL_WORDS[difficulty]} level FOR THEIR CAREER STAGE "
+        f"({card_stage(profile)}): what an interviewer would ask someone at that stage.",
         f"Write {KIND_BRIEF[kind]}.",
     ]
     if is_review:
