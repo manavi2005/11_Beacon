@@ -422,3 +422,46 @@ class StageAndMarketTests(TestCase):
         self.assertIn("New graduate", captured["prompt"])
         self.assertEqual(bp.market["trending"], ["NetSuite", "Month-end close"])
         self.assertEqual(bp.interview_style["rounds"][0]["name"], "Technical")
+
+
+@override_settings(LLM_ENABLED=False)
+class DeletingTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("d", password="pw-12345")
+        self.client.login(username="d", password="pw-12345")
+        bp = post_json(self.client, reverse("studio:start_blueprint"), {"role": "Librarian"}).json()
+        post_json(self.client, reverse("studio:start"),
+                  {"role": bp["title"], "blueprint": bp["slug"], "ratings": {s["name"]: 20 for s in bp["skills"]}})
+        self.profile = CandidateProfile.objects.get(user=self.user)
+        self.other = User.objects.create_user("o", password="pw-12345")
+
+    def test_plans_can_be_deleted_and_rebuilt(self):
+        plan = self.profile.plans.get()
+        r = self.client.get(reverse("studio:you"))
+        self.assertContains(r, plan.title)
+        self.client.post(reverse("studio:delete_plan", args=[plan.pk]))
+        self.assertFalse(self.profile.plans.exists())
+        self.assertEqual(self.client.get(reverse("preparation:my_plan")).status_code, 200)
+        self.client.post(reverse("studio:new_plan"))
+        self.assertTrue(self.profile.plans.exists())
+
+    def test_interviews_and_practice_can_be_deleted_but_progress_stays(self):
+        session = InterviewSession.objects.create(candidate=self.profile, role="Librarian")
+        memory = self.profile.memories.first()
+        Card.objects.create(candidate=self.profile, skill=memory.skill, kind=Card.Kind.SHORT, prompt="Q")
+        r = self.client.post(reverse("studio:delete_interview", args=[session.pk]),
+                             {"next": "https://evil.example/"})
+        self.assertRedirects(r, reverse("studio:you"))          # off-site next ignored
+        self.assertFalse(InterviewSession.objects.exists())
+        self.client.post(reverse("studio:clear_practice"))
+        self.assertFalse(Card.objects.exists())
+        self.assertTrue(self.profile.memories.exists())
+
+    def test_nobody_can_delete_someone_elses_things(self):
+        plan = self.profile.plans.get()
+        session = InterviewSession.objects.create(candidate=self.profile, role="Librarian")
+        self.client.login(username="o", password="pw-12345")
+        self.assertEqual(self.client.post(reverse("studio:delete_plan", args=[plan.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("studio:delete_interview", args=[session.pk])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("studio:delete_plan", args=[plan.pk])).status_code, 405)
+        self.assertTrue(self.profile.plans.exists())
