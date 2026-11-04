@@ -16,11 +16,14 @@ from functools import wraps
 import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.core.cache import cache
+from django.db.models import Count
 from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from preparation import onboarding as v1_onboarding
@@ -513,12 +516,18 @@ def progress(request):
 def you(request):
     profile = _profile(request)
     prefs = Preferences.objects.get_or_create(candidate=profile)[0] if profile else None
+    plans = (profile.plans.annotate(task_count=Count("tasks")).order_by("-created_at")
+             if profile else [])
+    interviews = profile.interviews.all() if profile else []
     if request.method == "POST" and prefs:
         prefs.email_reminders = request.POST.get("email_reminders") == "on"
         prefs.save(update_fields=["email_reminders"])
         return redirect("studio:you")
     return render(request, "studio/you.html", {
         "prefs": prefs,
+        "plans": plans,
+        "interviews": interviews,
+        "chat_turns": len(request.session.get(CHAT_KEY, [])) // 2,
         "profile": profile,
         "counts": {
             "cards": profile.cards.count() if profile else 0,
@@ -551,6 +560,56 @@ def export_data(request):
     response = HttpResponse(json.dumps(data, indent=2), content_type="application/json")
     response["Content-Disposition"] = 'attachment; filename="my-beacon-data.json"'
     return response
+
+
+# --------------------------------------------------------------------------
+# Deleting your own things. Every view is POST-only and scoped to the
+# signed-in person, so nobody can delete anyone else's data by guessing ids.
+# --------------------------------------------------------------------------
+@login_required
+@require_POST
+def delete_plan(request, pk):
+    plan = get_object_or_404(PreparationPlan, pk=pk, candidate__user=request.user)
+    title = plan.title
+    plan.delete()
+    messages.success(request, f"Deleted the plan “{title}”.")
+    return redirect("studio:you")
+
+
+@login_required
+@require_POST
+def new_plan(request):
+    profile = _profile(request)
+    if not profile:
+        return redirect("studio:start")
+    v1_onboarding.build_plan(profile)
+    messages.success(request, "Built a fresh weekly plan from your current skill levels.")
+    return redirect("preparation:my_plan")
+
+
+@login_required
+@require_POST
+def delete_interview(request, pk):
+    session = get_object_or_404(InterviewSession, pk=pk, candidate__user=request.user)
+    session.delete()
+    messages.success(request, "Deleted that mock interview and its transcript.")
+    target = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        target = "studio:you"
+    return redirect(target)
+
+
+@login_required
+@require_POST
+def clear_practice(request):
+    """Delete practice answers. Skill levels and streaks stay: they are
+    what the practice earned, not the answers themselves."""
+    profile = _profile(request)
+    if profile:
+        count, _ = profile.cards.all().delete()
+        request.session.pop(SESSION_KEY, None)
+        messages.success(request, f"Deleted {count} practice answer{'s' if count != 1 else ''}.")
+    return redirect("studio:you")
 
 
 @login_required
