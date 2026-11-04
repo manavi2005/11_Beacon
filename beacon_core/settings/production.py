@@ -11,15 +11,18 @@ from .base import *  # noqa: F401,F403
 # DEBUG = False so visitors never see tracebacks, file paths or settings.
 DEBUG = False
 
-# With DEBUG = False, Django refuses any host that is not listed here.
-ALLOWED_HOSTS = [
-    'SimonHwang1998.pythonanywhere.com'
-] + [h.strip()
-    for h in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS",
-        "beacon.example.com,127.0.0.1,localhost",
-    ).split(",")
-    if h.strip()
+# With DEBUG = False, Django refuses any host that is not listed here. Both
+# team deployments are always allowed; DJANGO_ALLOWED_HOSTS adds more (a
+# custom domain, say) without a code change.
+TEAM_HOSTS = ["manavi2005.pythonanywhere.com", "simonhwang1998.pythonanywhere.com"]
+ALLOWED_HOSTS = TEAM_HOSTS + [
+    h.strip()
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if h.strip() and h.strip().lower() not in TEAM_HOSTS
+]
+# Forms posted over https from these hosts pass Django's CSRF origin check.
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{h}" for h in ALLOWED_HOSTS if h not in ("127.0.0.1", "localhost")
 ]
 
 # A real deployment must supply its own key through the environment.
