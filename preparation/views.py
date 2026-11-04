@@ -1116,7 +1116,7 @@ def signup_view(request):
             )
             # A brand-new account has no profile yet, so the useful next
             # page is onboarding, not the cohort dashboard.
-            return redirect("preparation:onboarding")
+            return redirect("studio:start")
     else:
         form = UserCreationForm()
 
@@ -1184,7 +1184,7 @@ def api_whoami(request):
 # ---------------------------------------------------------------------------
 PALETTE_PAGES = [
     ("My plan", "preparation:my_plan", "Your readiness and week-by-week plan"),
-    ("Retake the diagnosis", "preparation:onboarding", "Rebuild your plan"),
+    ("Change your goal", "studio:start", "Any role, any field"),
     ("Dashboard", "preparation:dashboard", "Home, readiness and widest gaps"),
     ("Candidates", "preparation:candidate_list", "Every candidate with scores"),
     ("Find a candidate", "preparation:candidate_search", "POST search"),
@@ -1336,7 +1336,7 @@ def my_plan(request):
         .first()
     )
     if profile is None:
-        return redirect("preparation:onboarding")
+        return redirect("studio:start")
 
     plan = (
         profile.plans.filter(status=PreparationPlan.Status.ACTIVE)

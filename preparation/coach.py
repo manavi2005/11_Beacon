@@ -236,14 +236,15 @@ ADVICE_INSTRUCTIONS = (
 )
 
 
-def _chat(messages, *, json_mode=False, max_tokens=600, patient=False):
+def _chat(messages, *, json_mode=False, max_tokens=600, patient=False, timeout=None,
+          temperature=0.4):
     """One chat completion. patient=True (used for grading, which the user is
     actively waiting on) retries a busy free tier twice, after 6 and 10 s."""
     cfg = llm_config()
     body = {
         "model": cfg["model"],
         "messages": messages,
-        "temperature": 0.4,
+        "temperature": temperature,
         "max_tokens": max_tokens,
     }
     if json_mode:
@@ -260,7 +261,7 @@ def _chat(messages, *, json_mode=False, max_tokens=600, patient=False):
                 f"{cfg['base_url']}/chat/completions",
                 json=body,
                 headers=headers,
-                timeout=TIMEOUT_SECONDS + (15 if cfg["keyless"] else 0),
+                timeout=(timeout or TIMEOUT_SECONDS) + (15 if cfg["keyless"] else 0),
             )
             if response.status_code in (402, 429):
                 if attempt + 1 < attempts:
@@ -268,7 +269,9 @@ def _chat(messages, *, json_mode=False, max_tokens=600, patient=False):
                     continue
                 raise CoachBusy("The free AI model is busy right now.")
             response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
+            content = response.json()["choices"][0]["message"]["content"] or ""
+            # Reasoning models (several on Lumen) may inline their thinking.
+            return re.sub(r"<think>.*?</think>", "", content, flags=re.S).strip()
         except CoachBusy:
             raise
         except requests.Timeout as exc:

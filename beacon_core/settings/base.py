@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     # Beacon feature apps
     "preparation",
+    # v2 product experience: Today loop, sessions, voice interviews
+    "studio",
 ]
 
 # Which Site row the social callbacks belong to. Changing the deployed
@@ -159,7 +161,7 @@ DATABASES = {
 # so naming the route here is what keeps "/accounts/login/" out of the view
 # code.
 LOGIN_URL = "preparation:login"
-LOGIN_REDIRECT_URL = "preparation:dashboard"
+LOGIN_REDIRECT_URL = "studio:home"
 LOGOUT_REDIRECT_URL = "preparation:login"
 
 
@@ -295,7 +297,7 @@ if "test" in sys.argv:
 # A first-time Google sign-in creates an account with no profile, exactly
 # like the signup form. Send it to onboarding too, instead of the cohort
 # dashboard. Returning users still land on LOGIN_REDIRECT_URL.
-ACCOUNT_SIGNUP_REDIRECT_URL = "preparation:onboarding"
+ACCOUNT_SIGNUP_REDIRECT_URL = "studio:start"
 
 
 # ---------------------------------------------------------------------------

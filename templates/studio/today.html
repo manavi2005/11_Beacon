@@ -1,0 +1,129 @@
+{% extends "studio/base.html" %}
+{% block title %}Today{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero__text">
+    <div class="eyebrow">{{ greeting }}, {{ first_name }}</div>
+    {% if welcome %}
+      <h1 class="display">Your plan for <em>{{ profile.target_role }}</em> is ready.</h1>
+      <p class="lede">Every day Beacon picks a few minutes of practice: what's fading, then what's furthest from the bar. Show up, and the ring fills.</p>
+    {% elif first_time %}
+      <h1 class="display">Let's find your <em>real</em> starting point.</h1>
+      <p class="lede">Your first session is a friendly check-in on the skills {{ profile.target_role }} interviews test. No pressure: it just tells Beacon where to aim.</p>
+    {% elif streak.done_today %}
+      <h1 class="display">You showed up today. <em>That's the whole game.</em></h1>
+      <p class="lede">Today's work is done. Want one more round, or a mock interview while it's fresh?</p>
+    {% elif due_count %}
+      <h1 class="display">{{ due_count }} skill{{ due_count|pluralize }} {{ due_count|pluralize:"is,are" }} <em>starting to fade</em>.</h1>
+      <p class="lede">A quick review now locks them in for days longer. About {{ minutes }} minutes.</p>
+    {% else %}
+      <h1 class="display">One small step toward <em>{{ profile.target_role }}</em>.</h1>
+      <p class="lede">About {{ minutes }} minutes. Beacon picked the skills that move your readiness most.</p>
+    {% endif %}
+    {% if forecast %}
+      <div class="forecast">
+        <span class="chip chip--memory"><span class="dot"></span>Forecast</span>
+        <span>At this pace: <strong>{{ forecast.value }}%</strong> by {{ forecast.date|date:"M j" }} · {{ forecast.days_left }} day{{ forecast.days_left|pluralize }} to go</span>
+      </div>
+    {% endif %}
+  </div>
+  {% include "studio/_ring.html" with value=readiness forecast_value=forecast.value %}
+</section>
+
+<div class="grid grid--today">
+  <div class="stack">
+    <section class="card card--glow session-card" aria-labelledby="session-title">
+      <div class="spread">
+        <h2 class="h2" id="session-title">Today's session</h2>
+        <span class="chip chip--beam">~{{ minutes }} min</span>
+      </div>
+      <div class="checkin mt-16" data-mood-picker>
+        <span class="checkin__q">How are you arriving today?</span>
+        {% for value, label in log.Mood.choices %}
+          <button type="button" class="mood" data-mood="{{ value }}" aria-pressed="{% if log.mood == value %}true{% else %}false{% endif %}">
+            {% if value == "GREAT" %}☀︎ {% elif value == "OK" %}◐ {% else %}☾ {% endif %}{{ label }}</button>
+        {% endfor %}
+      </div>
+      {% if log.mood == "ROUGH" %}
+        <p class="care-note mt-16">Thank you for showing up anyway. Today is short and review-only: keeping what you've built counts. Be gentle with yourself.</p>
+      {% endif %}
+      <ol class="queue">
+        {% for m in plan %}
+          <li>
+            <span class="row"><span class="queue__n">{{ forloop.counter }}</span><span class="queue__name">{{ m.skill.name }}</span></span>
+            {% if m.reps and m.is_due %}<span class="chip chip--memory">Review · fading</span>
+            {% elif not m.reps %}<span class="chip">New</span>
+            {% else %}<span class="chip chip--beam">Close the gap</span>{% endif %}
+          </li>
+        {% empty %}
+          <li class="muted">Add skills in setup to get a session.</li>
+        {% endfor %}
+      </ol>
+      <div class="row">
+        <a class="btn btn--beam btn--big" href="{% url 'studio:session' %}">
+          {% if streak.done_today %}Another round{% else %}Start session{% endif %}
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        {% if not ai_on %}<span class="small muted">Offline coaching mode. Add a Lumen key for AI-written practice.</span>{% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="focus-title">
+      <div class="card__head">
+        <h2 class="h2" id="focus-title">Where you stand</h2>
+        <a class="small muted" href="{% url 'studio:progress' %}">All skills →</a>
+      </div>
+      <div class="skills">
+        {% for r in focus %}{% include "studio/_skill_row.html" %}{% endfor %}
+      </div>
+      <div class="legend">
+        <span><i style="background:linear-gradient(90deg,#ffc46b,#ff8a5c)"></i>Level today</span>
+        <span><i style="background:repeating-linear-gradient(135deg,rgba(169,155,255,.5) 0 3px,transparent 3px 6px)"></i>Faded since practice</span>
+        <span><i style="background:#f4f1ea;width:3px"></i>Interview bar</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="card" aria-labelledby="streak-title">
+      <div class="spread">
+        <div>
+          <h2 class="h3 muted" id="streak-title">Streak</h2>
+          <div class="streak-num tnum">{{ streak.days }} <span class="h3 muted">day{{ streak.days|pluralize }}</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="h3 muted">Level {{ level.level }}</div>
+          <div class="small muted tnum">{{ level.into }} / {{ level.need }} XP</div>
+        </div>
+      </div>
+      <div class="bar mt-16" aria-hidden="true"><span style="width:{{ level.percent }}%"></span></div>
+      <div class="week" aria-label="Last seven days">
+        {% for d in streak.week %}
+          <div class="week__day{% if d.active %} is-on{% endif %}{% if forloop.last %} is-today{% endif %}">
+            <span class="week__pip"></span>{{ d.date|date:"D"|slice:":2" }}
+          </div>
+        {% endfor %}
+      </div>
+      <p class="small muted mt-16">Rest days are part of it. One a week never breaks your streak.</p>
+    </section>
+
+    <section class="card" aria-labelledby="mock-title">
+      <div class="mic-teaser">
+        <div class="orb-mini" aria-hidden="true"></div>
+        <div>
+          <h2 class="h2" id="mock-title">Say it out loud</h2>
+          <p class="small muted">A realistic {{ profile.target_role }} interviewer. Speak or type. You get a STAR breakdown after.</p>
+        </div>
+      </div>
+      <div class="row mt-16">
+        <a class="btn" href="{% url 'studio:interview' %}">Start a mock interview</a>
+        {% if last_interview %}<a class="small muted" href="{% url 'studio:interview_report' last_interview.pk %}">Last: {{ last_interview.score }}/100</a>{% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="trend-title">
+      <div class="card__head"><h2 class="h3" id="trend-title">Readiness over time</h2></div>
+      <div class="trend" data-trend='{{ history_json }}' data-target="80"></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

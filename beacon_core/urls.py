@@ -11,6 +11,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # v2 owns "/" and its own paths; v1 pages keep theirs.
+    path("", include("studio.urls")),
     path("", include("preparation.urls")),
     # allauth comes AFTER preparation.urls on purpose. allauth also defines
     # accounts/login/ and accounts/signup/, and Django matches in order, so

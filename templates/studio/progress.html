@@ -1,0 +1,58 @@
+{% extends "studio/base.html" %}
+{% block title %}Progress{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero__text">
+    <div class="eyebrow">Progress · {{ profile.target_role }}</div>
+    <h1 class="display">{{ total_cards }} question{{ total_cards|pluralize }} answered. <em>Level {{ level.level }}.</em></h1>
+    <p class="lede">Strength is what you've shown. Memory fades between practice, so Beacon brings each skill back just before you'd start to lose it. That's why it sticks.</p>
+  </div>
+  {% include "studio/_ring.html" with value=readiness %}
+</section>
+
+<div class="grid grid--today">
+  <section class="card">
+    <div class="card__head"><h2 class="h2">Every skill</h2><a class="small muted" href="{% url 'studio:start' %}">Change goal</a></div>
+    <div class="skills">
+      {% for r in rows %}
+        {% include "studio/_skill_row.html" %}
+        <p class="skill__why" style="margin-top:-10px">
+          {% if r.memory.reps %}Memory {{ r.retention }}% · reviewed {{ r.memory.reps }} time{{ r.memory.reps|pluralize }} ·
+            {% if r.due %}<span style="color:#d8d0ff">due now</span>{% else %}next review {{ r.memory.due_at|timeuntil }}{% endif %}
+          {% else %}Not practised yet{% endif %}
+          · <a href="{% url 'studio:session' %}?skill={{ r.skill.pk }}">Practise this →</a>
+        </p>
+      {% endfor %}
+    </div>
+    <div class="legend">
+      <span><i style="background:linear-gradient(90deg,#ffc46b,#ff8a5c)"></i>Level today</span>
+      <span><i style="background:repeating-linear-gradient(135deg,rgba(169,155,255,.5) 0 3px,transparent 3px 6px)"></i>Faded since practice</span>
+      <span><i style="background:#f4f1ea;width:3px"></i>Interview bar</span>
+    </div>
+  </section>
+
+  <div class="stack">
+    <section class="card">
+      <h2 class="h3">Readiness over time</h2>
+      <div class="trend" data-trend='{{ history_json }}' data-target="80"></div>
+    </section>
+    <section class="card">
+      <div class="spread"><h2 class="h3">Streak</h2><span class="streak-num tnum" style="font-size:28px">{{ streak.days }}</span></div>
+      <div class="spread small muted mt-8"><span>Level {{ level.level }}</span><span class="tnum">{{ level.xp }} XP total</span></div>
+      <div class="bar mt-8"><span style="width:{{ level.percent }}%"></span></div>
+    </section>
+    {% if interviews %}
+    <section class="card">
+      <h2 class="h3">Mock interviews</h2>
+      <ul class="list mt-8">{% for s in interviews %}<li><a href="{% url 'studio:interview_report' s.pk %}">{{ s.started_at|date:"M j" }} · {{ s.get_mode_display }}</a><span class="score">{{ s.score }}</span></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+    {% if recent %}
+    <section class="card">
+      <h2 class="h3">Recent answers</h2>
+      <ul class="list mt-8">{% for c in recent %}<li><span class="small"><span class="muted">{{ c.skill.name }}</span><br>{{ c.prompt|truncatechars:70 }}</span><span class="score">{{ c.score }}</span></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

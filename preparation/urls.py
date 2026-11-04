@@ -20,7 +20,7 @@ app_name = "preparation"
 
 urlpatterns = [
     # Part 4 dashboard
-    path("", views.dashboard, name="dashboard"),
+    path("dashboard/", views.dashboard, name="dashboard"),
     # --- Section 2: function-based views -----------------------------------
     path("skills/manual/", views.skill_catalog_manual, name="skill_catalog_manual"),
     path("skills/", views.skill_catalog_render, name="skill_catalog_render"),

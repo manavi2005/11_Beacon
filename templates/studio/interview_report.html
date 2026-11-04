@@ -1,0 +1,54 @@
+{% extends "studio/base.html" %}
+{% block title %}Interview feedback{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero__text">
+    <div class="eyebrow">Mock interview · {{ session.started_at|date:"M j" }} · {{ session.get_mode_display }}</div>
+    <h1 class="display">{{ report.headline|default:"Here's how it went." }}</h1>
+    {% if report.best_moment %}<p class="lede">Your best moment: <em style="color:var(--beam-1)">“{{ report.best_moment }}”</em></p>{% endif %}
+  </div>
+  {% include "studio/_ring.html" with value=report.overall caption="overall" %}
+</section>
+
+<div class="grid grid--2">
+  <section class="card">
+    <h2 class="h2">STAR breakdown</h2>
+    <p class="small muted mt-8">How well your stories covered each part, averaged over your answers.</p>
+    <div class="skills mt-16">
+      {% for name, value in star_parts %}
+        <div class="skill">
+          <div class="skill__name">{{ name }}</div>
+          <div class="skill__meta tnum">{{ value }}/100</div>
+          <div class="skill__track" role="img" aria-label="{{ name }} {{ value }} out of 100"><span class="skill__fill" style="width:{{ value }}%"></span></div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    {% if report.strengths %}<h2 class="h3">What worked</h2><ul class="fb-list">{% for s in report.strengths %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}
+    {% if report.improve %}<h2 class="h3 mt-24">Make it stronger</h2><ul class="fb-list fb-list--improve">{% for s in report.improve %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}
+    {% if report.next_step %}<p class="care-note mt-24">Next: {{ report.next_step }}</p>{% endif %}
+  </section>
+</div>
+
+{% if report.rewrite.stronger %}
+<section class="card card--glow mt-24">
+  <div class="eyebrow">Your answer, levelled up</div>
+  <h2 class="h2 mt-8">{{ report.rewrite.question }}</h2>
+  <p class="mt-16" style="white-space:pre-line;color:var(--text-2);font-size:16px">{{ report.rewrite.stronger }}</p>
+</section>
+{% endif %}
+
+<section class="card mt-24">
+  <details><summary class="h3" style="cursor:pointer">Full transcript</summary>
+    <div class="transcript mt-16">
+      {% for t in session.transcript %}<p class="{% if t.who == 'you' %}you{% endif %}">{% if t.who == 'you' %}You{% else %}Interviewer{% endif %}: {{ t.text }}</p>{% endfor %}
+    </div>
+  </details>
+</section>
+
+<div class="row mt-32">
+  <a class="btn btn--beam btn--big" href="{% url 'studio:interview' %}">Go again</a>
+  <a class="btn" href="{% url 'studio:today' %}">Back to Today</a>
+</div>
+{% endblock %}

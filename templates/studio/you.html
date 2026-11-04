@@ -1,0 +1,50 @@
+{% extends "studio/base.html" %}
+{% block title %}You{% endblock %}
+{% block content %}
+<div class="eyebrow">You</div>
+<h1 class="display mt-8">A <em>safe space</em> to practise.</h1>
+<p class="lede mt-16">Getting things wrong here is how you get them right in the room. Nobody else sees your answers, scores or moods: no leaderboards, no sharing, no ads.</p>
+
+<div class="grid grid--2 mt-32">
+  <section class="card">
+    <h2 class="h2">Your goal</h2>
+    {% if profile %}
+      <ul class="list mt-16">
+        <li><span class="muted">Role</span><span>{{ profile.target_role }}</span></li>
+        <li><span class="muted">Organisation</span><span>{{ profile.target_company|default:"—" }}</span></li>
+        <li><span class="muted">Date</span><span>{{ profile.target_interview_date|default:"Not set" }}</span></li>
+        <li><span class="muted">Stage</span><span>{{ profile.get_experience_level_display }}</span></li>
+      </ul>
+      <a class="btn mt-16" href="{% url 'studio:start' %}">Change goal</a>
+    {% else %}
+      <a class="btn btn--beam mt-16" href="{% url 'studio:start' %}">Set your goal</a>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2 class="h2">Your data</h2>
+    <ul class="list mt-16">
+      <li><span class="muted">Practice answers</span><span class="tnum">{{ counts.cards }}</span></li>
+      <li><span class="muted">Mock interviews</span><span class="tnum">{{ counts.interviews }}</span></li>
+      <li><span class="muted">Days logged</span><span class="tnum">{{ counts.days }}</span></li>
+      <li><span class="muted">AI coach</span><span>{{ provider }}</span></li>
+    </ul>
+    <p class="small muted mt-16">Your answers are sent to the AI model only to grade them and write feedback. Voice is transcribed in your browser where possible, and audio is never stored.</p>
+    <div class="row mt-16">
+      <a class="btn" href="{% url 'studio:export_data' %}">Download everything</a>
+    </div>
+  </section>
+</div>
+
+{% if profile %}
+<section class="card mt-24">
+  <h2 class="h3">Start over</h2>
+  <p class="small muted mt-8">Deletes your goal, skills, answers, interviews and history. Your login stays. This can't be undone.</p>
+  <form method="post" action="{% url 'studio:reset_progress' %}" class="row mt-16">{% csrf_token %}
+    <label class="sr-only" for="confirm">Type DELETE to confirm</label>
+    <input class="input" style="max-width:220px" id="confirm" name="confirm" placeholder="Type DELETE" autocomplete="off">
+    <button class="btn" type="submit">Delete my progress</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

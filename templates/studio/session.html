@@ -1,0 +1,26 @@
+{% extends "studio/base.html" %}
+{% load static %}
+{% block title %}Practice{% endblock %}
+{% block chrome %}{% endblock %}
+{% block stage_class %}stage--focus{% endblock %}
+{% block content %}
+<div class="focus" data-session data-size="{{ size }}">
+  <header class="focus__top">
+    <a class="focus__close" href="{% url 'studio:today' %}" aria-label="Leave session">✕</a>
+    <div class="focus__progress" aria-hidden="true">
+      {% for name in skill_names %}<span></span>{% endfor %}
+    </div>
+    <div class="focus__xp tnum" aria-live="polite"><span data-xp>0</span> XP</div>
+  </header>
+  <div class="focus__body">
+    <div class="qcard" data-stage>
+      <div class="thinking">
+        <div class="thinking__beam" aria-hidden="true"></div>
+        <p>Writing your first question for <strong>{{ profile.target_role }}</strong>…</p>
+        {% if mood == "ROUGH" %}<p class="small muted">Short and gentle today. Just {{ size }} quick review{{ size|pluralize }}.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'studio/session.js' %}" defer></script>{% endblock %}
