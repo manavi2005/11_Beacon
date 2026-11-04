@@ -327,3 +327,31 @@ class ErrorPageTests(TestCase):
         r = self.client.get("/definitely-not-a-page/")
         self.assertEqual(r.status_code, 404)
         self.assertContains(r, "out of the light", status_code=404)
+
+
+class CircuitBreakerTests(TestCase):
+    def test_unreachable_provider_switches_ai_off_for_a_while(self):
+        from unittest import mock
+        from django.core.cache import cache
+        from preparation import coach
+        from . import ai
+        cache.delete(ai.DOWN_KEY)
+        with override_settings(LLM_ENABLED=True, LLM_API_KEY="k", LLM_BASE_URL="https://x.test", LLM_MODEL="m"), \
+                mock.patch.object(coach, "_chat", side_effect=coach.CoachError("The AI coach could not be reached.")):
+            self.assertTrue(ai.enabled())
+            with self.assertRaises(ai.Unavailable):
+                ai.ask_json("s", "u")
+            self.assertFalse(ai.enabled())
+        cache.delete(ai.DOWN_KEY)
+
+    def test_bad_json_does_not_trip_the_breaker(self):
+        from unittest import mock
+        from django.core.cache import cache
+        from preparation import coach
+        from . import ai
+        cache.delete(ai.DOWN_KEY)
+        with override_settings(LLM_ENABLED=True, LLM_API_KEY="k", LLM_BASE_URL="https://x.test", LLM_MODEL="m"), \
+                mock.patch.object(coach, "_chat", return_value="not json"):
+            with self.assertRaises(ai.Unavailable):
+                ai.ask_json("s", "u")
+            self.assertTrue(ai.enabled())
