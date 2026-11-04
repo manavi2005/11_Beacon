@@ -1,0 +1,90 @@
+/* The v1 pages (weekly plan, task workspace, coach and cohort views) in the
+   v2 look. beacon.css is built on custom properties, so most of the change
+   is re-pointing them at the night palette; the rules after that cover the
+   few places v1 hard-coded a light colour. Loaded after beacon.css. */
+
+:root {
+  --navy: #1a1e38;
+  --navy-700: #252a4a;
+  --navy-100: #252a4a;
+  --orange: #ff9a62;
+  --orange-700: #ffb06b;
+  --orange-50: rgba(255, 180, 100, .12);
+
+  --ink: #f4f1ea;
+  --ink-muted: #c3c0d4;
+  --ink-faint: #8d8aa6;
+
+  --surface: #1a1e38;
+  --surface-sunken: #12152a;
+  --page: #0b0d1a;
+  --line: rgba(255, 255, 255, .09);
+
+  --ok: #6fe3b0;
+  --warn: #ffc46b;
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 20px 60px -24px rgba(0, 0, 0, .7);
+
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  background: #0b0d1a radial-gradient(ellipse 900px 700px at 100% -10%, rgba(255, 170, 90, .12), transparent 70%) no-repeat;
+  color: var(--ink);
+}
+h1, h2, h3, .page-title, .hero-strip__title { font-family: "Fraunces", Georgia, serif; letter-spacing: -.01em; }
+a { color: var(--orange-700); }
+
+/* Masthead and menu */
+.masthead { background: rgba(18, 21, 42, .85); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
+.nav .menu__panel, .nav details > ul, .nav__panel { background: #1a1e38; border: 1px solid rgba(255, 255, 255, .14); }
+.nav .menu__panel a, .nav details > ul a { color: var(--ink); }
+.nav .menu__panel a:hover, .nav details > ul a:hover { background: #252a4a; }
+
+/* Places v1 wrote light colours directly */
+tr:nth-child(even) td { background: rgba(255, 255, 255, .02); }
+th { background: #12152a; color: var(--ink-muted); }
+.pill--done { background: rgba(111, 227, 176, .12); color: #a9f0d0; border-color: rgba(111, 227, 176, .3); }
+.pill--doing { background: rgba(255, 196, 107, .12); color: #ffd9a8; border-color: rgba(255, 196, 107, .3); }
+.switch { background: #3a3f63; }
+input, select, textarea {
+  background: #12152a; color: var(--ink); border-color: rgba(255, 255, 255, .16);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-faint); }
+.btn { background: linear-gradient(135deg, #ffc46b, #ff8a5c); color: #2a1406; border: 0; border-radius: 999px; }
+.btn:hover { background: linear-gradient(135deg, #ffd08a, #ff9a70); color: #2a1406; }
+.hero-strip { background: linear-gradient(135deg, #1a1e38, #252a4a); border: 1px solid var(--line); }
+.dev-note, .explainer { background: #12152a; color: var(--ink-muted); border-left-color: var(--orange-700); }
+
+/* v1 used --navy as a text colour too; on the night palette it would be
+   dark on dark, so those texts get the light ink instead. */
+.auth-card__title, .btn--ghost, .btn--ghost:hover, .chip.is-checked, .coach__chips button,
+.coach__headline, .coach__refresh, .field__label, .importer__paste summary, .importer__title,
+.nav .menu__panel a.menu__link:hover, .nav .menu__panel a.menu__link:focus-visible,
+.nav .menu__toggle:hover, .onb-back, .onb-step__title, .onb-steps .is-current, .onb-subtitle,
+.page-title, .palette__group, .ring__number, .stat__value, .tag, .week__label,
+.ws-result__number, .ws-result__verdict, h2, th { color: var(--ink); }
+.avatar { background: #ffc46b; color: #2a1406; }
+.hero-strip__action { background: linear-gradient(135deg, #ffc46b, #ff8a5c); color: #2a1406; }
+.hero-strip__action:hover { background: linear-gradient(135deg, #ffd08a, #ff9a70); color: #2a1406; }
+
+/* Panels v1 painted light */
+.coach, .importer, .palette__group--plan, .show-dev .devnote {
+  background: linear-gradient(180deg, rgba(37, 42, 74, .55), rgba(26, 30, 56, .9));
+  border-color: rgba(255, 255, 255, .1); color: var(--ink);
+}
+.coach__engine.is-ai { background: rgba(169, 155, 255, .16); color: #d8d0ff; }
+.task--done { background: rgba(111, 227, 176, .06); }
+.ws-result--pass, .ws-review__item.is-right { background: rgba(111, 227, 176, .1); border-color: rgba(111, 227, 176, .35); }
+.ws-result--retry, .ws-review__item.is-wrong { background: rgba(255, 184, 107, .1); border-color: rgba(255, 184, 107, .35); }
+.gapbar__fill { background: linear-gradient(90deg, #ffc46b, #ff8a5c); }
+.masthead__logo { background: #1a1e38; }
+.switch::after { background: #f4f1ea; }
+
+@media print {
+  :root { --ink: #1c1c1c; --page: #fff; --surface: #fff; }
+  body { background: #fff; color: #1c1c1c; }
+}
