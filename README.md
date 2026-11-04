@@ -892,7 +892,7 @@ only per-skill aggregates, so nobody can be identified, and `?format=csv`
 returns the same rows for spreadsheets. Every other JSON API
 (`/api/assessments/`, `/api/market-demand/`, `/api/whoami/`, `/api/palette/`,
 `/vega-lite/chart<N>.json`) returns `401` with a JSON error when signed out.
-See [`docs/a5/README.md`](docs/a5/README.md) for the full table, the Vega-Lite
+See [`docs/public-api/README.md`](docs/public-api/README.md) for the full table, the Vega-Lite
 spec that reads the production URL, and three alternative uses of the API
 (a Python report, a Google Sheets/Excel import, and a pandas notebook).
 
@@ -959,5 +959,5 @@ back to Remotive, which is. The response says which source answered.
 All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
 dependencies, and it respects `prefers-reduced-motion`.
 
-**Deploying.** [`docs/a5/DEPLOY.md`](docs/a5/DEPLOY.md). This release adds a
+**Deploying.** [`docs/deployment/DEPLOY.md`](docs/deployment/DEPLOY.md). This release adds a
 static file, so `collectstatic` must run before the reload.

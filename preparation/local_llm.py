@@ -27,7 +27,7 @@ the larger models correctly failed. It is a fallback, not a ceiling.
 
 Why this model
 --------------
-llm-test/ai_prototype.ipynb benchmarked 15 models on five Beacon tasks. The
+research/model-selection-lab/ai_prototype.ipynb benchmarked 15 models on five Beacon tasks. The
 lab's budget recommendation is Qwen2.5-1.5B-Instruct with a few-shot prompt:
 it returned valid JSON on every one of the matrix tasks, placed a weak answer
 correctly where several larger models did not, and answered in about 0.7

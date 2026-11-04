@@ -34,9 +34,9 @@ Thumbs.db
 # --- Demo-video working files (Assignment 5, Part 4) ---
 # The opening slide and narration script are kept locally by whoever is
 # recording; the finished video is submitted separately, not committed.
-docs/a5/video/
+docs/demo-video/
 
-# --- A6: local LLM prototyping (llm-test/) ---
+# --- A6: local LLM prototyping (research/model-selection-lab/) ---
 # Model weights are downloaded by the notebook into the Hugging Face cache
 # and must never be committed.
 *.bin
@@ -44,5 +44,5 @@ docs/a5/video/
 *.pt
 *.pth
 *.gguf
-llm-test/.venv/
-llm-test/.ipynb_checkpoints/
+research/model-selection-lab/.venv/
+research/model-selection-lab/.ipynb_checkpoints/

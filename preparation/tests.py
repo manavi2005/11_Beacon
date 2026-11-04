@@ -1754,7 +1754,7 @@ class FlexibleGoalsTests(TestCase):
 class ResumeImportTests(TestCase):
     """Onboarding shortcut: read a resume or LinkedIn PDF, suggest answers."""
 
-    SAMPLE_PDF = settings.BASE_DIR / "docs" / "a5" / "demo" / "sample_resume_maya.pdf"
+    SAMPLE_PDF = settings.BASE_DIR / "static" / "demo" / "sample_resume_maya.pdf"
 
     @classmethod
     def setUpTestData(cls):

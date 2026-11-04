@@ -235,11 +235,23 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 #                             gpt-oss-20b. Slower and rate-limited, but it means
 #                             the coach is AI-powered out of the box.
 #   3. LLM_ENABLED=false   -> rules only. The test suite and CI run this way.
+#
+# LUMEN_API_KEY (UIUC NCSA Lumen, OpenAI-compatible) takes priority when set,
+# so the key from the Lumen profile page is the only thing to add to .env.
 LLM_ENABLED = os.environ.get("LLM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
-LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+LUMEN_API_KEY = os.environ.get("LUMEN_API_KEY", "")
+if LUMEN_API_KEY:
+    LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://lumen.computes.illinois.edu/v1")
+    LLM_MODEL = os.environ.get("LLM_MODEL", "nemotron-3-super-120b-a12b")
+    LLM_API_KEY = LUMEN_API_KEY
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Lumen")
+else:
+    LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+    LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+    LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+# Speech-to-text for voice interviews (free on Lumen).
+LLM_SPEECH_MODEL = os.environ.get("LLM_SPEECH_MODEL", "granite-speech-4.1-2b-plus")
 LLM_KEYLESS_BASE_URL = os.environ.get("LLM_KEYLESS_BASE_URL", "https://text.pollinations.ai/openai")
 LLM_KEYLESS_MODEL = os.environ.get("LLM_KEYLESS_MODEL", "openai")          # = gpt-oss-20b
 LLM_KEYLESS_LABEL = os.environ.get("LLM_KEYLESS_LABEL", "gpt-oss-20b")
@@ -259,7 +271,7 @@ LLM_KEYLESS_PROVIDER = os.environ.get("LLM_KEYLESS_PROVIDER", "Pollinations (fre
 # default model; every one after that is local and free.
 #
 # The model is the lab's budget recommendation from
-# llm-test/ai_prototype.ipynb, where it returned valid JSON on every matrix
+# research/model-selection-lab/ai_prototype.ipynb, where it returned valid JSON on every matrix
 # task at about 0.7 seconds per reply. Override with LOCAL_LLM_MODEL to try
 # another one from the lab without touching code.
 #

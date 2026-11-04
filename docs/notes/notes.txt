@@ -1153,7 +1153,7 @@ Production finding:
   Remotive is on it, so it is now the fallback (cached 6h, per Remotive's
   terms). Local runs still prefer Jobicy, whose results are more relevant.
 
-Alternative uses (docs/a5/alt_uses/):
+Alternative uses (docs/public-api/alt_uses/):
   1. Python category report: weighted by learners, names one focus skill
      per category.
   2. Google Sheets IMPORTDATA via ?format=csv, plus a QUERY formula. The
@@ -1199,7 +1199,7 @@ Later the same week - from prototype to a product someone could use:
 REMINDERS / TODO
 
   [ ] Redeploy on PythonAnywhere: pip install, migrate (0003, 0004),
-      collectstatic, reload. See docs/a5/DEPLOY.md.
+      collectstatic, reload. See docs/deployment/DEPLOY.md.
   [ ] Create a staff "coach" account on production for the cohort view.
   [ ] Google OAuth: if sign-in says "app is in testing", add test users
       under OAuth consent screen.
