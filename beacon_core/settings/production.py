@@ -25,6 +25,14 @@ ALLOWED_HOSTS = [
 # A real deployment must supply its own key through the environment.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", SECRET_KEY)  # noqa: F405
 
+# PythonAnywhere terminates HTTPS at its proxy and forwards plain HTTP to
+# Django, with X-Forwarded-Proto saying what the visitor used. Without this,
+# request.is_secure() is False, allauth builds an http:// Google callback,
+# and Google rejects it with redirect_uri_mismatch because only the https://
+# address is registered. Safe because the proxy always sets the header.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+
 # Basic hardening that costs nothing to switch on.
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
