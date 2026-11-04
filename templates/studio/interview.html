@@ -1,0 +1,61 @@
+{% extends "studio/base.html" %}
+{% load static %}
+{% block title %}Mock interview{% endblock %}
+{% block content %}
+<div data-interview>
+  <section data-setup>
+    <div class="eyebrow">Mock interview</div>
+    <h1 class="display mt-8">Practise <em>out loud</em>, before it counts.</h1>
+    <p class="lede mt-16">A realistic interviewer for <strong>{{ profile.target_role }}</strong> asks one question at a time and follows up when an answer is thin, just like the real thing. Talk or type. Afterwards you get a STAR breakdown and a stronger version of your weakest answer, in your own words.</p>
+    <div class="card mt-32 setup">
+      <div>
+        <span class="label">Interview style</span>
+        <div class="seg" role="group" aria-label="Interview style" data-mode>
+          {% for value, label in modes %}<button type="button" data-value="{{ value }}" aria-pressed="{% if value == 'MIXED' %}true{% else %}false{% endif %}">{{ label }}</button>{% endfor %}
+        </div>
+      </div>
+      <div>
+        <span class="label">Length</span>
+        <div class="seg" role="group" aria-label="Number of questions" data-length>
+          <button type="button" data-value="3" aria-pressed="false">Quick · 3</button>
+          <button type="button" data-value="4" aria-pressed="true">Standard · 4</button>
+          <button type="button" data-value="6" aria-pressed="false">Full · 6</button>
+        </div>
+      </div>
+      <div>
+        <span class="label">How you'll answer</span>
+        <div class="seg" role="group" aria-label="Answer by" data-input>
+          <button type="button" data-value="voice" aria-pressed="true">🎙 Speak</button>
+          <button type="button" data-value="type" aria-pressed="false">⌨ Type</button>
+        </div>
+        <p class="small muted mt-8">Voice stays in your browser where it can. Nothing is recorded or stored, only the words of your answers.</p>
+      </div>
+      <div class="row"><button class="btn btn--beam btn--big" data-begin>Begin interview</button></div>
+    </div>
+    {% if past %}
+      <section class="card mt-24">
+        <h2 class="h3">Past interviews</h2>
+        <ul class="list mt-8">
+          {% for s in past %}<li><a href="{% url 'studio:interview_report' s.pk %}">{{ s.started_at|date:"M j" }} · {{ s.get_mode_display }} · {{ s.questions_asked }} questions</a><span class="score">{{ s.score }}/100</span></li>{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+  </section>
+
+  <section class="studio-stage" data-room hidden>
+    <div class="row small muted"><span data-counter>Question 1</span> · <button class="btn btn--ghost" style="padding:6px 12px" data-mute type="button">🔈 Voice on</button></div>
+    <div class="orb" data-orb aria-hidden="true"></div>
+    <p class="say" data-say aria-live="polite"></p>
+    <div class="live" data-live data-placeholder="Your answer appears here as you speak…" aria-live="polite" hidden></div>
+    <textarea class="answer" data-typed placeholder="Type your answer the way you'd say it…" hidden aria-label="Your answer"></textarea>
+    <div class="controls">
+      <button class="btn btn--beam btn--big" data-talk type="button" hidden>🎙 Start answering</button>
+      <button class="btn btn--beam btn--big" data-send type="button" hidden>Done answering →</button>
+      <button class="btn btn--ghost" data-switch type="button">Type instead</button>
+      <button class="btn btn--ghost" data-end type="button">End & get feedback</button>
+    </div>
+    <details class="transcript mt-16"><summary class="small muted">Transcript</summary><div data-transcript class="transcript mt-8"></div></details>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'studio/interview.js' %}" defer></script>{% endblock %}

@@ -53,4 +53,4 @@ jobs:
         run: python manage.py verify_constraints
 
       - name: Test suite
-        run: python manage.py test preparation --verbosity 2
+        run: python manage.py test preparation studio --verbosity 2

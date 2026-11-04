@@ -1,4 +1,4 @@
-# Notebook-only dependencies for llm-test/ai_prototype.ipynb.
+# Notebook-only dependencies for research/model-selection-lab/ai_prototype.ipynb.
 # Kept separate from the Django requirements.txt on purpose: torch and the
 # model weights are several GB, far beyond PythonAnywhere's 512 MB quota.
 torch

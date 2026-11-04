@@ -175,12 +175,12 @@ class UrlsAndNavigationTests(TestCase):
         # that still passes, which is how five of these were silently broken.
         self.assertTrue(self.client.login(username="bpatel", password="test-only-pw"))
     def test_root_url_is_not_a_404(self):
-        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 200)
 
     def test_nav_has_at_least_three_reversed_links(self):
         """Nav links must come from {% url %}, so a bad route name would fail
         to render rather than silently produce a dead link."""
-        body = self.client.get("/").content.decode()
+        body = self.client.get("/dashboard/").content.decode()
         # Match the opening tag loosely: the nav carries a class attribute
         # since the stylesheet moved into static/, and the test should not
         # break every time that markup is restyled.
@@ -366,14 +366,14 @@ class StaticFilesTests(TestCase):
         self.assertIsNotNone(finders.find("img/beacon-logo.svg"))
 
     def test_base_template_links_the_stylesheet_via_static(self):
-        body = self.client.get("/").content.decode()
+        body = self.client.get("/dashboard/").content.decode()
         self.assertIn('href="/static/css/beacon.css"', body)
         self.assertIn('rel="stylesheet"', body)
 
     def test_no_inline_style_block_remains(self):
         """The CSS moved to static/. An inline <style> block coming back would
         mean a page is carrying its own copy again."""
-        for url in ("/", "/candidates/", "/insights/", "/search/skills/"):
+        for url in ("/dashboard/", "/candidates/", "/insights/", "/search/skills/"):
             with self.subTest(url=url):
                 self.assertNotIn("<style>", self.client.get(url).content.decode())
 
@@ -384,7 +384,7 @@ class StaticFilesTests(TestCase):
             self.assertIn("<svg", fh.read(400))
 
     def test_every_page_carries_the_stylesheet(self):
-        for url in ("/", "/skills/", "/candidates/", "/tasks/", "/insights/"):
+        for url in ("/dashboard/", "/skills/", "/candidates/", "/tasks/", "/insights/"):
             with self.subTest(url=url):
                 self.assertContains(self.client.get(url), "css/beacon.css")
 
@@ -983,7 +983,7 @@ class ExportAndReportTests(TestCase):
         self.assertIn("Download JSON", body)
 
     def test_reports_page_is_reachable_from_the_nav(self):
-        body = self.client.get("/").content.decode()
+        body = self.client.get("/dashboard/").content.decode()
         self.assertIn(reverse("preparation:reports"), body)
 
     # --- empty database -------------------------------------------------
@@ -1040,7 +1040,7 @@ class AuthenticationTests(TestCase):
         r = self.client.post(reverse("preparation:login"),
                              {"username": "areader", "password": self.PASSWORD})
         self.assertEqual(r.status_code, 302)
-        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 200)
 
     def test_login_with_bad_credentials_re_renders_with_an_error(self):
         r = self.client.post(reverse("preparation:login"),
@@ -1048,7 +1048,7 @@ class AuthenticationTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertFalse(r.context["form"].is_valid())
         # Still anonymous.
-        self.assertEqual(self.client.get("/").status_code, 302)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 302)
 
     def test_signup_creates_the_account_and_signs_them_in(self):
         r = self.client.post(reverse("preparation:signup"),
@@ -1057,7 +1057,7 @@ class AuthenticationTests(TestCase):
                               "password2": self.PASSWORD})
         self.assertEqual(r.status_code, 302)
         self.assertTrue(User.objects.filter(username="brandnew").exists())
-        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 200)
 
     def test_signup_applies_the_password_validators(self):
         """AUTH_PASSWORD_VALIDATORS from base.py should reject '12345'."""
@@ -1073,13 +1073,13 @@ class AuthenticationTests(TestCase):
         self.client.login(username="areader", password=self.PASSWORD)
         self.assertEqual(self.client.get(reverse("preparation:logout")).status_code, 405)
         # still signed in
-        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 200)
 
     def test_logout_via_post_ends_the_session(self):
         self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
         r = self.client.post(reverse("preparation:logout"))
         self.assertEqual(r.status_code, 302)
-        self.assertEqual(self.client.get("/").status_code, 302)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 302)
 
     # --- 1.3 the three settings -----------------------------------------
     def test_the_three_auth_settings_are_configured(self):
@@ -1087,16 +1087,16 @@ class AuthenticationTests(TestCase):
         development falls back to Django's /accounts/profile/ default."""
         from django.conf import settings
         self.assertEqual(resolve_url(settings.LOGIN_URL), reverse("preparation:login"))
-        self.assertEqual(resolve_url(settings.LOGIN_REDIRECT_URL),
-                         reverse("preparation:dashboard"))
+        # v2: login lands on "/", which routes to Today (or setup if new).
+        self.assertEqual(resolve_url(settings.LOGIN_REDIRECT_URL), reverse("studio:home"))
         self.assertEqual(resolve_url(settings.LOGOUT_REDIRECT_URL),
                          reverse("preparation:login"))
 
     def test_login_redirect_target_actually_exists(self):
         from django.conf import settings
         self.client.login(username="areader", password=self.PASSWORD)
-        self.assertEqual(
-            self.client.get(resolve_url(settings.LOGIN_REDIRECT_URL)).status_code, 200)
+        r = self.client.get(resolve_url(settings.LOGIN_REDIRECT_URL), follow=True)
+        self.assertEqual(r.status_code, 200)
 
     def test_login_honours_next_then_lands_on_the_configured_page(self):
         r = self.client.post(reverse("preparation:login"),
@@ -1117,7 +1117,7 @@ class AuthenticationTests(TestCase):
         self.assertNotIn("evil.example.com", r["Location"])
 
     # --- 1.4 protected sections and APIs ---------------------------------
-    PROTECTED_PAGES = ["/", "/skills/", "/candidates/", "/tasks/", "/insights/",
+    PROTECTED_PAGES = ["/dashboard/", "/skills/", "/candidates/", "/tasks/", "/insights/",
                        "/charts/", "/vega-lite/", "/market/", "/reports/",
                        "/reports/candidates.csv", "/reports/candidates.json",
                        "/api/skills/"]
@@ -1168,7 +1168,7 @@ class AuthenticationTests(TestCase):
 
     def test_nav_shows_protected_links_after_login(self):
         self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
-        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        nav = self.client.get("/dashboard/").content.decode().split("<nav")[1].split("</nav>")[0]
         for shown in (reverse("preparation:reports"), reverse("preparation:insights"),
                       reverse("preparation:charts")):
             self.assertIn(shown, nav)
@@ -1179,7 +1179,7 @@ class AuthenticationTests(TestCase):
         """It has to be a form, because the view is POST-only. This is why
         the nav needs a button styled to match the links beside it."""
         self.assertTrue(self.client.login(username="areader", password=self.PASSWORD))
-        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        nav = self.client.get("/dashboard/").content.decode().split("<nav")[1].split("</nav>")[0]
         self.assertIn(f'action="{reverse("preparation:logout")}"', nav)
         self.assertIn('method="post"', nav)
         self.assertIn("csrfmiddlewaretoken", nav)
@@ -1261,7 +1261,7 @@ class GoogleOAuthConfiguredTests(TestCase):
         """Adding allauth's backend must not displace ModelBackend, or every
         account from Part 1, including the superuser, stops working."""
         self.assertTrue(self.client.login(username="oauthy", password="Str0ngPass!2026"))
-        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(self.client.get("/dashboard/").status_code, 200)
 
 
 class GoogleOAuthNotConfiguredTests(TestCase):
@@ -1512,11 +1512,11 @@ class PolishTests(TestCase):
     def test_palette_markup_only_for_signed_in_users(self):
         self.assertNotContains(self.client.get(reverse("preparation:login")), "data-palette")
         self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
-        self.assertContains(self.client.get("/"), "data-palette-open")
+        self.assertContains(self.client.get("/dashboard/"), "data-palette-open")
 
     def test_dashboard_shows_readiness_and_widest_gaps(self):
         self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
-        r = self.client.get("/")
+        r = self.client.get("/dashboard/")
         self.assertEqual(r.status_code, 200)
         # A student sees only their own ring.
         self.assertEqual([row["name"] for row in r.context["readiness"]], ["tquant"])
@@ -1531,9 +1531,9 @@ class PolishTests(TestCase):
         from django.test.utils import CaptureQueriesContext
 
         self.assertTrue(self.client.login(username="tquant", password="test-only-pw"))
-        self.client.get("/")  # warm the session
+        self.client.get("/dashboard/")  # warm the session
         with CaptureQueriesContext(connection) as before:
-            self.client.get("/")
+            self.client.get("/dashboard/")
         extra = CandidateProfile.objects.create(
             user=User.objects.create_user("extra", password="test-only-pw"),
             target_role="Backend Engineer", preparation_timeline_weeks=4,
@@ -1542,14 +1542,14 @@ class PolishTests(TestCase):
             candidate=extra, skill=self.sql, proficiency_score=50, required_level=70
         )
         with CaptureQueriesContext(connection) as after:
-            self.client.get("/")
+            self.client.get("/dashboard/")
         self.assertEqual(len(after), len(before))
 
     def test_auth_pages_render_the_hero_and_styled_fields(self):
         for name in ("preparation:login", "preparation:signup"):
             with self.subTest(page=name):
                 r = self.client.get(reverse(name))
-                self.assertContains(r, "auth-hero")
+                self.assertContains(r, "auth2__story")
                 self.assertContains(r, 'class="field__label"')
                 self.assertNotContains(r, "{%")
 
@@ -1593,16 +1593,16 @@ class FromScratchJourneyTests(TestCase):
 
     def test_signup_lands_on_onboarding(self):
         r = self._sign_up()
-        self.assertRedirects(r, reverse("preparation:onboarding"))
+        self.assertRedirects(r, reverse("studio:start"))
 
     def test_new_user_without_profile_is_sent_to_onboarding_from_my_plan(self):
         self._sign_up()
         self.assertRedirects(self.client.get(reverse("preparation:my_plan")),
-                             reverse("preparation:onboarding"))
+                             reverse("studio:start"))
 
     def test_dashboard_offers_the_diagnosis_to_a_new_user(self):
         self._sign_up()
-        self.assertContains(self.client.get("/"), "Start your diagnosis")
+        self.assertContains(self.client.get("/dashboard/"), "Start your diagnosis")
 
     def test_onboarding_builds_profile_assessments_and_plan(self):
         self._sign_up()
@@ -1737,10 +1737,10 @@ class FlexibleGoalsTests(TestCase):
         profile = self._profile()
         self.assertEqual(profile.interests, ["data", "product"])
         self.assertEqual(profile.resume_summary, "Econ major.")
-        r = self.client.get(reverse("preparation:onboarding"))
-        form = r.context["form"]
-        self.assertEqual(form.initial["interests"], ["data", "product"])
-        self.assertEqual(form.initial["has_interview"], "no")
+        # The retake now happens in v2 setup, which pre-fills the same "about".
+        self.assertRedirects(self.client.get(reverse("preparation:onboarding")),
+                             reverse("studio:start"))
+        self.assertContains(self.client.get(reverse("studio:start")), "Econ major.")
 
     def test_interest_suggestions(self):
         from .onboarding import suggested_roles
@@ -1754,7 +1754,7 @@ class FlexibleGoalsTests(TestCase):
 class ResumeImportTests(TestCase):
     """Onboarding shortcut: read a resume or LinkedIn PDF, suggest answers."""
 
-    SAMPLE_PDF = settings.BASE_DIR / "docs" / "a5" / "demo" / "sample_resume_maya.pdf"
+    SAMPLE_PDF = settings.BASE_DIR / "static" / "demo" / "sample_resume_maya.pdf"
 
     @classmethod
     def setUpTestData(cls):
@@ -1821,9 +1821,9 @@ class ResumeImportTests(TestCase):
         self.assertEqual(r.status_code, 401)
 
     def test_onboarding_page_offers_the_import(self):
-        r = self.client.get(reverse("preparation:onboarding"))
-        self.assertContains(r, "data-resume-import")
-        self.assertContains(r, "Save to PDF")
+        r = self.client.get(reverse("studio:start"))
+        self.assertContains(r, "data-file")
+        self.assertContains(r, "never stored")
 
 
 class ProductNavigationTests(TestCase):
@@ -1834,7 +1834,7 @@ class ProductNavigationTests(TestCase):
         _a4_fixture(cls)
         cls.staff = User.objects.create_user("coach", password="test-only-pw", is_staff=True)
 
-    def _nav(self, url="/"):
+    def _nav(self, url="/dashboard/"):
         body = self.client.get(url).content.decode()
         return body.split("<nav")[1].split("</nav>")[0]
 
@@ -2277,7 +2277,7 @@ class StudentPrivacyTests(TestCase):
             ("/candidates/", "tquant", "Eunji"),
             ("/plans/cbv-base/", "tquant plan", "eunji plan"),
             ("/tasks/", "tquant task", "eunji task"),
-            ("/", "tquant plan", "eunji plan"),
+            ("/dashboard/", "tquant plan", "eunji plan"),
         ]:
             with self.subTest(url=url):
                 r = self.client.get(url)
@@ -2317,7 +2317,7 @@ class StudentPrivacyTests(TestCase):
         self.assertContains(r, "Eunji")
         self.assertContains(r, "tquant")
         self.assertEqual(self.client.get(self.eunji.get_absolute_url()).status_code, 200)
-        nav = self.client.get("/").content.decode().split("<nav")[1].split("</nav>")[0]
+        nav = self.client.get("/dashboard/").content.decode().split("<nav")[1].split("</nav>")[0]
         self.assertIn("/candidates/", nav)
 
     def test_anonymous_aggregates_stay_visible_to_students(self):

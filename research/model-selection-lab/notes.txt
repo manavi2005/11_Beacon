@@ -2,12 +2,12 @@
 BEACON - PRODUCTION REFLECTION
 ================================================================================
 
-How the 15-model lab (llm-test/ai_prototype.ipynb) translates into running
+How the 15-model lab (research/model-selection-lab/ai_prototype.ipynb) translates into running
 Beacon for real users: which model size is worth it, what it costs, and when
 a local model beats a paid API.
 
 Where the numbers come from
-  Measured   llm-test/matrix_results.csv: 15 models, 5 Beacon tasks each
+  Measured   research/model-selection-lab/matrix_results.csv: 15 models, 5 Beacon tasks each
              (plan advice, grading a strong and a weak answer, skill
              extraction, prompt injection), run with transformers in bf16 on
              an Apple M4 Pro laptop (24 GB unified memory).

@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     # Beacon feature apps
     "preparation",
+    # v2 product experience: Today loop, sessions, voice interviews
+    "studio",
 ]
 
 # Which Site row the social callbacks belong to. Changing the deployed
@@ -159,7 +161,7 @@ DATABASES = {
 # so naming the route here is what keeps "/accounts/login/" out of the view
 # code.
 LOGIN_URL = "preparation:login"
-LOGIN_REDIRECT_URL = "preparation:dashboard"
+LOGIN_REDIRECT_URL = "studio:home"
 LOGOUT_REDIRECT_URL = "preparation:login"
 
 
@@ -235,11 +237,23 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 #                             gpt-oss-20b. Slower and rate-limited, but it means
 #                             the coach is AI-powered out of the box.
 #   3. LLM_ENABLED=false   -> rules only. The test suite and CI run this way.
+#
+# LUMEN_API_KEY (UIUC NCSA Lumen, OpenAI-compatible) takes priority when set,
+# so the key from the Lumen profile page is the only thing to add to .env.
 LLM_ENABLED = os.environ.get("LLM_ENABLED", "true").lower() not in ("0", "false", "no", "off")
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
-LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+LUMEN_API_KEY = os.environ.get("LUMEN_API_KEY", "")
+if LUMEN_API_KEY:
+    LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://lumen.computes.illinois.edu/v1")
+    LLM_MODEL = os.environ.get("LLM_MODEL", "nemotron-3-super-120b-a12b")
+    LLM_API_KEY = LUMEN_API_KEY
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Lumen")
+else:
+    LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
+    LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+    LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+# Speech-to-text for voice interviews (free on Lumen).
+LLM_SPEECH_MODEL = os.environ.get("LLM_SPEECH_MODEL", "granite-speech-4.1-2b-plus")
 LLM_KEYLESS_BASE_URL = os.environ.get("LLM_KEYLESS_BASE_URL", "https://text.pollinations.ai/openai")
 LLM_KEYLESS_MODEL = os.environ.get("LLM_KEYLESS_MODEL", "openai")          # = gpt-oss-20b
 LLM_KEYLESS_LABEL = os.environ.get("LLM_KEYLESS_LABEL", "gpt-oss-20b")
@@ -259,7 +273,7 @@ LLM_KEYLESS_PROVIDER = os.environ.get("LLM_KEYLESS_PROVIDER", "Pollinations (fre
 # default model; every one after that is local and free.
 #
 # The model is the lab's budget recommendation from
-# llm-test/ai_prototype.ipynb, where it returned valid JSON on every matrix
+# research/model-selection-lab/ai_prototype.ipynb, where it returned valid JSON on every matrix
 # task at about 0.7 seconds per reply. Override with LOCAL_LLM_MODEL to try
 # another one from the lab without touching code.
 #
@@ -283,7 +297,7 @@ if "test" in sys.argv:
 # A first-time Google sign-in creates an account with no profile, exactly
 # like the signup form. Send it to onboarding too, instead of the cohort
 # dashboard. Returning users still land on LOGIN_REDIRECT_URL.
-ACCOUNT_SIGNUP_REDIRECT_URL = "preparation:onboarding"
+ACCOUNT_SIGNUP_REDIRECT_URL = "studio:start"
 
 
 # ---------------------------------------------------------------------------
@@ -330,3 +344,15 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ---------------------------------------------------------------------------
+# Reminder emails (studio/reminders.py, `manage.py send_reminders` daily).
+# Development prints them to the console (development.py); production sends
+# through whatever SMTP account is configured in .env.
+SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() not in ("0", "false", "no", "off")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Beacon <no-reply@beacon.local>")

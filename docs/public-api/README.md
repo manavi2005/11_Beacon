@@ -49,7 +49,7 @@ spreadsheets (see use 2 below).
 
 ### 3.2 and 3.3: Vega-Lite
 
-[`group-11-vega-lite-API-demo.txt`](group-11-vega-lite-API-demo.txt) is the
+[`vega-lite-api-demo.txt`](vega-lite-api-demo.txt) is the
 full spec. Its data is `{"url": "https://manavi2005.pythonanywhere.com/api/skills/summary/"}`
 with no inline values. It draws a grouped bar chart of current proficiency
 against the required level for every assessed skill, sorted by the widest gap.
@@ -57,7 +57,7 @@ The spec's field names (`skill`, `category`, `learners`, `avg_proficiency`,
 `avg_required`, `avg_gap`) match the API exactly.
 
 Screenshot from the Vega-Lite editor:
-[`a5-part3-vega-lite-editor.png`](../screenshots/a5-part3-vega-lite-editor.png).
+[`a5-part3-vega-lite-editor.png`](../screenshots/archive/vega-lite-editor.png).
 
 ### 3.4: Three alternative uses
 
@@ -87,7 +87,7 @@ statistics and a correlation, then asks a question the site itself never
 answers: are the preparation tasks aimed at the widest gaps? It flags three
 skills with an above-median gap but below-median task coverage: Git, data
 structures, and failure questions.
-Chart: [`a5-part3-use3-notebook-chart.png`](../screenshots/a5-part3-use3-notebook-chart.png).
+Chart: [`a5-part3-use3-notebook-chart.png`](../screenshots/archive/use3-notebook-chart.png).
 An HTML copy with all outputs is next to the notebook.
 
 ## The start-from-scratch journey (for the demo)
@@ -127,6 +127,6 @@ On the login page the lighthouse beam follows the mouse.
 
 1. Public API production URL: `https://manavi2005.pythonanywhere.com/api/skills/summary/`
 2. GitHub URL: `https://github.com/manavi2005/11_Beacon`
-3. Vega-Lite script: `docs/a5/group-11-vega-lite-API-demo.txt`
-4. Vega-Lite editor screenshot: `docs/screenshots/a5-part3-vega-lite-editor.png`
+3. Vega-Lite script: `docs/public-api/vega-lite-api-demo.txt`
+4. Vega-Lite editor screenshot: `docs/screenshots/archive/vega-lite-editor.png`
 5. Demo video: submitted separately (the recording materials are kept outside the repository).

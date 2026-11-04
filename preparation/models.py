@@ -81,6 +81,9 @@ class CandidateProfile(models.Model):
         STUDENT = "STU", "Current student"
         NEW_GRAD = "NEW", "New graduate"
         EARLY_CAREER = "EARLY", "Early career (1-3 yrs)"
+        MID_CAREER = "MID", "Experienced (4+ yrs)"
+        SWITCHING = "SWTCH", "Changing careers"
+        RETURNING = "RETRN", "Returning to work"
 
     class PrimaryConcern(models.TextChoices):
         """The optional "what worries you most?" answer on the setup screen."""

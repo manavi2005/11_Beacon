@@ -28,18 +28,12 @@ docs/
 ├── branching_strategy/     <- REQUIRED folder: branch diagram + written strategy
 ├── notes/notes.txt         <- REQUIRED folder: weekly running log
 ├── data_model/             <- the data layer (ER diagram, design justification)
-└── screenshots/            <- browser output, grouped by assignment section
-    ├── section1-*.png      <- Assignment 2
-    ├── section2-*.png      <- Assignment 2
-    ├── section3-*.png      <- Assignment 2
-    ├── a3-section1-*.png   <- Assignment 3: home, navigation, detail via link
-    ├── a3-section2-*.png   <- Assignment 3: search and aggregations
-    ├── a3-section3-*.png   <- Assignment 3: the styled UI
-    ├── a3-section4-*.png   <- Assignment 3: the charts page
-    ├── a4-part1-*.png      <- Assignment 4: Vega-Lite charts
-    ├── a4-part3-*.png      <- Assignment 4: the reports page
-    ├── a4-part2-*.png      <- Assignment 4: external API
-    ├── admin/              <- Django Admin list views (earlier assignment)
+├── ai-system.md            <- how the AI features work (data in, prompts, guardrails)
+├── public-api/             <- public API docs, Vega-Lite demo, alternative uses
+├── deployment/DEPLOY.md    <- deploying to PythonAnywhere
+└── screenshots/
+    ├── archive/            <- captures of the v1 UI, named by feature
+    ├── admin/              <- Django Admin list views
     └── superseded/         <- older captures, kept for the record only
 ```
 
@@ -64,10 +58,10 @@ docs/
 
 | View | Kind | URL | Code | Screenshot |
 |---|---|---|---|---|
-| `skill_catalog_manual` | FBV, `HttpResponse` | `/skills/manual/` | [views.py](../preparation/views.py) | [`section2-view1-fbv-httpresponse.png`](screenshots/section2-view1-fbv-httpresponse.png) |
-| `skill_catalog_render` | FBV, `render()` | `/skills/` | [views.py](../preparation/views.py) | [`section2-view2-fbv-render.png`](screenshots/section2-view2-fbv-render.png) |
-| `PlanBoardView` | CBV, base `View` | `/plans/cbv-base/` | [views.py](../preparation/views.py) | [`section2-view3-cbv-base-view.png`](screenshots/section2-view3-cbv-base-view.png) |
-| `PlanTaskListView` | CBV, generic `ListView` | `/tasks/` | [views.py](../preparation/views.py) | [`section2-view4-cbv-generic-listview.png`](screenshots/section2-view4-cbv-generic-listview.png) |
+| `skill_catalog_manual` | FBV, `HttpResponse` | `/skills/manual/` | [views.py](../preparation/views.py) | [`section2-view1-fbv-httpresponse.png`](screenshots/archive/view1-fbv-httpresponse.png) |
+| `skill_catalog_render` | FBV, `render()` | `/skills/` | [views.py](../preparation/views.py) | [`section2-view2-fbv-render.png`](screenshots/archive/view2-fbv-render.png) |
+| `PlanBoardView` | CBV, base `View` | `/plans/cbv-base/` | [views.py](../preparation/views.py) | [`section2-view3-cbv-base-view.png`](screenshots/archive/view3-cbv-base-view.png) |
+| `PlanTaskListView` | CBV, generic `ListView` | `/tasks/` | [views.py](../preparation/views.py) | [`section2-view4-cbv-generic-listview.png`](screenshots/archive/template-normal-list-state.png) |
 | `PlanTaskDetailView` | CBV, generic `DetailView` (extra) | `/tasks/<pk>/` | [views.py](../preparation/views.py) | - |
 
 Routing, with `name=` on every route: [`preparation/urls.py`](../preparation/urls.py).
@@ -86,8 +80,8 @@ The written comparison the bonus asks for - *HttpResponse vs render* and
 | `{% for %}` + `{% empty %}` | every list template; `skill_list.html` lines 23-40 |
 | Meaningful empty-state message | `skill_list.html` - distinguishes "no match for filter" from "catalog empty" |
 | Template reuse across views | `skill_list.html` is rendered by **both** function-based views |
-| Normal list state screenshot | [`section3-template-normal-list-state.png`](screenshots/section3-template-normal-list-state.png) |
-| Empty state screenshot | [`section3-template-empty-state.png`](screenshots/section3-template-empty-state.png) |
+| Normal list state screenshot | [`section3-template-normal-list-state.png`](screenshots/archive/view4-cbv-generic-listview.png) |
+| Empty state screenshot | [`section3-template-empty-state.png`](screenshots/archive/template-empty-state.png) |
 
 To reproduce the empty state without touching the database, visit
 `/skills/?q=zzzz` - the filter matches nothing and the `{% empty %}` branch
@@ -105,7 +99,7 @@ fires.
 | `data: {url: ...}`, no inline data | Both specs. `VegaLiteTests.test_specs_load_data_by_url_and_never_inline` enforces it |
 | Charts embedded in an HTML page | `/vega-lite/` - [`templates/preparation/vega_lite.html`](../templates/preparation/vega_lite.html) |
 | Chart outputs on dedicated endpoints | `/vega-lite/chart1.png`, `/vega-lite/chart2.png` (and `.json` for each spec) |
-| Screenshots of working charts | [`a4-part1-vega-lite-chart1.png`](screenshots/a4-part1-vega-lite-chart1.png), [`a4-part1-vega-lite-chart2.png`](screenshots/a4-part1-vega-lite-chart2.png) |
+| Screenshots of working charts | [`vega-lite-chart1.png`](screenshots/archive/vega-lite-chart1.png), [`vega-lite-chart2.png`](screenshots/archive/vega-lite-chart2.png) |
 | External keyless API, `?q=`, `requests.get(params=, timeout=5)`, `raise_for_status()` | [`preparation/market.py`](../preparation/market.py) `fetch_postings()` |
 | Errors handled | `MarketDataError` -> 400 / 502 / 504 JSON; the page shows a message |
 | Combined with internal data, processed, not stored | `market_report()`: demand per skill x the role cohort's average gap |
@@ -153,7 +147,7 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | `get_absolute_url()` on the model | `Skill`, `CandidateProfile`, `PreparationPlan`, `PlanTask` in [models.py](../preparation/models.py) |
 | Used in templates instead of `{% url %}` | `{{ object.get_absolute_url }}`, 21 uses across 10 templates |
 | End-to-end flow | models.py -> urls.py -> views.py -> templates, walked through in `notes.txt` |
-| Screenshots | [home](screenshots/a3-section1-home-page.png), [navigation](screenshots/a3-section1-navigation-and-list.png), [detail via link](screenshots/a3-section1-detail-via-link.png) |
+| Screenshots | [home](screenshots/archive/home-page.png), [navigation](screenshots/archive/navigation-and-list.png), [detail via link](screenshots/archive/detail-via-link.png) |
 
 ## Assignment 3, Section 2 - ORM queries and data presentation
 
@@ -168,7 +162,7 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Total, via `count()` | `/insights/`, the `totals` dict |
 | Grouped summary, `annotate` + `Count` | skills per category, tasks per plan, learners per skill |
 | `{% for %}` with `{% empty %}` | every list template |
-| Screenshots | [GET search](screenshots/a3-section2-search-get.png), [aggregations](screenshots/a3-section2-aggregations.png) |
+| Screenshots | [GET search](screenshots/archive/search-get.png), [aggregations](screenshots/archive/aggregations.png) |
 
 ## Assignment 3, Section 3 - Static files and UI styling
 
@@ -182,7 +176,7 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Layout | masthead, pill nav, content card, stat tiles, progress meters, responsive under 700px |
 | Fonts | system font stack, no network request |
 | Logo / header | [`static/img/beacon-logo.svg`](../static/img/beacon-logo.svg), used in the masthead and as the favicon |
-| Screenshot with CSS applied | [dashboard](screenshots/a3-section3-styled-dashboard.png), [insights](screenshots/a3-section3-styled-insights.png), [search](screenshots/a3-section3-styled-search.png), [mobile](screenshots/a3-section3-styled-mobile.png) |
+| Screenshot with CSS applied | [dashboard](screenshots/archive/styled-dashboard.png), [insights](screenshots/archive/styled-insights.png), [search](screenshots/archive/styled-search.png), [mobile](screenshots/archive/styled-mobile.png) |
 | README UI note | [README, "Look and feel"](../README.md) |
 | Static organisation write-up | `notes.txt`, "STATIC FILE ORGANIZATION" |
 | Cache busting (bonus) | `ManifestStaticFilesStorage` in [production.py](../beacon_core/settings/production.py); write-up in `notes.txt` |
@@ -199,7 +193,7 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Headless rendering | `matplotlib.use("Agg")` before use, and `Figure()` rather than `pyplot`, so no figure registry to leak |
 | Displayed on a page | [`templates/preparation/charts.html`](../templates/preparation/charts.html) |
 | Heading, caption, alt text | one `<h2>`, one `<figcaption>` naming the query, and descriptive `alt` per figure |
-| Screenshot | [charts page](screenshots/a3-section4-charts-page.png) |
+| Screenshot | [charts page](screenshots/archive/charts-page.png) |
 
 ## Assignment 4, Part 3 - CSV and JSON exports, reports page
 
@@ -217,7 +211,7 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Reports page with 2+ grouped summaries | by experience level, by target role, and tasks per plan (done vs all) |
 | One totals line | `report_totals()`, rendered as stat tiles plus a sentence |
 | Tables with headers and `{% empty %}` | all four tables in `reports.html` |
-| Screenshot | [reports page](screenshots/a4-part3-reports-page.png) |
+| Screenshot | [reports page](screenshots/archive/reports-page.png) |
 
 ## Assignment 5, Part 1 - Internal Django authentication
 
@@ -247,33 +241,33 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Both backends kept | `ModelBackend` + allauth's, so username/password still works |
 | Degrades without credentials | [`context_processors.py`](../preparation/context_processors.py) hides the button |
 | Deploy helper | `python manage.py set_site_domain <host>` |
-| Screenshots | [login](screenshots/a5-part2-google-login-button.png), [signup](screenshots/a5-part2-google-signup-button.png) |
+| Screenshots | [login](screenshots/archive/google-login-button.png), [signup](screenshots/archive/google-signup-button.png) |
 
 ---
 
 ## Assignment 5, Part 3 - One public API, Vega-Lite, three alternative uses
 
-Full write-up: [`a5/README.md`](a5/README.md).
+Full write-up: [`public-api/README.md`](public-api/README.md).
 
 | Requirement | Where to look |
 |---|---|
 | One public API; all others protected | `/api/skills/summary/` is public. Every other JSON API returns 401 when signed out (`api_login_required` in `preparation/views.py`, tests in `PublicVsProtectedApiTests`) |
-| Vega-Lite chart on the deployed public API | [`a5/group-11-vega-lite-API-demo.txt`](a5/group-11-vega-lite-API-demo.txt) |
-| Editor screenshot | [`screenshots/a5-part3-vega-lite-editor.png`](screenshots/a5-part3-vega-lite-editor.png) |
-| Three alternative uses, with code and output | [`a5/alt_uses/`](a5/alt_uses/): Python report, spreadsheet import, notebook |
+| Vega-Lite chart on the deployed public API | [`public-api/vega-lite-api-demo.txt`](public-api/vega-lite-api-demo.txt) |
+| Editor screenshot | [`screenshots/archive/vega-lite-editor.png`](screenshots/archive/vega-lite-editor.png) |
+| Three alternative uses, with code and output | [`public-api/alt_uses/`](public-api/alt_uses/): Python report, spreadsheet import, notebook |
 
 ## Assignment 5, Part 4 - Demo video
 
 Submitted separately; the recording materials are kept outside the
 repository. Before recording, update production with
-[`a5/DEPLOY.md`](a5/DEPLOY.md).
+[`deployment/DEPLOY.md`](deployment/DEPLOY.md).
 
 ## Product features (final deployment stage)
 
 | Feature | Where to look |
 |---|---|
 | Start from scratch: onboarding, interests, flexible goals | `/welcome/`, [`preparation/onboarding.py`](../preparation/onboarding.py) |
-| Resume / LinkedIn PDF import | [`preparation/resume.py`](../preparation/resume.py), sample in [`a5/demo/`](a5/demo/) |
+| Resume / LinkedIn PDF import | [`preparation/resume.py`](../preparation/resume.py), sample in [`static/demo/`](../static/demo/) |
 | Tasks done on the platform, graded, ratings follow evidence | `/me/tasks/<id>/`, [`preparation/practice.py`](../preparation/practice.py) |
 | AI coach (free open model; any OpenAI-compatible API) | [`preparation/coach.py`](../preparation/coach.py), settings in `.env.example` |
 | Students see only their own data; staff see the cohort | [`preparation/visibility.py`](../preparation/visibility.py) |
@@ -283,4 +277,4 @@ repository. Before recording, update production with
 
 Lighthouse login and signup pages, a dashboard with readiness rings and
 widest-gap bars, and a Ctrl/Cmd+K command palette. Screenshots:
-`screenshots/a5-ui-*.jpg`.
+`screenshots/archive/*.jpg`.

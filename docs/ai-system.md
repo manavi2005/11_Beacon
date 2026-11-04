@@ -2,7 +2,7 @@
 
 How Beacon gets data from a user to a language model and back safely. The model
 choice is backed by the 15-model lab in
-[`llm-test/ai_prototype.ipynb`](llm-test/ai_prototype.ipynb).
+[`research/model-selection-lab/ai_prototype.ipynb`](../research/model-selection-lab/ai_prototype.ipynb).
 
 Beacon uses text AI for four jobs, across two engines: a hosted chat API
 reached over HTTP, and a Hugging Face model whose weights this process loads
@@ -127,7 +127,7 @@ exactly the input the hosted model would have had nothing to work with on. An
 injection attempt is caught before it reaches the larger model.
 
 **Which model, and why.** `Qwen/Qwen2.5-1.5B-Instruct`, the budget
-recommendation from the lab in `llm-test/ai_prototype.ipynb`. It returned
+recommendation from the lab in `research/model-selection-lab/ai_prototype.ipynb`. It returned
 valid JSON on every matrix task and placed a weak answer correctly where
 several larger models did not, at about a third of the memory of the 4B tier.
 Screening is a narrow classification job, so the lab's quality-first pick

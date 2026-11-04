@@ -1,0 +1,80 @@
+{% extends "studio/base.html" %}
+{% load static %}
+{% block title %}Set up{% endblock %}
+{% block chrome %}{% if profile %}{{ block.super }}{% endif %}{% endblock %}
+{% block stage_class %}{% if not profile %}stage--focus{% endif %}{% endblock %}
+{% block content %}
+<div class="wizard" data-wizard style="padding-top:{% if profile %}0{% else %}8vh{% endif %};padding-inline:16px;padding-bottom:80px">
+
+  <section class="wizard__step" data-step="1">
+    <div class="eyebrow">{% if profile %}Update your goal{% else %}Welcome to Beacon{% endif %}</div>
+    <h1 class="display mt-8">First, tell Beacon <em>about you</em>.</h1>
+    <p class="lede mt-16">Upload your resume or write a few sentences. Beacon reads it, suggests roles that fit, and tailors everything after that to you.</p>
+
+    <div class="card mt-24 setup">
+      <label class="drop" data-drop>
+        <input type="file" accept=".pdf,.txt" data-file hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+        <span data-file-label><strong>Upload your resume</strong><br><span class="small muted">PDF or text. It's read once and never stored.</span></span>
+      </label>
+      <div>
+        <label class="label" for="about">Or describe yourself</label>
+        <textarea class="input" id="about" rows="4" data-about placeholder="What you've studied or worked on, what you're good at, and what you'd like to do next.">{{ profile.resume_summary|default:'' }}</textarea>
+      </div>
+      <div>
+        <label class="label" for="level">Where you are now</label>
+        <select class="input" id="level" data-level>
+          {% for value, label in experience_levels %}<option value="{{ value }}"{% if profile.experience_level == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="row">
+        <button class="btn btn--beam btn--big" data-read>Continue →</button>
+        <button class="btn btn--ghost" data-skip-to-role type="button">I already know the role I want</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="wizard__step" data-step="2" hidden>
+    <button class="btn btn--ghost" data-back="1" style="padding-left:0">← Back</button>
+    <div class="eyebrow mt-16" data-about-eyebrow>Your goal</div>
+    <h1 class="display mt-8">What are you <em>working toward</em>?</h1>
+    <p class="lede mt-16" data-summary></p>
+    <div class="ideas" data-ideas></div>
+    <label class="label mt-24" for="role">Or type the job title you're aiming for</label>
+    <input class="big-input" id="role" data-role autocomplete="off" placeholder="Job title" value="{{ profile.target_role|default:'' }}">
+    <div class="row mt-16"><button class="btn btn--beam btn--big" data-build>Build my blueprint →</button></div>
+  </section>
+
+  <section class="wizard__step" data-step="3" hidden>
+    <button class="btn btn--ghost" data-back="2" style="padding-left:0">← Change role</button>
+    <div class="eyebrow mt-16" data-bp-source></div>
+    <h1 class="display mt-8" data-bp-title></h1>
+    <p class="lede mt-16" data-bp-summary></p>
+    <p class="mt-24" style="color:var(--text-2)" data-rate-note></p>
+    <div class="card mt-16" data-rates></div>
+    <div class="row mt-24"><button class="btn btn--beam btn--big" data-to4>Looks right →</button></div>
+  </section>
+
+  <section class="wizard__step" data-step="4" hidden>
+    <button class="btn btn--ghost" data-back="3" style="padding-left:0">← Back</button>
+    <h1 class="display mt-16">When's the <em>big day</em>?</h1>
+    <p class="lede mt-16">A date lets Beacon pace your plan and forecast where you'll be. No date yet? Leave it blank. You can add it any time.</p>
+    <div class="card mt-24 setup">
+      <div><label class="label" for="date">Interview or application date</label>
+        <input class="input" type="date" id="date" data-date value="{{ profile.target_interview_date|date:'Y-m-d' }}"></div>
+      <div><label class="label" for="company">Organisation you're aiming for <span class="muted">(optional)</span></label>
+        <input class="input" id="company" data-company value="{{ profile.target_company|default:'' }}" placeholder="Optional"></div>
+    </div>
+    <div class="row mt-24"><button class="btn btn--beam btn--big" data-finish>Start my plan</button></div>
+  </section>
+
+  <section class="wizard__step" data-step="5" hidden>
+    <div class="thinking" style="padding-top:12vh">
+      <div class="thinking__beam" aria-hidden="true"></div>
+      <h2 class="h2">Building your plan…</h2>
+      <p class="muted">Setting your skills, the interview bar for each, and your first session.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'studio/start.js' %}" defer></script>{% endblock %}

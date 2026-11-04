@@ -1,0 +1,63 @@
+{% extends "studio/base.html" %}
+{% block title %}Interview-ready for any career{% endblock %}
+{% block chrome %}{% endblock %}
+{% block stage_class %}stage--focus{% endblock %}
+{% block content %}
+<header class="topbar">
+  <a class="rail__brand" href="/"><span class="beacon-mark" aria-hidden="true"></span><span>Beacon</span></a>
+  <div class="row">
+    <a class="btn btn--ghost" href="{% url 'preparation:login' %}">Log in</a>
+    <a class="btn btn--beam" href="{% url 'preparation:signup' %}">Start free</a>
+  </div>
+</header>
+
+<div class="landing">
+  <section class="landing-hero">
+    <div class="beam-hero" aria-hidden="true"></div>
+    <div class="eyebrow">Your personal interview coach</div>
+    <h1 class="display">Walk in <em>ready</em>, for any career.</h1>
+    <p class="lede">Ten minutes a day. Beacon learns your background and what your next role demands, practises you on it, remembers what you're forgetting, and lets you rehearse out loud with an interviewer who listens.</p>
+    <div class="row" style="justify-content:center">
+      <a class="btn btn--beam btn--big" href="{% url 'preparation:signup' %}">Start free →</a>
+      <a class="btn btn--ghost btn--big" href="{% url 'preparation:login' %}">I have an account</a>
+    </div>
+  </section>
+
+  {% if roles %}
+  <div class="roles-marquee" aria-label="Roles people prepare for">
+    <div class="roles-marquee__track">
+      {% for r in roles %}<span class="chip">{{ r }}</span>{% endfor %}{% for r in roles %}<span class="chip" aria-hidden="true">{{ r }}</span>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <section class="features">
+    <article class="card feature">
+      <div class="feature__icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+      <h3>Any role, any field</h3>
+      <p>Share your resume or a few lines about you. Beacon suggests roles that fit, works out what those interviews really test, and builds your plan around you.</p>
+    </article>
+    <article class="card feature">
+      <div class="feature__icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></div>
+      <h3>It remembers what you forget</h3>
+      <p>Every skill fades. Beacon tracks it and brings it back right before you'd lose it, with a fresh question every time, so you learn it rather than memorise it.</p>
+    </article>
+    <article class="card feature">
+      <div class="feature__icon"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+      <h3>Rehearse out loud</h3>
+      <p>A voice mock interviewer that follows up like a real one, then breaks down your STAR stories and rewrites your weakest answer in your own words.</p>
+    </article>
+    <article class="card feature">
+      <div class="feature__icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg></div>
+      <h3>A safe space</h3>
+      <p>Private by default. No leaderboards. On a rough day, Beacon goes gentle. Streaks forgive rest days, because consistency beats intensity.</p>
+    </article>
+  </section>
+
+  <section class="card card--glow" style="margin:20px 16px 60px;text-align:center;padding:48px 24px">
+    <h2 class="display" style="font-size:clamp(28px,4vw,42px)">Your first session takes <em>three minutes</em>.</h2>
+    <p class="lede mt-16" style="margin-inline:auto">See exactly where you stand for the role you want, today.</p>
+    <a class="btn btn--beam btn--big mt-24" href="{% url 'preparation:signup' %}">Start free →</a>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+<div class="skill">
+  <div class="skill__name">
+    {{ r.skill.name }}
+    {% if r.due and r.memory.reps %}<span class="chip chip--memory">fading</span>{% endif %}
+  </div>
+  <div class="skill__meta tnum">{{ r.level }} · {{ r.effective }}<span class="muted">/{{ r.required }}</span></div>
+  <div class="skill__track" role="img" aria-label="{{ r.skill.name }}: level {{ r.effective }} of {{ r.required }} needed{% if r.faded %}, {{ r.faded }} faded since last practice{% endif %}">
+    <span class="skill__fill" style="width:{{ r.effective }}%"></span>
+    {% if r.faded %}<span class="skill__fade" style="left:{{ r.effective }}%;width:{{ r.faded }}%"></span>{% endif %}
+    <span class="skill__bar-target" style="left:{{ r.required }}%"></span>
+  </div>
+</div>

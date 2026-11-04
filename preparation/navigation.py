@@ -39,7 +39,7 @@ NAV = [
          "hint": "Every task in your plan"},
         {"label": "My plans", "name": "preparation:plan_board",
          "hint": "Current and past plans"},
-        {"label": "Retake the diagnosis", "name": "preparation:onboarding",
+        {"label": "Change your goal", "name": "studio:start",
          "hint": "Rebuild your plan"},
     ]},
     {"label": "Skills", "children": [
@@ -65,7 +65,7 @@ NAV = [
 # The account menu on the right of the bar.
 ACCOUNT_MENU = [
     {"label": "My plan", "name": "preparation:my_plan"},
-    {"label": "Retake the diagnosis", "name": "preparation:onboarding"},
+    {"label": "Change your goal", "name": "studio:start"},
     {"label": "Admin", "name": "admin:index", "staff_only": True},
 ]
 
