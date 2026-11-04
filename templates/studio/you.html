@@ -38,6 +38,57 @@
 
 {% if profile %}
 <section class="card mt-24">
+  <div class="card__head">
+    <h2 class="h2">Your plans</h2>
+    <form method="post" action="{% url 'studio:new_plan' %}">{% csrf_token %}<button class="btn" type="submit">Build a fresh plan</button></form>
+  </div>
+  <ul class="list">
+    {% for p in plans %}
+      <li>
+        <span><a href="{% url 'preparation:my_plan' %}">{{ p.title }}</a>
+          <span class="small muted"><br>{{ p.get_status_display }} · {{ p.task_count }} task{{ p.task_count|pluralize }} · made {{ p.created_at|date:"M j" }}</span></span>
+        <form method="post" action="{% url 'studio:delete_plan' p.pk %}" data-confirm="Delete “{{ p.title }}” and its tasks? This can't be undone.">{% csrf_token %}
+          <button class="btn btn--ghost btn--danger" type="submit">Delete</button></form>
+      </li>
+    {% empty %}
+      <li class="muted">No plans yet. Build one from your current skill levels.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card mt-24">
+  <h2 class="h2">Mock interviews</h2>
+  <ul class="list mt-8">
+    {% for s in interviews %}
+      <li>
+        <span>{% if s.report %}<a href="{% url 'studio:interview_report' s.pk %}">{% endif %}{{ s.started_at|date:"M j, g:i a" }} · {{ s.get_mode_display }}{% if s.report %}</a>{% endif %}
+          <span class="small muted"><br>{% if s.score is not None %}{{ s.score }}/100{% else %}Not finished{% endif %} · {{ s.questions_asked }} question{{ s.questions_asked|pluralize }}</span></span>
+        <form method="post" action="{% url 'studio:delete_interview' s.pk %}" data-confirm="Delete this interview and its transcript?">{% csrf_token %}
+          <button class="btn btn--ghost btn--danger" type="submit">Delete</button></form>
+      </li>
+    {% empty %}
+      <li class="muted">No mock interviews yet.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="card mt-24">
+  <h2 class="h2">History</h2>
+  <ul class="list mt-8">
+    <li>
+      <span>Practice answers <span class="small muted"><br>{{ counts.cards }} saved. Your skill levels and streak stay if you delete them.</span></span>
+      <form method="post" action="{% url 'studio:clear_practice' %}" data-confirm="Delete all {{ counts.cards }} practice answers? Your skill levels and streak stay.">{% csrf_token %}
+        <button class="btn btn--ghost btn--danger" type="submit"{% if not counts.cards %} disabled{% endif %}>Delete all</button></form>
+    </li>
+    <li>
+      <span>Coach chat <span class="small muted"><br>{% if chat_turns %}{{ chat_turns }} message{{ chat_turns|pluralize }} in this session{% else %}Empty{% endif %}. Never stored permanently.</span></span>
+      <form method="post" action="{% url 'studio:coach_clear' %}">{% csrf_token %}
+        <button class="btn btn--ghost btn--danger" type="submit"{% if not chat_turns %} disabled{% endif %}>Clear</button></form>
+    </li>
+  </ul>
+</section>
+
+<section class="card mt-24">
   <h2 class="h3">Reminders</h2>
   <form method="post" class="mt-8">{% csrf_token %}
     <label class="row" style="cursor:pointer">

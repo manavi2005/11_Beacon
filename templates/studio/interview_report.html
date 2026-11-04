@@ -50,5 +50,8 @@
 <div class="row mt-32">
   <a class="btn btn--beam btn--big" href="{% url 'studio:interview' %}">Go again</a>
   <a class="btn" href="{% url 'studio:today' %}">Back to Today</a>
+  <form method="post" action="{% url 'studio:delete_interview' session.pk %}" data-confirm="Delete this interview and its transcript?" style="margin-left:auto">{% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'studio:interview' %}">
+    <button class="btn btn--ghost btn--danger" type="submit">Delete this interview</button></form>
 </div>
 {% endblock %}
