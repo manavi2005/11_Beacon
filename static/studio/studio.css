@@ -468,3 +468,8 @@ input[type="range"] { width: 100%; accent-color: var(--beam-1); }
 .bubble ul { margin: 0 0 10px; padding-left: 20px; } .bubble li { margin: 4px 0; }
 .bubble strong { color: #ffd9a8; }
 .topbar .rail__brand { display: flex; }
+.drop { display: flex; align-items: center; gap: 16px; padding: 22px; border-radius: 18px; border: 1.5px dashed var(--line-strong);
+  background: var(--ink-1); cursor: pointer; transition: border-color .2s, background .2s; }
+.drop:hover, .drop.is-over { border-color: rgba(255, 196, 107, .7); background: rgba(255, 180, 100, .06); }
+.drop svg { width: 28px; height: 28px; flex: none; fill: none; stroke: var(--beam-1); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+textarea.input { resize: vertical; line-height: 1.55; }

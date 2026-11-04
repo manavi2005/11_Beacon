@@ -87,8 +87,11 @@ class BlueprintTests(TestCase):
         self.assertEqual(data["skills"][0]["required"], 95)
         self.assertIn("STAR-format storytelling", names)
 
-    def test_suggestions_are_empty_without_ai(self):
-        self.assertEqual(blueprint.suggest_roles("chemistry major"), [])
+    def test_about_falls_back_to_the_persons_own_words_without_ai(self):
+        from . import about
+        result = about.read_background("I studied history and ran a volunteer program for 3 years.")
+        self.assertIn("volunteer program", result["summary"])
+        self.assertEqual(result["roles"], [])
 
 
 @override_settings(LLM_ENABLED=False)
@@ -277,3 +280,43 @@ class CoachAndReminderTests(TestCase):
         DayLog.objects.create(candidate=self.profile, date=timezone.localdate() + timedelta(days=1),
                               cards_done=2)
         self.assertEqual(send_due(timezone.localdate() + timedelta(days=1)), 0)
+
+
+@override_settings(LLM_ENABLED=False)
+class TailoredSetupTests(TestCase):
+    def setUp(self):
+        User.objects.create_user("t", password="pw-12345")
+        self.client.login(username="t", password="pw-12345")
+
+    def test_setup_page_names_no_industry(self):
+        body = self.client.get(reverse("studio:start")).content.decode().lower()
+        for word in ("software", "engineer", "chemist", "nurse", "teacher", "designer", "pfizer"):
+            self.assertNotIn(word, body)
+
+    def test_about_accepts_text_and_a_resume_file(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        r = self.client.post(reverse("studio:start_about"), {"text": "I coach youth soccer and study kinesiology."})
+        self.assertIn("kinesiology", r.json()["summary"])
+        upload = SimpleUploadedFile("cv.txt", b"Barista for two years, now studying accounting.", "text/plain")
+        r = self.client.post(reverse("studio:start_about"), {"resume": upload})
+        self.assertIn("accounting", r.json()["summary"])
+        self.assertEqual(self.client.post(reverse("studio:start_about"), {}).status_code, 400)
+
+    def test_background_is_kept_for_tailoring(self):
+        bp = post_json(self.client, reverse("studio:start_blueprint"), {"role": "Physiotherapist"}).json()
+        post_json(self.client, reverse("studio:start"), {
+            "role": bp["title"], "blueprint": bp["slug"], "ratings": {},
+            "background": "Former athlete, kinesiology degree.", "experience_level": "SWTCH"})
+        profile = CandidateProfile.objects.get(user__username="t")
+        self.assertEqual(profile.experience_level, "SWTCH")
+        from .about import tailor_line
+        self.assertIn("kinesiology", tailor_line(profile))
+        self.assertIn("Changing careers", tailor_line(profile))
+
+    def test_weekly_plan_has_tasks_for_any_skill(self):
+        bp = post_json(self.client, reverse("studio:start_blueprint"), {"role": "Sommelier"}).json()
+        post_json(self.client, reverse("studio:start"), {
+            "role": bp["title"], "blueprint": bp["slug"], "ratings": {s["name"]: 10 for s in bp["skills"]}})
+        plan = CandidateProfile.objects.get(user__username="t").plans.get(status="ACTIVE")
+        self.assertTrue(plan.tasks.exists())
+        self.assertTrue(any("sommelier" in t.title.lower() for t in plan.tasks.all()))

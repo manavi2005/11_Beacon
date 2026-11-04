@@ -30,6 +30,8 @@ def context(profile):
         f"Goal: {profile.target_role}"
         + (f" at {profile.target_company}" if profile.target_company else ""),
         f"Interview date: {profile.target_interview_date or 'not set'}",
+        f"Stage: {profile.get_experience_level_display()}",
+        f"Background: {(profile.resume_summary or 'not shared')[:600]}",
         f"Readiness: {engine.readiness(memories)}%",
         "Skills (level today / bar): " + "; ".join(
             f"{r['skill'].name} {r['effective']}/{r['required']}{' (fading)' if r['due'] and r['memory'].reps else ''}"

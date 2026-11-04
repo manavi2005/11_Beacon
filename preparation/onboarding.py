@@ -172,6 +172,15 @@ TASKS_BY_SKILL = {
 
 MAX_TASKS = 12
 
+# For any skill without hand-written tasks (every skill a v2 blueprint
+# creates, in any field): the same three moves that build any interview
+# skill. Practise it, find your own evidence, say it out loud.
+GENERIC_TASKS = [
+    ("Do a focused Beacon practice round on {skill}", 20),
+    ("Write down two real examples of when you used {skill}", 30),
+    ("Explain {skill} out loud in two minutes, as you would in the interview", 15),
+]
+
 
 def required_level(roles, skill_name):
     """The bar for one skill. With several roles it is the highest of them:
@@ -239,8 +248,11 @@ def build_plan(profile):
     chosen = []
     for rank, (gap, assessment) in enumerate(gaps):
         allowance = 3 if rank == 0 else 2 if rank == 1 else 1
-        for title_, minutes in TASKS_BY_SKILL.get(assessment.skill.name, [])[:allowance]:
-            chosen.append((gap, assessment, title_, minutes))
+        tasks = TASKS_BY_SKILL.get(assessment.skill.name) or [
+            (t.format(skill=assessment.skill.name.lower()), m) for t, m in GENERIC_TASKS
+        ]
+        for title_, minutes in tasks[:allowance]:
+            chosen.append((gap, assessment, title_[:150], minutes))
     chosen = chosen[:MAX_TASKS]
 
     for i, (gap, assessment, task_title, minutes) in enumerate(chosen):

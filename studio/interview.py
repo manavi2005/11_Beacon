@@ -11,7 +11,7 @@ import random
 
 from django.utils import timezone
 
-from . import ai
+from . import about, ai
 from .models import InterviewSession, clamp
 
 SYSTEM = (
@@ -80,6 +80,8 @@ def _ai_next(session, followed_up):
     data = ai.ask_json(
         SYSTEM + " Reply with JSON only.",
         f"Role: {session.role}. Interview style: {session.get_mode_display()}.\n"
+        f"{about.tailor_line(session.candidate)}\n"
+        "Ask about their real background where it fits, as a good interviewer who read their resume would.\n"
         f"Skills this candidate is working on: {_focus(session.candidate)}.\n"
         f"Question {session.questions_asked} of {session.planned_questions}.\n"
         f"Transcript so far:\n{history}\n\n"
@@ -137,7 +139,7 @@ def _ai_report(session):
     )
     data = ai.ask_json(
         REPORT_SYSTEM,
-        f"Role: {session.role}\nTranscript:\n{transcript}\n\n"
+        f"Role: {session.role}\n{about.tailor_line(session.candidate)}\nTranscript:\n{transcript}\n\n"
         'Return {"overall": 0-100, "headline": one encouraging, specific sentence, '
         '"star": {"situation", "task", "action", "result"} each 0-100 averaged over the '
         'behavioural answers, "strengths": [2-3 specific things], "improve": [2-3 specific, '

@@ -24,17 +24,11 @@ from django.views.decorators.http import require_POST
 from preparation import onboarding as v1_onboarding
 from preparation.models import CandidateProfile, PreparationPlan, SkillAssessment
 
-from . import ai, blueprint, cards, chat, engine, interview
+from . import about, ai, blueprint, cards, chat, engine, interview
 from .templatetags.studio_text import coach_html
 from .models import Card, DayLog, InterviewSession, Preferences, RoleBlueprint, SkillMemory
 
 SESSION_KEY = "studio_session"
-# Shown on the landing page only until real users have created enough roles.
-LANDING_EXAMPLES = [
-    "Analytical chemist", "ICU nurse", "High-school teacher", "Software engineer",
-    "Brand designer", "Policy analyst", "Physical therapist", "Lab research associate",
-    "Social worker", "Civil engineer", "Pharmacist", "Marketing coordinator",
-]
 
 
 def _profile(request):
@@ -56,10 +50,11 @@ def _greeting():
 def home(request):
     if not request.user.is_authenticated:
         # Real roles people have set up, so the page reflects who uses Beacon.
-        roles = list(RoleBlueprint.objects.order_by("-created_at").values_list("title", flat=True)[:16])
-        if len(roles) < 8:
-            roles += [r for r in LANDING_EXAMPLES if r not in roles][: 16 - len(roles)]
-        return render(request, "studio/landing.html", {"roles": roles})
+        # Only roles real people have set up, and only once there are enough
+        # to show the range; nothing is invented for the page.
+        roles = list(RoleBlueprint.objects.filter(source=RoleBlueprint.Source.AI)
+                     .order_by("-created_at").values_list("title", flat=True)[:16])
+        return render(request, "studio/landing.html", {"roles": roles if len(roles) >= 6 else []})
     if not _profile(request):
         if request.user.is_staff:
             return redirect("preparation:dashboard")
@@ -91,7 +86,7 @@ def start(request):
         if experience not in CandidateProfile.ExperienceLevel.values:
             experience = CandidateProfile.ExperienceLevel.STUDENT
         _complete_setup(request.user, bp, ratings, interview_date, experience,
-                        str(data.get("company", ""))[:120], str(data.get("background", ""))[:500])
+                        str(data.get("company", ""))[:120], str(data.get("background", ""))[:1500])
         return JsonResponse({"next": "/today/?welcome=1"})
     return render(request, "studio/start.html", {
         "profile": profile,
@@ -139,8 +134,18 @@ def _complete_setup(user, bp, ratings, interview_date, experience, company, back
 
 @login_required
 @require_POST
-def start_suggest(request):
-    return JsonResponse({"roles": blueprint.suggest_roles(_body(request).get("background", ""))})
+def start_about(request):
+    """Read a resume (PDF or text, never stored) and/or a self-description."""
+    from preparation import resume as resume_reader
+    text = request.POST.get("text", "")
+    if request.FILES.get("resume"):
+        try:
+            text = resume_reader.extract_text(upload=request.FILES["resume"]) + "\n" + text
+        except resume_reader.ResumeError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+    if not text.strip():
+        return JsonResponse({"error": "Upload a resume or write a few sentences about you."}, status=400)
+    return JsonResponse(about.read_background(text))
 
 
 @login_required
@@ -152,7 +157,8 @@ def start_blueprint(request):
         return JsonResponse({"error": "Type a role first."}, status=400)
     bp = blueprint.get_blueprint(role, data.get("experience", ""))
     return JsonResponse({"slug": bp.slug, "title": bp.title, "summary": bp.summary, "skills": bp.skills,
-                         "source": bp.source})
+                         "source": bp.source,
+                         "levels": about.estimate_levels(str(data.get("background", ""))[:1500], bp)})
 
 
 # --------------------------------------------------------------------------

@@ -16,24 +16,26 @@
     <div class="beam-hero" aria-hidden="true"></div>
     <div class="eyebrow">Your personal interview coach</div>
     <h1 class="display">Walk in <em>ready</em>, for any career.</h1>
-    <p class="lede">Ten minutes a day. Beacon learns what your role demands, practises you on it, remembers what you're forgetting, and lets you rehearse out loud with an interviewer who listens.</p>
+    <p class="lede">Ten minutes a day. Beacon learns your background and what your next role demands, practises you on it, remembers what you're forgetting, and lets you rehearse out loud with an interviewer who listens.</p>
     <div class="row" style="justify-content:center">
       <a class="btn btn--beam btn--big" href="{% url 'preparation:signup' %}">Start free →</a>
       <a class="btn btn--ghost btn--big" href="{% url 'preparation:login' %}">I have an account</a>
     </div>
   </section>
 
+  {% if roles %}
   <div class="roles-marquee" aria-label="Roles people prepare for">
     <div class="roles-marquee__track">
       {% for r in roles %}<span class="chip">{{ r }}</span>{% endfor %}{% for r in roles %}<span class="chip" aria-hidden="true">{{ r }}</span>{% endfor %}
     </div>
   </div>
+  {% endif %}
 
   <section class="features">
     <article class="card feature">
       <div class="feature__icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
       <h3>Any role, any field</h3>
-      <p>Type your goal, from chemist to nurse to designer. Beacon works out what those interviews really test and builds your plan around it.</p>
+      <p>Share your resume or a few lines about you. Beacon suggests roles that fit, works out what those interviews really test, and builds your plan around you.</p>
     </article>
     <article class="card feature">
       <div class="feature__icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></div>

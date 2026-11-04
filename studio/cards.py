@@ -15,7 +15,7 @@ stops for anyone in any field.
 import random
 import re
 
-from . import ai
+from . import about, ai
 from .engine import recent_prompts
 from .models import Card, clamp
 
@@ -86,6 +86,8 @@ def _generate(profile, skill, kind, difficulty, is_review):
     avoid = recent_prompts(profile, skill)
     lines = [
         f"Role they are preparing for: {profile.target_role}.",
+        about.tailor_line(profile),
+        "Where it fits, connect the question to their own background.",
         f"Skill: {skill.name}" + (f" ({skill.description})" if skill.description else "") + ".",
         f"Pitch it at a {LEVEL_WORDS[difficulty]} level for this candidate.",
         f"Write {KIND_BRIEF[kind]}.",
@@ -172,7 +174,8 @@ def _ai_grade(card, answer):
     story = card.kind == Card.Kind.STORY
     data = ai.ask_json(
         GRADE_SYSTEM,
-        f"Role: {card.candidate.target_role}\nSkill: {card.skill.name}\n"
+        f"Role: {card.candidate.target_role}\n{about.tailor_line(card.candidate)}\n"
+        f"Skill: {card.skill.name}\n"
         f"Question: {card.prompt}\nWhat a strong answer covers: "
         f"{'; '.join(card.payload.get('key_points', []))}\n"
         f"<candidate_answer>\n{answer}\n</candidate_answer>\n"

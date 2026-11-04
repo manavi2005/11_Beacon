@@ -1737,10 +1737,10 @@ class FlexibleGoalsTests(TestCase):
         profile = self._profile()
         self.assertEqual(profile.interests, ["data", "product"])
         self.assertEqual(profile.resume_summary, "Econ major.")
-        r = self.client.get(reverse("preparation:onboarding"))
-        form = r.context["form"]
-        self.assertEqual(form.initial["interests"], ["data", "product"])
-        self.assertEqual(form.initial["has_interview"], "no")
+        # The retake now happens in v2 setup, which pre-fills the same "about".
+        self.assertRedirects(self.client.get(reverse("preparation:onboarding")),
+                             reverse("studio:start"))
+        self.assertContains(self.client.get(reverse("studio:start")), "Econ major.")
 
     def test_interest_suggestions(self):
         from .onboarding import suggested_roles
@@ -1821,9 +1821,9 @@ class ResumeImportTests(TestCase):
         self.assertEqual(r.status_code, 401)
 
     def test_onboarding_page_offers_the_import(self):
-        r = self.client.get(reverse("preparation:onboarding"))
-        self.assertContains(r, "data-resume-import")
-        self.assertContains(r, "Save to PDF")
+        r = self.client.get(reverse("studio:start"))
+        self.assertContains(r, "data-file")
+        self.assertContains(r, "never stored")
 
 
 class ProductNavigationTests(TestCase):

@@ -1241,6 +1241,10 @@ def api_palette(request):
 # ---------------------------------------------------------------------------
 @login_required
 def onboarding_view(request):
+    # v2 replaced this preset-role form with studio's setup, which works for
+    # any field. GET goes there; POST still works for existing integrations.
+    if request.method != "POST":
+        return redirect("studio:start")
     profile = CandidateProfile.objects.filter(user=request.user).first()
     if request.method == "POST":
         form = OnboardingForm(request.POST)

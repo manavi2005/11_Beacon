@@ -150,28 +150,3 @@ def ensure_skills(blueprint):
         result.append((skill, row))
     return result
 
-
-SUGGEST_SYSTEM = "You are a career counsellor for every field, not just tech. Reply with JSON only."
-
-
-def suggest_roles(background):
-    """Role ideas for a major, field or vague goal ("chem major", "I like people")."""
-    background = " ".join((background or "").split())[:200]
-    if not background:
-        return []
-    try:
-        data = ai.ask_json(
-            SUGGEST_SYSTEM,
-            f'Background: "{background}".\nSuggest 6 realistic entry-level or early-career '
-            "job titles this person could interview for, across industry, research, public "
-            "sector and adjacent fields where they fit. "
-            'Return {"roles": [{"title", "why": one short sentence}]}',
-            max_tokens=1500, temperature=0.7,
-        )
-    except ai.Unavailable:
-        return []
-    roles = []
-    for row in data.get("roles") or []:
-        if isinstance(row, dict) and ai.clean(row.get("title"), 80):
-            roles.append({"title": ai.clean(row.get("title"), 80), "why": ai.clean(row.get("why"), 160)})
-    return roles[:6]
