@@ -375,3 +375,10 @@ class AiBudgetTests(TestCase):
                 views.AI_ACTIONS_PER_HOUR = original
         self.assertEqual(codes, [200, 200, 429])
         cache.clear()
+
+
+@override_settings(LLM_ENABLED=False)
+class HealthTests(TestCase):
+    def test_health_reports_database_and_ai_without_login(self):
+        data = self.client.get(reverse("studio:healthz")).json()
+        self.assertEqual(data, {"ok": True, "database": True, "ai": "off"})

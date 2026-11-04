@@ -564,3 +564,20 @@ def reset_progress(request):
         return redirect("studio:start")
     return redirect("studio:you")
 
+
+
+def healthz(request):
+    """Deploy check: is the database reachable, and is AI on? No secrets."""
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_ok = True
+    except Exception:  # noqa: BLE001 - any failure means "not healthy"
+        db_ok = False
+    paused = bool(cache.get(ai.DOWN_KEY))
+    return JsonResponse(
+        {"ok": db_ok, "database": db_ok,
+         "ai": "paused" if paused else ("on" if ai.enabled() else "off")},
+        status=200 if db_ok else 503,
+    )
