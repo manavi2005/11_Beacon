@@ -22,13 +22,24 @@
     });
   }
 
+  // The next question is written in the background while you answer this
+  // one, so "Continue" is instant instead of an 8-second wait.
+  let prefetched = null;
+  const fetchNext = () => B.post("/session/next/", {});
+
   async function next() {
     window.scrollTo({ top: 0, behavior: "smooth" });
+    const ready = prefetched;
+    prefetched = null;
     stage.innerHTML = THINKING(pick(LOADING_LINES));
     stage.style.animation = "none"; void stage.offsetWidth; stage.style.animation = "";
     try {
-      const data = await B.post("/session/next/", {});
+      let data = (ready && (await ready)) || (await fetchNext());
+      // A prefetched "done" was computed before the last answer was graded;
+      // ask again so the summary includes it.
+      if (data.done && ready) data = await fetchNext();
       if (data.done) return summary(data.summary);
+      if (data.position < data.total) prefetched = fetchNext().catch(() => null);
       progress(data.position);
       render(data.card);
     } catch (e) {

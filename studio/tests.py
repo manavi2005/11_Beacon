@@ -234,3 +234,46 @@ class StreakTests(TestCase):
         result = engine.streak(self.profile, self.today)
         self.assertEqual(result["days"], 2)
         self.assertFalse(result["done_today"])
+
+
+@override_settings(LLM_ENABLED=False)
+class CoachAndReminderTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("r", password="pw-12345", email="r@example.com",
+                                             first_name="Riya")
+        self.client.login(username="r", password="pw-12345")
+        self.profile = CandidateProfile.objects.create(user=self.user, target_role="Pharmacist")
+        self.skill = Skill.objects.create(name="Drug interactions")
+        self.memory = SkillMemory.objects.create(candidate=self.profile, skill=self.skill,
+                                                 strength=50, required=75)
+
+    def test_coach_replies_offline_and_keeps_history_in_session_only(self):
+        r = post_json(self.client, reverse("studio:coach_send"), {"message": "What should I do?"})
+        self.assertIn("Drug interactions", r.json()["reply"])
+        self.assertEqual(len(self.client.session["studio_chat"]), 2)
+        self.assertContains(self.client.get(reverse("studio:coach")), "What should I do?")
+        self.client.post(reverse("studio:coach_clear"))
+        self.assertNotIn("studio_chat", self.client.session)
+
+    def test_coach_formatter_escapes_html(self):
+        from .templatetags.studio_text import coach_html
+        html = coach_html("<script>x</script>\n**Bold** move\n- a\n- b")
+        self.assertNotIn("<script>", html)
+        self.assertIn("<strong>Bold</strong>", html)
+        self.assertIn("<ul><li>a</li><li>b</li></ul>", html)
+
+    def test_reminders_are_opt_in_daily_and_skip_active_days(self):
+        from django.core import mail
+        from .models import Preferences
+        from .reminders import send_due
+        self.memory.record(80, timezone.now() - timedelta(days=20))
+        self.memory.save()
+        self.assertEqual(send_due(), 0)                      # not opted in
+        self.client.post(reverse("studio:you"), {"email_reminders": "on"})
+        self.assertTrue(Preferences.objects.get(candidate=self.profile).email_reminders)
+        self.assertEqual(send_due(), 1)
+        self.assertIn("Drug interactions", mail.outbox[0].body)
+        self.assertEqual(send_due(), 0)                      # once a day
+        DayLog.objects.create(candidate=self.profile, date=timezone.localdate() + timedelta(days=1),
+                              cards_done=2)
+        self.assertEqual(send_due(timezone.localdate() + timedelta(days=1)), 0)

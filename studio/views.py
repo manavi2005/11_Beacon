@@ -24,8 +24,9 @@ from django.views.decorators.http import require_POST
 from preparation import onboarding as v1_onboarding
 from preparation.models import CandidateProfile, PreparationPlan, SkillAssessment
 
-from . import ai, blueprint, cards, engine, interview
-from .models import Card, DayLog, InterviewSession, RoleBlueprint, SkillMemory
+from . import ai, blueprint, cards, chat, engine, interview
+from .templatetags.studio_text import coach_html
+from .models import Card, DayLog, InterviewSession, Preferences, RoleBlueprint, SkillMemory
 
 SESSION_KEY = "studio_session"
 # Shown on the landing page only until real users have created enough roles.
@@ -399,6 +400,52 @@ def transcribe(request):
 
 
 # --------------------------------------------------------------------------
+# Coach chat (history in the session only)
+# --------------------------------------------------------------------------
+CHAT_KEY = "studio_chat"
+STARTERS = [
+    "What should I focus on this week?",
+    "I'm nervous about my interview.",
+    "How do I explain a gap or a failure?",
+    "Help me answer 'Tell me about yourself'.",
+]
+
+
+@login_required
+def coach_page(request):
+    profile = _profile(request)
+    if not profile:
+        return redirect("studio:start")
+    return render(request, "studio/coach.html", {
+        "profile": profile, "history": request.session.get(CHAT_KEY, []), "starters": STARTERS,
+    })
+
+
+@login_required
+@require_POST
+def coach_send(request):
+    profile = _profile(request)
+    if not profile:
+        raise Http404
+    message = " ".join(str(_body(request).get("message", "")).split())[:2000]
+    if not message:
+        return JsonResponse({"error": "Type a message first."}, status=400)
+    history = request.session.get(CHAT_KEY, [])
+    answer = chat.reply(profile, history, message)
+    history = (history + [{"role": "user", "content": message},
+                          {"role": "assistant", "content": answer}])[-chat.MAX_TURNS * 2:]
+    request.session[CHAT_KEY] = history
+    return JsonResponse({"reply": answer, "html": coach_html(answer)})
+
+
+@login_required
+@require_POST
+def coach_clear(request):
+    request.session.pop(CHAT_KEY, None)
+    return redirect("studio:coach")
+
+
+# --------------------------------------------------------------------------
 # Progress and privacy
 # --------------------------------------------------------------------------
 @login_required
@@ -425,7 +472,13 @@ def progress(request):
 @login_required
 def you(request):
     profile = _profile(request)
+    prefs = Preferences.objects.get_or_create(candidate=profile)[0] if profile else None
+    if request.method == "POST" and prefs:
+        prefs.email_reminders = request.POST.get("email_reminders") == "on"
+        prefs.save(update_fields=["email_reminders"])
+        return redirect("studio:you")
     return render(request, "studio/you.html", {
+        "prefs": prefs,
         "profile": profile,
         "counts": {
             "cards": profile.cards.count() if profile else 0,

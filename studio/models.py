@@ -210,6 +210,19 @@ class InterviewSession(models.Model):
         return len({t.get("q") for t in self.transcript if t.get("who") == "interviewer"})
 
 
+class Preferences(models.Model):
+    """Per-person settings. Reminders are opt-in: a safe space doesn't nag."""
+
+    candidate = models.OneToOneField(
+        CandidateProfile, on_delete=models.CASCADE, related_name="preferences"
+    )
+    email_reminders = models.BooleanField(default=False)
+    last_reminded = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Preferences for {self.candidate}"
+
+
 def level_name(value):
     """A friendly name for a 0-100 level."""
     for floor, name in ((85, "Interview-ready"), (70, "Strong"), (55, "Capable"),

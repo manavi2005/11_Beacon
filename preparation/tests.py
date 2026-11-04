@@ -1549,7 +1549,7 @@ class PolishTests(TestCase):
         for name in ("preparation:login", "preparation:signup"):
             with self.subTest(page=name):
                 r = self.client.get(reverse(name))
-                self.assertContains(r, "auth-hero")
+                self.assertContains(r, "auth2__story")
                 self.assertContains(r, 'class="field__label"')
                 self.assertNotContains(r, "{%")
 

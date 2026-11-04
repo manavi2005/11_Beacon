@@ -1,0 +1,38 @@
+{% extends "studio/base.html" %}
+{% load static studio_text %}
+{% block title %}Coach{% endblock %}
+{% block content %}
+<div class="chat" data-chat>
+  <header class="spread">
+    <div>
+      <div class="eyebrow">Coach</div>
+      <h1 class="h2 mt-8" style="font-size:28px">Talk it through.</h1>
+      <p class="small muted mt-8">Beacon knows your goal and your progress. This conversation isn't saved anywhere permanent.</p>
+    </div>
+    {% if history %}<form method="post" action="{% url 'studio:coach_clear' %}">{% csrf_token %}<button class="btn btn--ghost" type="submit">New chat</button></form>{% endif %}
+  </header>
+
+  <div class="chat__log" data-log aria-live="polite">
+    {% if not history %}
+      <div class="bubble bubble--coach">Hi {{ user.first_name|default:user.username }}. I've been looking at your {{ profile.target_role }} prep. What's on your mind? Strategy, nerves, a tricky question, anything.</div>
+    {% endif %}
+    {% for m in history %}
+      <div class="bubble {% if m.role == 'user' %}bubble--you{% else %}bubble--coach{% endif %}">{% if m.role == 'user' %}{{ m.content }}{% else %}{{ m.content|coach_html }}{% endif %}</div>
+    {% endfor %}
+  </div>
+
+  {% if not history %}
+  <div class="ideas" data-starters>
+    {% for s in starters %}<button type="button" class="idea" data-starter>{{ s }}</button>{% endfor %}
+  </div>
+  {% endif %}
+
+  <form class="chat__composer" data-composer>
+    <label class="sr-only" for="msg">Message</label>
+    <textarea id="msg" class="input" rows="1" placeholder="Ask anything…" data-input></textarea>
+    <button type="button" class="mic-btn" data-mic aria-label="Speak" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <button class="btn btn--beam" type="submit">Send</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'studio/coach.js' %}" defer></script>{% endblock %}

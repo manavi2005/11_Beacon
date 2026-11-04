@@ -1,27 +1,32 @@
-{% extends "base.html" %}
-
-{% block title %}Sign Up - Beacon{% endblock %}
+{% extends "studio/base.html" %}
+{% block title %}Sign Up{% endblock %}
 {% block body_class %}page-auth{% endblock %}
-{% block page_header %}{% endblock %}
-
+{% block chrome %}{% endblock %}
+{% block stage_class %}stage--focus{% endblock %}
 {% block content %}
-<div class="auth">
-  {% include "registration/_auth_hero.html" %}
-
-  <section class="auth-card">
-    <h1 class="auth-card__title">Create an account</h1>
-    <p class="auth-card__lede">Free, and it takes under a minute.</p>
-
-    {% include "registration/_google_button.html" with google_hint="Your account is created on first sign-in. No password to remember." %}
-
-    <form method="post" class="auth-card__form">
+<nav class="topbar auth2__top" aria-label="Account">
+  <a class="rail__brand" href="/"><span class="beacon-mark" aria-hidden="true"></span><span>Beacon</span></a>
+  <div class="row">
+    <a class="btn btn--ghost" href="{% url 'preparation:login' %}">Log in</a>
+    <a class="btn" href="{% url 'preparation:signup' %}">Sign up</a>
+  </div>
+</nav>
+<div class="auth2">
+  <aside class="auth2__story" aria-hidden="true">
+    <div class="beam-hero"></div>
+    <p class="auth2__quote">Walk into your next interview knowing exactly what you'll say.</p>
+    <p class="small muted">Any role. Any field. A safe space to practise.</p>
+  </aside>
+  <section class="auth2__card card">
+    <h1 class="h2" style="font-size:30px">Start free</h1>
+    <p class="muted mt-8">Under a minute. Then tell Beacon what you're working toward, whatever field it's in.</p>
+    <div class="mt-24">{% include "registration/_google_button.html" with google_hint="Your account is created on first sign-in. No password to remember." %}</div>
+    <form method="post" class="auth2__form">
       {% csrf_token %}
       {% include "registration/_auth_fields.html" %}
-      <button type="submit" class="auth-card__submit">Sign Up</button>
+      <button type="submit" class="btn btn--beam btn--big" style="width:100%">Sign Up</button>
     </form>
-
-
-    <p class="auth-card__switch">Already registered? <a href="{% url 'preparation:login' %}">Log in</a></p>
+    <p class="small muted mt-24" style="text-align:center">Already registered? <a href="{% url 'preparation:login' %}">Log in</a></p>
   </section>
 </div>
 {% endblock %}
