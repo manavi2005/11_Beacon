@@ -122,7 +122,15 @@ REMOTIVE_HOME = "https://remotive.com"
 # Remotive asks callers to fetch no more than a few times a day.
 REMOTIVE_CACHE_SECONDS = 6 * 60 * 60
 
+# Adzuna covers every industry (the two boards above are mostly remote tech
+# jobs), so it goes first when its free API credentials are configured:
+# ADZUNA_APP_ID / ADZUNA_APP_KEY from developer.adzuna.com, ADZUNA_COUNTRY
+# (default "us").
+ADZUNA_URL = "https://api.adzuna.com/v1/api/jobs/{country}/search/1"
+ADZUNA_HOME = "https://www.adzuna.com"
+
 SOURCES = {
+    "adzuna": {"name": "Adzuna", "url": ADZUNA_HOME},
     "jobicy": {"name": "Jobicy", "url": JOBICY_HOME},
     "remotive": {"name": "Remotive", "url": REMOTIVE_HOME},
 }
@@ -181,6 +189,36 @@ def _fetch_jobicy(query):
     ]
 
 
+def _adzuna_credentials():
+    from django.conf import settings
+    return (getattr(settings, "ADZUNA_APP_ID", ""), getattr(settings, "ADZUNA_APP_KEY", ""),
+            getattr(settings, "ADZUNA_COUNTRY", "us") or "us")
+
+
+def _fetch_adzuna(query):
+    app_id, app_key, country = _adzuna_credentials()
+    if not (app_id and app_key):
+        raise MarketDataError("Adzuna is not configured.")
+    payload = _get_json("Adzuna", ADZUNA_URL.format(country=country), {
+        "app_id": app_id, "app_key": app_key, "what": query,
+        "results_per_page": POSTING_LIMIT, "content-type": "application/json",
+    })
+    results = payload.get("results") if isinstance(payload, dict) else None
+    if not isinstance(results, list):
+        raise MarketDataError("Adzuna's response had no list of jobs in it.")
+    return [
+        {
+            "title": html.unescape(job.get("title") or ""),
+            "company": html.unescape((job.get("company") or {}).get("display_name") or ""),
+            "url": job.get("redirect_url") or "",
+            "level": job.get("contract_time") or "",
+            "published": (job.get("created") or "")[:10],
+            "_text": _plain_text(job.get("title"), job.get("description")),
+        }
+        for job in results if isinstance(job, dict)
+    ]
+
+
 def _fetch_remotive(query):
     payload = _get_json("Remotive", REMOTIVE_URL, {"search": query, "limit": POSTING_LIMIT})
     return [
@@ -213,6 +251,7 @@ def fetch_postings(query):
     """
     slug = re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")
     attempts = [
+        ("adzuna", _fetch_adzuna, CACHE_SECONDS),
         ("jobicy", _fetch_jobicy, CACHE_SECONDS),
         ("remotive", _fetch_remotive, REMOTIVE_CACHE_SECONDS),
     ]
