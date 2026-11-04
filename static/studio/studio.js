@@ -206,6 +206,12 @@
     });
   }
 
+  // Destructive forms ask first: <form data-confirm="Delete this?">.
+  document.addEventListener("submit", (evt) => {
+    const message = evt.target.dataset && evt.target.dataset.confirm;
+    if (message && !window.confirm(message)) evt.preventDefault();
+  });
+
   document.addEventListener("DOMContentLoaded", () => {
     B.animateRings();
     document.querySelectorAll("[data-trend]").forEach(B.trend);

@@ -57,6 +57,7 @@
   </aside>
   {% endblock %}
   <main class="stage {% block stage_class %}{% endblock %}" id="main">
+    {% if messages %}<div class="notices" role="status">{% for m in messages %}<p class="notice">{{ m }}</p>{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>
   <div class="toast" role="status" aria-live="polite" hidden></div>
