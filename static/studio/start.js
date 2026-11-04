@@ -69,7 +69,7 @@
     btn.disabled = true; btn.textContent = "Reading what this role needs…";
     try {
       blueprint = await B.post("/start/blueprint/", {
-        role, background, experience: $("[data-level]").selectedOptions[0].text,
+        role, background, experience_level: $("[data-level]").value,
       });
       renderBlueprint();
       show(3);
@@ -88,6 +88,15 @@
     $("[data-rate-note]").textContent = estimated
       ? "Here's what interviewers for this role test. Beacon estimated where you are from what you shared. Adjust anything that's off."
       : "Here's what interviewers for this role test. Be honest about where you are today: your first session checks it anyway.";
+    const style = blueprint.interview_style || {};
+    const market = blueprint.market || {};
+    $("[data-insights]").innerHTML =
+      (style.rounds && style.rounds.length ? `<div class="card"><h2 class="h3">How this interview usually runs</h2>
+        ${style.summary ? `<p class="small muted mt-8">${esc(style.summary)}</p>` : ""}
+        <ol class="rounds">${style.rounds.map((r) => `<li><strong>${esc(r.name)}</strong><span>${esc(r.what)}</span></li>`).join("")}</ol></div>` : "") +
+      (market.trending && market.trending.length ? `<div class="card"><h2 class="h3">In demand right now</h2>
+        <p class="small muted mt-8">From ${market.postings} current job postings.</p>
+        <div class="ideas">${market.trending.map((t) => `<span class="chip chip--beam">${esc(t)}</span>`).join("")}</div></div>` : "");
     $("[data-rates]").innerHTML = blueprint.skills.map((s, i) => {
       const v = levels[s.name] != null ? levels[s.name] : 40;
       return `<div class="rate" style="animation-delay:${i * 70}ms">

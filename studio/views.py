@@ -98,7 +98,7 @@ def start(request):
         if not role:
             return JsonResponse({"error": "Tell Beacon what you're working toward."}, status=400)
         bp = (RoleBlueprint.objects.filter(slug=str(data.get("blueprint", ""))).first()
-              or blueprint.get_blueprint(role, data.get("experience", "")))
+              or blueprint.get_blueprint(role, data.get("experience_level", "")))
         ratings = data.get("ratings") or {}
         interview_date = None
         if data.get("date"):
@@ -152,6 +152,7 @@ def _complete_setup(user, bp, ratings, interview_date, experience, company, back
     profile.memories.exclude(skill_id__in=keep).delete()
     profile.skills.set(keep)
     engine.sync_memories(profile)
+    Preferences.objects.update_or_create(candidate=profile, defaults={"blueprint": bp})
     v1_onboarding.build_plan(profile)
     return profile
 
@@ -181,9 +182,10 @@ def start_blueprint(request):
     role = " ".join(str(data.get("role", "")).split())[:140]
     if not role:
         return JsonResponse({"error": "Type a role first."}, status=400)
-    bp = blueprint.get_blueprint(role, data.get("experience", ""))
+    bp = blueprint.get_blueprint(role, str(data.get("experience_level", "")))
     return JsonResponse({"slug": bp.slug, "title": bp.title, "summary": bp.summary, "skills": bp.skills,
-                         "source": bp.source,
+                         "source": bp.source, "interview_style": bp.interview_style,
+                         "market": bp.market,
                          "levels": about.estimate_levels(str(data.get("background", ""))[:1500], bp)})
 
 
