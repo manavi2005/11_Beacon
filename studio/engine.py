@@ -55,7 +55,7 @@ def skill_rows(memories, now=None):
             "required": m.required,
             "faded": round(m.strength - effective),
             "retention": round(m.retention(now) * 100),
-            "level": level_name(effective),
+            "level": level_name(effective, m.required),
             "due": m.is_due(now),
             "gap": max(m.required - round(effective), 0),
             "percent": round(min(effective / m.required, 1) * 100) if m.required else 100,
@@ -184,7 +184,7 @@ def record_card(card, score, feedback, response):
             proficiency_score=clamp(round(memory.strength)), assessed_on=timezone.localdate()
         )
     return {"xp": xp, "before": round(before), "after": round(memory.effective(now)),
-            "next_review_days": round(memory.stability, 1), "level": level_name(memory.effective(now))}
+            "next_review_days": round(memory.stability, 1), "level": level_name(memory.effective(now), memory.required)}
 
 
 def recent_prompts(profile, skill, limit=12):
