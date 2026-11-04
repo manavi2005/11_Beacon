@@ -116,7 +116,7 @@ class TemplateBehaviourTests(TestCase):
         self.assertTrue(self.client.login(username="templateuser", password="test-only-pw"))
     def test_every_page_extends_base_and_shows_the_nav(self):
         response = self.client.get(reverse("preparation:skill_catalog_render"))
-        self.assertContains(response, "Team Career Coaches (Group 11)")
+        self.assertContains(response, "Your interview coach, for any career")
         self.assertContains(response, f'href="{reverse("preparation:task_list")}"')
 
     def test_empty_branch_fires_when_the_filter_matches_nothing(self):

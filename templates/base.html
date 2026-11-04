@@ -33,7 +33,10 @@ Django prints it as page text.
     document.documentElement.classList.add("js");
     try { if (localStorage.getItem("beacon-dev-notes") === "1") document.documentElement.classList.add("show-dev"); } catch (e) {}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{% static 'css/beacon.css' %}">
+  <link rel="stylesheet" href="{% static 'css/beacon-night.css' %}">
   <link rel="icon" href="{% static 'img/beacon-logo.svg' %}" type="image/svg+xml">
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -45,7 +48,7 @@ Django prints it as page text.
       <div class="masthead__text">
         <p class="masthead__title">BEACON</p>
         <p class="masthead__tagline">
-          An AI Personal Career Coach &middot; Team Career Coaches (Group 11)
+          Your interview coach, for any career
         </p>
       </div>
     </header>
@@ -144,7 +147,7 @@ Django prints it as page text.
     </main>
 
     <footer class="footer">
-      Beacon &middot; INFO 490 MG &middot; Manavi Chaudhry, Chu-Yun Hwang, Meet Kailash Mali
+      Beacon &middot; Manavi Chaudhry, Chu-Yun Hwang, Meet Kailash Mali
     </footer>
 
   </div>
