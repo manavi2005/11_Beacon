@@ -28,4 +28,8 @@ urlpatterns = [
     path("you/", views.you, name="you"),
     path("you/export/", views.export_data, name="export_data"),
     path("you/reset/", views.reset_progress, name="reset_progress"),
+    path("you/plans/new/", views.new_plan, name="new_plan"),
+    path("you/plans/<int:pk>/delete/", views.delete_plan, name="delete_plan"),
+    path("you/practice/clear/", views.clear_practice, name="clear_practice"),
+    path("interview/<int:pk>/delete/", views.delete_interview, name="delete_interview"),
 ]
