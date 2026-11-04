@@ -382,3 +382,43 @@ class HealthTests(TestCase):
     def test_health_reports_database_and_ai_without_login(self):
         data = self.client.get(reverse("studio:healthz")).json()
         self.assertEqual(data, {"ok": True, "database": True, "ai": "off"})
+
+
+@override_settings(LLM_ENABLED=False)
+class StageAndMarketTests(TestCase):
+    def test_blueprints_are_per_career_stage(self):
+        intern = blueprint.get_blueprint("Accountant", "STU")
+        senior = blueprint.get_blueprint("Accountant", "MID")
+        self.assertNotEqual(intern.pk, senior.pk)
+        self.assertEqual(intern.stage, "STU")
+
+    def test_levels_are_named_against_the_persons_own_bar(self):
+        from .models import level_name
+        self.assertEqual(level_name(60, 60), "Interview-ready")   # an intern at their bar
+        self.assertEqual(level_name(60, 90), "Building")
+        self.assertEqual(level_name(10, 90), "Starting out")
+
+    def test_market_postings_feed_the_prompt_and_are_recorded(self):
+        from unittest import mock
+        from preparation import market
+        from . import ai
+        postings = [{"title": f"{t} Accountant", "_text": "cpa track, netsuite, month-end close"}
+                    for t in ("Staff", "Junior", "Tax")]
+        postings.append({"title": "React Developer", "_text": "react typescript docker"})
+        captured = {}
+
+        def fake_ask(system, user, **kw):
+            captured["prompt"] = user
+            return {"title": "Accountant", "summary": "s", "trending": ["NetSuite", "Month-end close"],
+                    "interview_style": {"summary": "x", "rounds": [{"name": "Technical", "what": "Journal entries"}]},
+                    "skills": [{"name": f"Skill {i}", "category": "domain", "required": 70} for i in range(5)]}
+
+        with mock.patch.object(ai, "enabled", return_value=True), \
+                mock.patch.object(ai, "ask_json", side_effect=fake_ask), \
+                mock.patch.object(market, "fetch_postings", return_value=("jobicy", postings)):
+            bp = blueprint.get_blueprint("Accountant", "NEW")
+        self.assertIn("netsuite", captured["prompt"])
+        self.assertNotIn("typescript", captured["prompt"])     # unrelated posting dropped
+        self.assertIn("New graduate", captured["prompt"])
+        self.assertEqual(bp.market["trending"], ["NetSuite", "Month-end close"])
+        self.assertEqual(bp.interview_style["rounds"][0]["name"], "Technical")
