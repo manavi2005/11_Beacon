@@ -11,10 +11,12 @@
 
 import json
 from datetime import date as date_cls
+from functools import wraps
 
 import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -29,6 +31,28 @@ from .templatetags.studio_text import coach_html
 from .models import Card, DayLog, InterviewSession, Preferences, RoleBlueprint, SkillMemory
 
 SESSION_KEY = "studio_session"
+
+
+AI_ACTIONS_PER_HOUR = 150
+
+
+def ai_budget(view):
+    """Cap AI-backed actions per person per hour, so one runaway script or
+    tab can't run up the provider bill. Generous for real use."""
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        key = f"studio:ai-budget:{request.user.pk}:{timezone.now():%Y%m%d%H}"
+        used = cache.get_or_set(key, 0, 3600)
+        if used >= AI_ACTIONS_PER_HOUR:
+            return JsonResponse(
+                {"error": "You've done a lot this hour. Take a breather and come back in a few minutes."},
+                status=429)
+        try:
+            cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, 3600)
+        return view(request, *args, **kwargs)
+    return wrapped
 
 
 def _profile(request):
@@ -74,7 +98,7 @@ def start(request):
         if not role:
             return JsonResponse({"error": "Tell Beacon what you're working toward."}, status=400)
         bp = (RoleBlueprint.objects.filter(slug=str(data.get("blueprint", ""))).first()
-              or blueprint.get_blueprint(role, data.get("experience", "")))
+              or blueprint.get_blueprint(role, data.get("experience_level", "")))
         ratings = data.get("ratings") or {}
         interview_date = None
         if data.get("date"):
@@ -128,12 +152,14 @@ def _complete_setup(user, bp, ratings, interview_date, experience, company, back
     profile.memories.exclude(skill_id__in=keep).delete()
     profile.skills.set(keep)
     engine.sync_memories(profile)
+    Preferences.objects.update_or_create(candidate=profile, defaults={"blueprint": bp})
     v1_onboarding.build_plan(profile)
     return profile
 
 
 @login_required
 @require_POST
+@ai_budget
 def start_about(request):
     """Read a resume (PDF or text, never stored) and/or a self-description."""
     from preparation import resume as resume_reader
@@ -150,14 +176,16 @@ def start_about(request):
 
 @login_required
 @require_POST
+@ai_budget
 def start_blueprint(request):
     data = _body(request)
     role = " ".join(str(data.get("role", "")).split())[:140]
     if not role:
         return JsonResponse({"error": "Type a role first."}, status=400)
-    bp = blueprint.get_blueprint(role, data.get("experience", ""))
+    bp = blueprint.get_blueprint(role, str(data.get("experience_level", "")))
     return JsonResponse({"slug": bp.slug, "title": bp.title, "summary": bp.summary, "skills": bp.skills,
-                         "source": bp.source,
+                         "source": bp.source, "interview_style": bp.interview_style,
+                         "market": bp.market,
                          "levels": about.estimate_levels(str(data.get("background", ""))[:1500], bp)})
 
 
@@ -255,6 +283,7 @@ def _card_json(card):
 
 @login_required
 @require_POST
+@ai_budget
 def session_next(request):
     profile = _profile(request)
     state = request.session.get(SESSION_KEY)
@@ -273,6 +302,7 @@ def session_next(request):
 
 @login_required
 @require_POST
+@ai_budget
 def card_answer(request, pk):
     profile = _profile(request)
     card = get_object_or_404(Card, pk=pk, candidate=profile)
@@ -325,6 +355,7 @@ def interview_page(request):
 
 @login_required
 @require_POST
+@ai_budget
 def interview_start(request):
     profile = _profile(request)
     if not profile:
@@ -342,6 +373,7 @@ def interview_start(request):
 
 @login_required
 @require_POST
+@ai_budget
 def interview_reply(request, pk):
     session = get_object_or_404(InterviewSession, pk=pk, candidate__user=request.user,
                                 finished_at__isnull=True)
@@ -354,6 +386,7 @@ def interview_reply(request, pk):
 
 @login_required
 @require_POST
+@ai_budget
 def interview_finish(request, pk):
     session = get_object_or_404(InterviewSession, pk=pk, candidate__user=request.user)
     already = session.finished_at is not None
@@ -429,6 +462,7 @@ def coach_page(request):
 
 @login_required
 @require_POST
+@ai_budget
 def coach_send(request):
     profile = _profile(request)
     if not profile:
@@ -532,3 +566,20 @@ def reset_progress(request):
         return redirect("studio:start")
     return redirect("studio:you")
 
+
+
+def healthz(request):
+    """Deploy check: is the database reachable, and is AI on? No secrets."""
+    from django.db import connection
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_ok = True
+    except Exception:  # noqa: BLE001 - any failure means "not healthy"
+        db_ok = False
+    paused = bool(cache.get(ai.DOWN_KEY))
+    return JsonResponse(
+        {"ok": db_ok, "database": db_ok,
+         "ai": "paused" if paused else ("on" if ai.enabled() else "off")},
+        status=200 if db_ok else 503,
+    )

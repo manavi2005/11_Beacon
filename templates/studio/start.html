@@ -9,13 +9,13 @@
   <section class="wizard__step" data-step="1">
     <div class="eyebrow">{% if profile %}Update your goal{% else %}Welcome to Beacon{% endif %}</div>
     <h1 class="display mt-8">First, tell Beacon <em>about you</em>.</h1>
-    <p class="lede mt-16">Upload your resume or write a few sentences. Beacon reads it, suggests roles that fit, and tailors everything after that to you.</p>
+    <p class="lede mt-16">Upload your resume, CV or LinkedIn profile, or write a few sentences. Beacon reads it, suggests roles that fit, and tailors everything after that to you.</p>
 
     <div class="card mt-24 setup">
       <label class="drop" data-drop>
         <input type="file" accept=".pdf,.txt" data-file hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-        <span data-file-label><strong>Upload your resume</strong><br><span class="small muted">PDF or text. It's read once and never stored.</span></span>
+        <span data-file-label><strong>Upload your resume, CV or LinkedIn profile</strong><br><span class="small muted">PDF or text. On LinkedIn: your profile → Resources → Save to PDF. It's read once and never stored.</span></span>
       </label>
       <div>
         <label class="label" for="about">Or describe yourself</label>
@@ -50,6 +50,7 @@
     <div class="eyebrow mt-16" data-bp-source></div>
     <h1 class="display mt-8" data-bp-title></h1>
     <p class="lede mt-16" data-bp-summary></p>
+    <div class="grid grid--2 mt-24" data-insights></div>
     <p class="mt-24" style="color:var(--text-2)" data-rate-note></p>
     <div class="card mt-16" data-rates></div>
     <div class="row mt-24"><button class="btn btn--beam btn--big" data-to4>Looks right →</button></div>

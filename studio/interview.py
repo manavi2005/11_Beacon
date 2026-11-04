@@ -45,6 +45,16 @@ def start(profile, mode=InterviewSession.Mode.MIXED, questions=4):
     return session
 
 
+def _style(profile):
+    prefs = getattr(profile, "preferences", None)
+    bp = prefs.blueprint if prefs else None
+    style = bp.interview_style if bp else {}
+    if not style or not style.get("rounds"):
+        return ""
+    rounds = "; ".join(f"{r['name']}: {r['what']}" for r in style["rounds"])
+    return f"How this role is really interviewed at their stage: {rounds}"
+
+
 def _focus(profile):
     names = [m.skill.name for m in profile.memories.select_related("skill").order_by("strength")[:5]]
     return ", ".join(names)
@@ -81,6 +91,10 @@ def _ai_next(session, followed_up):
         SYSTEM + " Reply with JSON only.",
         f"Role: {session.role}. Interview style: {session.get_mode_display()}.\n"
         f"{about.tailor_line(session.candidate)}\n"
+        f"{_style(session.candidate)}\n"
+        "Pitch the difficulty for their career stage, not above or below it. "
+        "For role-specific questions, use the formats above (case, scenario, portfolio, "
+        "technical, etc.) as a real interviewer for this role would.\n"
         "Ask about their real background where it fits, as a good interviewer who read their resume would.\n"
         f"Skills this candidate is working on: {_focus(session.candidate)}.\n"
         f"Question {session.questions_asked} of {session.planned_questions}.\n"
@@ -91,7 +105,7 @@ def _ai_next(session, followed_up):
         + "When moving on, briefly acknowledge their answer in a few words, then ask the next "
         "question: mix behavioural questions with ones specific to this role's real work. "
         'Return {"follow_up": true|false, "say": what you say next}',
-        max_tokens=1500, temperature=0.8, timeout=40,
+        max_tokens=4000, temperature=0.8, timeout=45,
     )
     say = ai.clean(data.get("say"), 600)
     if not say:
@@ -147,7 +161,7 @@ def _ai_report(session):
         '"rewrite": {"question": the question they answered weakest, "stronger": a stronger '
         'answer using their real details, 5-7 sentences}, "next_step": one sentence on what to '
         "practise next}",
-        max_tokens=4000, temperature=0.3, timeout=90,
+        max_tokens=8000, temperature=0.3, timeout=90,
     )
     try:
         overall = clamp(int(data.get("overall")))

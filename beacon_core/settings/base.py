@@ -10,6 +10,7 @@ You never run base.py directly; you run one of the two children, which do
 `from .base import *`.
 """
 
+import mimetypes
 import os
 import sys
 from pathlib import Path
@@ -247,11 +248,16 @@ if LUMEN_API_KEY:
     LLM_MODEL = os.environ.get("LLM_MODEL", "nemotron-3-super-120b-a12b")
     LLM_API_KEY = LUMEN_API_KEY
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Lumen")
+    # Lumen's models reason before answering. "low" keeps replies about 2x
+    # faster and stops long prompts from spending the whole token budget on
+    # reasoning and returning an empty answer.
+    LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "low")
 else:
     LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
     LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
     LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
+    LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "")
 # Speech-to-text for voice interviews (free on Lumen).
 LLM_SPEECH_MODEL = os.environ.get("LLM_SPEECH_MODEL", "granite-speech-4.1-2b-plus")
 LLM_KEYLESS_BASE_URL = os.environ.get("LLM_KEYLESS_BASE_URL", "https://text.pollinations.ai/openai")
@@ -356,3 +362,14 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() not in ("0", "false", "no", "off")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Beacon <no-reply@beacon.local>")
+
+# Serve the web app manifest with its proper type, so phones offer
+# "Add to Home Screen" with Beacon's name and icon.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+
+# Job postings for every industry (preparation/market.py, studio/blueprint.py).
+# Free credentials at developer.adzuna.com; without them Beacon falls back to
+# two keyless boards that mostly list remote tech jobs.
+ADZUNA_APP_ID = os.environ.get("ADZUNA_APP_ID", "")
+ADZUNA_APP_KEY = os.environ.get("ADZUNA_APP_KEY", "")
+ADZUNA_COUNTRY = os.environ.get("ADZUNA_COUNTRY", "us")

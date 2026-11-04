@@ -320,3 +320,105 @@ class TailoredSetupTests(TestCase):
         plan = CandidateProfile.objects.get(user__username="t").plans.get(status="ACTIVE")
         self.assertTrue(plan.tasks.exists())
         self.assertTrue(any("sommelier" in t.title.lower() for t in plan.tasks.all()))
+
+
+class ErrorPageTests(TestCase):
+    def test_404_uses_the_product_design(self):
+        r = self.client.get("/definitely-not-a-page/")
+        self.assertEqual(r.status_code, 404)
+        self.assertContains(r, "out of the light", status_code=404)
+
+
+class CircuitBreakerTests(TestCase):
+    def test_unreachable_provider_switches_ai_off_for_a_while(self):
+        from unittest import mock
+        from django.core.cache import cache
+        from preparation import coach
+        from . import ai
+        cache.delete(ai.DOWN_KEY)
+        with override_settings(LLM_ENABLED=True, LLM_API_KEY="k", LLM_BASE_URL="https://x.test", LLM_MODEL="m"), \
+                mock.patch.object(coach, "_chat", side_effect=coach.CoachError("The AI coach could not be reached.")):
+            self.assertTrue(ai.enabled())
+            with self.assertRaises(ai.Unavailable):
+                ai.ask_json("s", "u")
+            self.assertFalse(ai.enabled())
+        cache.delete(ai.DOWN_KEY)
+
+    def test_bad_json_does_not_trip_the_breaker(self):
+        from unittest import mock
+        from django.core.cache import cache
+        from preparation import coach
+        from . import ai
+        cache.delete(ai.DOWN_KEY)
+        with override_settings(LLM_ENABLED=True, LLM_API_KEY="k", LLM_BASE_URL="https://x.test", LLM_MODEL="m"), \
+                mock.patch.object(coach, "_chat", return_value="not json"):
+            with self.assertRaises(ai.Unavailable):
+                ai.ask_json("s", "u")
+            self.assertTrue(ai.enabled())
+
+
+@override_settings(LLM_ENABLED=False)
+class AiBudgetTests(TestCase):
+    def test_ai_actions_are_capped_per_hour(self):
+        from django.core.cache import cache
+        from . import views
+        cache.clear()
+        User.objects.create_user("b", password="pw-12345")
+        self.client.login(username="b", password="pw-12345")
+        with self.settings():
+            original = views.AI_ACTIONS_PER_HOUR
+            views.AI_ACTIONS_PER_HOUR = 2
+            try:
+                codes = [post_json(self.client, reverse("studio:start_blueprint"), {"role": "Baker"}).status_code
+                         for _ in range(3)]
+            finally:
+                views.AI_ACTIONS_PER_HOUR = original
+        self.assertEqual(codes, [200, 200, 429])
+        cache.clear()
+
+
+@override_settings(LLM_ENABLED=False)
+class HealthTests(TestCase):
+    def test_health_reports_database_and_ai_without_login(self):
+        data = self.client.get(reverse("studio:healthz")).json()
+        self.assertEqual(data, {"ok": True, "database": True, "ai": "off"})
+
+
+@override_settings(LLM_ENABLED=False)
+class StageAndMarketTests(TestCase):
+    def test_blueprints_are_per_career_stage(self):
+        intern = blueprint.get_blueprint("Accountant", "STU")
+        senior = blueprint.get_blueprint("Accountant", "MID")
+        self.assertNotEqual(intern.pk, senior.pk)
+        self.assertEqual(intern.stage, "STU")
+
+    def test_levels_are_named_against_the_persons_own_bar(self):
+        from .models import level_name
+        self.assertEqual(level_name(60, 60), "Interview-ready")   # an intern at their bar
+        self.assertEqual(level_name(60, 90), "Building")
+        self.assertEqual(level_name(10, 90), "Starting out")
+
+    def test_market_postings_feed_the_prompt_and_are_recorded(self):
+        from unittest import mock
+        from preparation import market
+        from . import ai
+        postings = [{"title": f"{t} Accountant", "_text": "cpa track, netsuite, month-end close"}
+                    for t in ("Staff", "Junior", "Tax")]
+        postings.append({"title": "React Developer", "_text": "react typescript docker"})
+        captured = {}
+
+        def fake_ask(system, user, **kw):
+            captured["prompt"] = user
+            return {"title": "Accountant", "summary": "s", "trending": ["NetSuite", "Month-end close"],
+                    "interview_style": {"summary": "x", "rounds": [{"name": "Technical", "what": "Journal entries"}]},
+                    "skills": [{"name": f"Skill {i}", "category": "domain", "required": 70} for i in range(5)]}
+
+        with mock.patch.object(ai, "enabled", return_value=True), \
+                mock.patch.object(ai, "ask_json", side_effect=fake_ask), \
+                mock.patch.object(market, "fetch_postings", return_value=("jobicy", postings)):
+            bp = blueprint.get_blueprint("Accountant", "NEW")
+        self.assertIn("netsuite", captured["prompt"])
+        self.assertNotIn("typescript", captured["prompt"])     # unrelated posting dropped
+        self.assertIn("New graduate", captured["prompt"])
+        self.assertEqual(bp.market["trending"], ["NetSuite", "Month-end close"])
+        self.assertEqual(bp.interview_style["rounds"][0]["name"], "Technical")

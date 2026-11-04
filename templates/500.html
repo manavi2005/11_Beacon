@@ -1,0 +1,13 @@
+{% extends "studio/base.html" %}
+{% block title %}500{% endblock %}
+{% block chrome %}{% endblock %}
+{% block stage_class %}stage--focus{% endblock %}
+{% block content %}
+<div class="landing-hero" style="min-height:80vh;justify-content:center">
+  <div class="beam-hero" aria-hidden="true"></div>
+  <div class="eyebrow">Error 500</div>
+  <h1 class="display">Something went wrong <em>on our side</em>.</h1>
+  <p class="lede">It's not you. Your answers and progress are saved. Try again in a moment.</p>
+  <div class="row" style="justify-content:center"><a class="btn btn--beam btn--big" href="/">Back to Beacon</a></div>
+</div>
+{% endblock %}

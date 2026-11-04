@@ -18,6 +18,7 @@ To add a page to the menu, add a line here. Nothing else changes.
 from django.urls import NoReverseMatch, reverse
 
 NAV = [
+    {"label": "Today", "name": "studio:today"},
     {"label": "My plan", "name": "preparation:my_plan"},
     {"label": "Dashboard", "name": "preparation:dashboard"},
     # Coaching is the cohort view: everyone's profiles and search. Students

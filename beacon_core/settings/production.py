@@ -11,19 +11,30 @@ from .base import *  # noqa: F401,F403
 # DEBUG = False so visitors never see tracebacks, file paths or settings.
 DEBUG = False
 
-# With DEBUG = False, Django refuses any host that is not listed here.
-ALLOWED_HOSTS = [
-    'SimonHwang1998.pythonanywhere.com'
-] + [h.strip()
-    for h in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS",
-        "beacon.example.com,127.0.0.1,localhost",
-    ).split(",")
-    if h.strip()
+# With DEBUG = False, Django refuses any host that is not listed here. Both
+# team deployments are always allowed; DJANGO_ALLOWED_HOSTS adds more (a
+# custom domain, say) without a code change.
+TEAM_HOSTS = ["manavi2005.pythonanywhere.com", "simonhwang1998.pythonanywhere.com"]
+ALLOWED_HOSTS = TEAM_HOSTS + [
+    h.strip()
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if h.strip() and h.strip().lower() not in TEAM_HOSTS
+]
+# Forms posted over https from these hosts pass Django's CSRF origin check.
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{h}" for h in ALLOWED_HOSTS if h not in ("127.0.0.1", "localhost")
 ]
 
 # A real deployment must supply its own key through the environment.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", SECRET_KEY)  # noqa: F405
+
+# PythonAnywhere terminates HTTPS at its proxy and forwards plain HTTP to
+# Django, with X-Forwarded-Proto saying what the visitor used. Without this,
+# request.is_secure() is False, allauth builds an http:// Google callback,
+# and Google rejects it with redirect_uri_mismatch because only the https://
+# address is registered. Safe because the proxy always sets the header.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
 # Basic hardening that costs nothing to switch on.
 SECURE_CONTENT_TYPE_NOSNIFF = True
