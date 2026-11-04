@@ -320,3 +320,10 @@ class TailoredSetupTests(TestCase):
         plan = CandidateProfile.objects.get(user__username="t").plans.get(status="ACTIVE")
         self.assertTrue(plan.tasks.exists())
         self.assertTrue(any("sommelier" in t.title.lower() for t in plan.tasks.all()))
+
+
+class ErrorPageTests(TestCase):
+    def test_404_uses_the_product_design(self):
+        r = self.client.get("/definitely-not-a-page/")
+        self.assertEqual(r.status_code, 404)
+        self.assertContains(r, "out of the light", status_code=404)
