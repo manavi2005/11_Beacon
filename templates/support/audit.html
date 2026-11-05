@@ -1,0 +1,22 @@
+{% extends "support/base.html" %}
+{% load support_extras %}
+{% block title %}Audit log · Support{% endblock %}
+{% block content %}
+<header class="staff-head"><div><div class="eyebrow">Support console</div><h1 class="display">Audit log</h1>
+  <p class="small muted">Every change made from this console. It can't be edited or deleted.</p></div></header>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>When</th><th>Staff</th><th>Action</th><th>Person</th><th>Result</th></tr></thead>
+  <tbody>
+  {% for a in page %}
+  <tr><td class="small">{{ a.created_at|date:"M j, H:i" }}</td>
+    <td>{{ a.actor.username|default:"(deleted)" }}</td>
+    <td>{{ labels|get:a.action }}</td>
+    <td>{% if a.target %}<a href="{% url 'support:user' a.target_id %}">{{ a.target.username }}</a>{% else %}<span class="muted">-</span>{% endif %}</td>
+    <td class="small muted">{{ a.detail.result|default:"" }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="muted">Nothing yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "support/_pager.html" %}
+{% endblock %}

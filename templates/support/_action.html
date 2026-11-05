@@ -1,0 +1,4 @@
+<form method="post" action="{% url 'support:user_action' person.pk %}" class="inline-form"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>{% csrf_token %}
+  <input type="hidden" name="action" value="{{ name }}">
+  <button class="btn {{ cls|default:'btn--ghost' }} btn--small" type="submit">{{ text }}</button>
+</form>

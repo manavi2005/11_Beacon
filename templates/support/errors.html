@@ -1,0 +1,20 @@
+{% extends "support/base.html" %}
+{% block title %}Errors · Support{% endblock %}
+{% block content %}
+<header class="staff-head"><div><div class="eyebrow">Support console</div><h1 class="display">Server errors</h1>
+  <p class="small muted">Unhandled exceptions from the last 30 days: where and what, never request contents. The full traceback is in the server error log.</p></div></header>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>When</th><th>Error</th><th>Where</th><th>Who</th></tr></thead>
+  <tbody>
+  {% for e in page %}
+  <tr><td class="small">{{ e.created_at|date:"M j, H:i:s" }}</td>
+    <td><code>{{ e.kind }}</code><div class="small muted">{{ e.message|truncatechars:200 }}</div></td>
+    <td class="small">{{ e.method }} {{ e.path }}</td>
+    <td class="small">{% if e.user %}<a href="{% url 'support:user' e.user_id %}">{{ e.user.username }}</a>{% else %}<span class="muted">signed out</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="muted">No errors recorded.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "support/_pager.html" %}
+{% endblock %}

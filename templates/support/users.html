@@ -1,0 +1,38 @@
+{% extends "support/base.html" %}
+{% block title %}People · Support{% endblock %}
+{% block content %}
+<header class="staff-head">
+  <div><div class="eyebrow">Support console</div><h1 class="display">People</h1></div>
+</header>
+<form class="filters" method="get" role="search">
+  <input class="input" type="search" name="q" value="{{ q }}" placeholder="Name, username, email or target role" aria-label="Search people">
+  <select class="input" name="status" aria-label="Filter">
+    <option value="">Everyone</option>
+    <option value="reports" {% if status == "reports" %}selected{% endif %}>With open reports</option>
+    <option value="no-setup" {% if status == "no-setup" %}selected{% endif %}>Haven't set up</option>
+    <option value="suspended" {% if status == "suspended" %}selected{% endif %}>Suspended</option>
+    <option value="staff" {% if status == "staff" %}selected{% endif %}>Staff</option>
+  </select>
+  <button class="btn" type="submit">Search</button>
+</form>
+<div class="table-wrap mt-16">
+<table class="table">
+  <thead><tr><th>Person</th><th>Goal</th><th>Joined</th><th>Last sign-in</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for u in page %}
+  <tr>
+    <td><a href="{% url 'support:user' u.pk %}"><strong>{{ u.get_full_name|default:u.username }}</strong></a>
+      <div class="small muted">{{ u.username }}{% if u.email %} · {{ u.email }}{% endif %}</div></td>
+    <td>{% if u.candidate_profile %}{{ u.candidate_profile.target_role }}<div class="small muted">{{ u.candidate_profile.get_experience_level_display }}</div>{% else %}<span class="muted">Not set up</span>{% endif %}</td>
+    <td class="small">{{ u.date_joined|date:"M j, Y" }}</td>
+    <td class="small">{% if u.last_login %}{{ u.last_login|timesince }} ago{% else %}<span class="muted">never</span>{% endif %}</td>
+    <td>{% if not u.is_active %}<span class="status status--error">Suspended</span>{% endif %}
+        {% if u.is_staff %}<span class="chip chip--memory">Staff</span>{% endif %}
+        {% if u.tickets %}<span class="chip chip--beam">{{ u.tickets }} report{{ u.tickets|pluralize }}</span>{% endif %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="5" class="muted">Nobody matches.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "support/_pager.html" %}
+{% endblock %}

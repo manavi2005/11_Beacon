@@ -1,0 +1,68 @@
+/* Support console: dense, scannable, same night palette as the app. */
+.staff-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+.staff-head .display { font-size: clamp(26px, 3.2vw, 38px); }
+.staff-search { flex: 0 1 360px; }
+.filters { display: flex; gap: 10px; flex-wrap: wrap; }
+.filters .input { flex: 1 1 220px; width: auto; }
+.filters select.input { flex: 0 0 200px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.tile { background: var(--ink-2); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+.tile__n { font: 600 34px/1 var(--display); }
+.tile__l { color: var(--text-2); margin-top: 6px; }
+.tile__s { color: var(--text-3); font-size: 12.5px; margin-top: 4px; }
+
+.card h2 { font: 600 18px/1.2 var(--display); }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.list > li { padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.list > li:last-child { border-bottom: 0; padding-bottom: 0; }
+.list--cards > li { border: 1px solid var(--line); padding: 18px 20px; }
+.list summary { cursor: pointer; list-style: none; }
+.list summary::-webkit-details-marker { display: none; }
+.detail { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--ink-1); display: flex; flex-direction: column; gap: 6px; }
+code { font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #ffd9a8; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th { text-align: left; font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); background: var(--ink-1); padding: 10px 14px; white-space: nowrap; }
+.table td { padding: 12px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+.table tbody tr:hover td { background: rgba(255, 255, 255, .02); }
+.table .num { text-align: right; }
+
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line-strong); }
+.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status--on, .status--ok { color: #a9f0d0; border-color: rgba(111, 227, 176, .35); }
+.status--paused, .status--warn { color: #ffd9a8; border-color: rgba(255, 196, 107, .35); }
+.status--off, .status--error { color: #ffb3a0; border-color: rgba(255, 140, 110, .35); }
+
+.findings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.finding { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 14px 12px 16px; border-radius: 12px; background: var(--ink-1); border-left: 3px solid var(--text-3); }
+.finding p { margin: 2px 0 0; }
+.finding--ok { border-left-color: var(--good); }
+.finding--warn { border-left-color: var(--beam-1); }
+.finding--error { border-left-color: #ff8a70; }
+.finding--info { border-left-color: #a99bff; }
+.finding--ok strong::before { content: "✓ "; color: var(--good); }
+.finding--warn strong::before { content: "! "; color: var(--beam-1); }
+.finding--error strong::before { content: "✕ "; color: #ff8a70; }
+
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--text-3); }
+.facts dd { margin: 0; }
+.action-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.inline-form { display: inline; margin: 0; }
+.btn--small { padding: 8px 14px; font-size: 13.5px; }
+.adjust { display: flex; align-items: center; gap: 6px; }
+.input--tiny { width: 64px; padding: 6px 8px; border-radius: 10px; text-align: right; }
+.stack-sm { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.stack-sm textarea { width: 100%; }
+
+.tabs { display: flex; gap: 6px; }
+.tab { padding: 8px 16px; border-radius: 99px; border: 1px solid var(--line); color: var(--text-2); text-decoration: none; }
+.tab.is-active { background: var(--ink-3); color: var(--text); border-color: var(--beam-1); }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 20px; }
+
+@media (max-width: 720px) {
+  .finding { flex-direction: column; align-items: flex-start; }
+  .table { font-size: 13px; }
+}

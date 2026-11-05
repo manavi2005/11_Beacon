@@ -1,0 +1,86 @@
+{% extends "support/base.html" %}
+{% block title %}Support{% endblock %}
+{% block content %}
+<header class="staff-head">
+  <div>
+    <div class="eyebrow">Support console</div>
+    <h1 class="display">How Beacon is <em>doing</em></h1>
+  </div>
+  <form class="staff-search" method="get" action="{% url 'support:users' %}" role="search">
+    <input class="input" type="search" name="q" placeholder="Find someone by name, email or role" aria-label="Find a person">
+  </form>
+</header>
+
+<section class="tiles" aria-label="Usage">
+  <div class="tile"><div class="tile__n tnum">{{ stats.users }}</div><div class="tile__l">people</div><div class="tile__s">+{{ stats.new_day }} today · +{{ stats.new_week }} this week</div></div>
+  <div class="tile"><div class="tile__n tnum">{{ stats.active_today }}</div><div class="tile__l">practised today</div><div class="tile__s">{{ stats.active_week }} this week</div></div>
+  <div class="tile"><div class="tile__n tnum">{{ stats.answers_day }}</div><div class="tile__l">answers, 24h</div><div class="tile__s">{{ stats.interviews_day }} mock interviews</div></div>
+  <div class="tile"><div class="tile__n tnum">{{ open_tickets }}</div><div class="tile__l">open reports</div><div class="tile__s">{{ errors_day }} server errors, 24h</div></div>
+</section>
+
+<div class="grid grid--2 mt-24">
+  <section class="card">
+    <div class="card__head"><h2>AI provider</h2>
+      <span class="status status--{{ ai.state }}">{{ ai.state|title }}</span></div>
+    <p class="small muted">{{ ai.detail }}</p>
+    <div class="meter mt-16" aria-label="Site-wide AI actions this hour">
+      <div class="spread small"><span>AI actions this hour, whole site</span><span class="tnum">{{ ai_site }} / {{ ai_site_cap }}</span></div>
+      <div class="bar mt-8"><span style="width:{% widthratio ai_site ai_site_cap 100 %}%"></span></div>
+    </div>
+    <p class="small muted mt-16">{{ stats.offline_share }}% of questions in the last 24h came from the offline fallback.</p>
+    {% if ai.state == "paused" %}
+    <form method="post" action="{% url 'support:resume_ai' %}" class="mt-16">{% csrf_token %}
+      <button class="btn" type="submit">Resume AI now</button>
+      <p class="small muted mt-8">Beacon pauses AI for 5 minutes after the provider fails. Resume once it's fixed.</p>
+    </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2>Open reports</h2><a class="small" href="{% url 'support:reports' %}">All reports</a></div>
+    <ul class="list">
+      {% for t in tickets %}
+      <li><a href="{% url 'support:user' t.user_id %}"><strong>{{ t.user.username }}</strong></a>
+        <span class="chip">{{ t.get_category_display }}</span>
+        <p class="small">{{ t.message|truncatechars:140 }}</p>
+        <span class="small muted">{{ t.created_at|timesince }} ago</span></li>
+      {% empty %}<li class="muted small">Nothing open. Nice.</li>{% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2>Recent errors</h2><a class="small" href="{% url 'support:errors' %}">All errors</a></div>
+    {% if top_errors %}
+    <p class="small muted">Most frequent this week</p>
+    <ul class="list">{% for e in top_errors %}<li class="small"><code>{{ e.kind }}</code> at <code>{{ e.path }}</code> · {{ e.n }}×</li>{% endfor %}</ul>
+    {% endif %}
+    <ul class="list mt-16">
+      {% for e in errors %}
+      <li class="small"><code>{{ e.kind }}</code> {{ e.path }}{% if e.user %} · <a href="{% url 'support:user' e.user_id %}">{{ e.user.username }}</a>{% endif %}
+        <span class="muted">· {{ e.created_at|timesince }} ago</span></li>
+      {% empty %}<li class="muted small">No errors recorded.</li>{% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2>Newest people</h2><a class="small" href="{% url 'support:users' %}">Everyone</a></div>
+    <ul class="list">
+      {% for u in recent_users %}
+      <li class="spread small"><a href="{% url 'support:user' u.pk %}">{{ u.get_full_name|default:u.username }}</a>
+        <span class="muted">{{ u.date_joined|timesince }} ago</span></li>
+      {% endfor %}
+    </ul>
+    <p class="small muted mt-16">{{ stats.roles }} role blueprints · {{ stats.suspended }} suspended account{{ stats.suspended|pluralize }}</p>
+  </section>
+</div>
+
+<section class="card mt-24">
+  <div class="card__head"><h2>Recent staff actions</h2><a class="small" href="{% url 'support:audit' %}">Audit log</a></div>
+  <ul class="list">
+    {% for a in audit %}
+    <li class="small"><strong>{{ a.actor.username|default:"(deleted)" }}</strong> · {{ a.action }}{% if a.target %} · <a href="{% url 'support:user' a.target_id %}">{{ a.target.username }}</a>{% endif %}
+      <span class="muted">· {{ a.created_at|timesince }} ago</span></li>
+    {% empty %}<li class="muted small">No changes yet.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}
