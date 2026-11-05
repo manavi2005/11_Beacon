@@ -100,7 +100,7 @@ REASONS = {
     "gap": "Widest gap to your bar",
     "demand": "Employers are asking for it now",
     "cohort": "People at your stage find this one hard",
-    "explore": "New: let's see where you are",
+    "explore": "Find your starting level",
 }
 
 
