@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "preparation",
     # v2 product experience: Today loop, sessions, voice interviews
     "studio",
+    "support",
 ]
 
 # Which Site row the social callbacks belong to. Changing the deployed
@@ -106,6 +107,7 @@ MIDDLEWARE = [
     "beacon_core.security.AbuseGuardMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "support.middleware.RecordErrorsMiddleware",
     # allauth needs this to handle its own redirects and to keep the social
     # login flow's state between the outbound request and the callback.
     # Without it allauth raises ImproperlyConfigured at the first request.
