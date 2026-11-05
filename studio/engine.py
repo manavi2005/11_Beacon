@@ -5,15 +5,17 @@ Card, DayLog), never from a fixed list, so it works the same for a chemist,
 a nurse or an engineer.
 """
 
+import math
+import re
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Avg, Count, Sum
 from django.utils import timezone
 
 from preparation.models import SkillAssessment
 
-from .models import Card, DayLog, SkillMemory, clamp, level_name, xp_level
+from .models import Card, DayLog, Preferences, SkillMemory, clamp, level_name, xp_level
 
 SESSION_SIZE = {"GREAT": 5, "OK": 4, "ROUGH": 2, "": 4}
 
@@ -64,22 +66,135 @@ def skill_rows(memories, now=None):
     return rows
 
 
-def queue(memories, mood="", now=None):
-    """Today's skills, in order: what is fading first, then the widest gaps.
+# --------------------------------------------------------------------------
+# Ranking: what to practise next
+# --------------------------------------------------------------------------
+# Choosing today's skills is a ranking problem. Every skill gets a score from
+# one scoring function, and the session is the top of that list. Each term is
+# 0..1 and the weights say how much each one matters, so the ranking can be
+# tuned in one place and explained term by term ("why this today").
+#
+#   urgency      1 - retention: about to be forgotten
+#   gap          how far below your own, stage-relative bar
+#   demand       current job postings for the role ask for it
+#   cohort       how hard people at your stage find it (collaborative signal)
+#   explore      little evidence yet, so a rep here teaches Beacon the most
+#   recent       practised in the last few hours (a penalty)
+#
+# Only `cohort` depends on other people's data, and that is the sparse part
+# of the user x item matrix: most skills have few answers from people at a
+# given stage. It is a Bayesian average, so a skill with three answers sits
+# near the prior and only data in volume moves it, and its weight grows with
+# the amount of evidence, so it fades in rather than dominating early. The
+# explore term (UCB-style) keeps sparse skills from never being shown and so
+# never getting any less sparse.
+WEIGHTS = {"urgency": 1.0, "gap": 0.9, "demand": 0.35, "cohort": 0.35,
+           "explore": 0.25, "recent": 0.8}
+COHORT_PRIOR = 65       # the mean score assumed before any answers exist
+COHORT_PRIOR_WEIGHT = 10  # how many answers the prior is worth
+COHORT_FULL_AT = 50     # answers needed for the cohort term to reach full weight
+RECENT_HOURS = 6
 
-    A rough day gets a short, review-only session: keeping what you have is
-    a win too, and nobody should be pushed into new material when they are
-    struggling.
+REASONS = {
+    "urgency": "Fading: review it before it slips",
+    "gap": "Widest gap to your bar",
+    "demand": "Employers are asking for it now",
+    "cohort": "People at your stage find this one hard",
+    "explore": "New: let's see where you are",
+}
+
+
+def cohort_stats(skill_ids, stage):
+    """{skill_id: (answers, mean score)} over everyone at this career stage."""
+    rows = (Card.objects.filter(skill_id__in=skill_ids, answered_at__isnull=False,
+                                candidate__experience_level=stage)
+            .values("skill_id").annotate(n=Count("id"), mean=Avg("score")))
+    return {r["skill_id"]: (r["n"], r["mean"] or 0) for r in rows}
+
+
+def shrunk_mean(n, mean, prior=COHORT_PRIOR, weight=COHORT_PRIOR_WEIGHT):
+    """Bayesian average: (n * observed + m * prior) / (n + m)."""
+    return (n * mean + weight * prior) / (n + weight)
+
+
+WORD = re.compile(r"[a-z0-9+#]{3,}")
+
+
+def _demand_words(trending):
+    words = set()
+    for term in trending or []:
+        words |= set(WORD.findall(str(term).lower()))
+    return words
+
+
+def score(memory, *, now, cohort=None, demand=frozenset(), total_reps=0):
+    """Score one skill for today; returns (score, {term: contribution})."""
+    n, mean = (cohort or {}).get(memory.skill_id, (0, 0))
+    gap = max(memory.required - memory.effective(now), 0) / max(memory.required, 1)
+    words = set(WORD.findall(memory.skill.name.lower()))
+    recent = (memory.last_practiced is not None
+              and (now - memory.last_practiced).total_seconds() < RECENT_HOURS * 3600)
+    terms = {
+        "urgency": (1 - memory.retention(now)) / (1 - 0.5) if memory.reps else 0,
+        "gap": min(gap, 1),
+        "demand": 1.0 if words & demand else 0.0,
+        # Hardness = 1 - shrunk mean score, scaled by how much evidence exists.
+        "cohort": (1 - shrunk_mean(n, mean) / 100) * min(n / COHORT_FULL_AT, 1),
+        "explore": math.sqrt(math.log(total_reps + 2) / (memory.reps + 1)) / 2,
+        "recent": 1.0 if recent else 0.0,
+    }
+    terms = {k: min(max(v, 0), 1) for k, v in terms.items()}
+    parts = {k: WEIGHTS[k] * v * (-1 if k == "recent" else 1) for k, v in terms.items()}
+    return sum(parts.values()), parts
+
+
+def rank(memories, *, now=None, stage="", trending=None):
+    """Every skill, best first, each with .rank_score and .why_today."""
+    now = now or timezone.now()
+    cohort = cohort_stats([m.skill_id for m in memories], stage) if memories else {}
+    demand = _demand_words(trending)
+    total = sum(m.reps for m in memories)
+    ranked = []
+    for m in memories:
+        m.rank_score, m.rank_parts = score(m, now=now, cohort=cohort, demand=demand,
+                                           total_reps=total)
+        top = max((k for k in REASONS), key=lambda k: m.rank_parts[k])
+        m.why_today = REASONS[top] if m.rank_parts[top] > 0 else "Keep it sharp"
+        ranked.append(m)
+    ranked.sort(key=lambda m: (-m.rank_score, m.skill.name))
+    return ranked
+
+
+def _context(memories):
+    """Stage and trending terms for the person these memories belong to."""
+    if not memories:
+        return "", []
+    profile = memories[0].candidate
+    try:
+        bp = profile.preferences.blueprint
+    except Preferences.DoesNotExist:
+        bp = None
+    return profile.experience_level, ((bp.market or {}).get("trending") if bp else []) or []
+
+
+def queue(memories, mood="", now=None):
+    """Today's skills: the top of the ranking.
+
+    Due skills always come before ones that are not due, so the spaced
+    repetition schedule is kept; within each group the scoring function
+    decides. A rough day gets a short, review-only session: keeping what you
+    have is a win too, and nobody should be pushed into new material when
+    they are struggling.
     """
     now = now or timezone.now()
     size = SESSION_SIZE.get(mood, 4)
-    due = sorted((m for m in memories if m.is_due(now)), key=lambda m: m.retention(now))
-    picked = due[:size]
-    if mood != "ROUGH":
-        rest = sorted((m for m in memories if m not in picked),
-                      key=lambda m: m.effective(now) - m.required)
-        picked += rest[: size - len(picked)]
-    return picked
+    stage, trending = _context(memories)
+    ranked = rank(memories, now=now, stage=stage, trending=trending)
+    due = [m for m in ranked if m.is_due(now)]
+    if mood == "ROUGH":
+        return [m for m in due if m.reps][:size] or due[:size]
+    rest = [m for m in ranked if not m.is_due(now)]
+    return (due + rest)[:size]
 
 
 def today_log(profile):
