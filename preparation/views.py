@@ -21,6 +21,7 @@ import json
 from functools import wraps
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Avg, Count, Max, Q
 from django.http import Http404, HttpResponse, JsonResponse
 from django.utils import timezone
@@ -56,6 +57,7 @@ from . import coach
 from . import local_llm
 from . import practice
 from . import visibility
+from beacon_core import security
 from beacon_core.security import relaxed_csp
 
 # ---------------------------------------------------------------------------
@@ -766,6 +768,9 @@ def _api_response(data, status=200):
     response["Access-Control-Allow-Origin"] = "*"
     return response
 
+PUBLIC_API_PER_MINUTE = 60
+
+
 def public_api(view):
     """Read-only, cross-origin JSON endpoint.
 
@@ -785,6 +790,14 @@ def public_api(view):
             response["Access-Control-Allow-Headers"] = "Content-Type"
             response["Access-Control-Allow-Private-Network"] = "true"
             response["Access-Control-Max-Age"] = "86400"
+            return response
+        # Open to everyone, so it gets a per-address limit: a scraper or a
+        # loop can't turn it into a way to keep the server busy.
+        if getattr(settings, "RATE_LIMITS_ENABLED", True) and not security.allow(
+            "public-api", security.client_ip(request), PUBLIC_API_PER_MINUTE, 60
+        ):
+            response = _api_response({"error": "Too many requests. Try again in a minute."}, 429)
+            response["Retry-After"] = "60"
             return response
         return require_safe(view)(request, *args, **kwargs)
 
@@ -843,7 +856,12 @@ SKILL_SUMMARY_FIELDS = [
 @public_api
 def api_skill_summary(request):
     """/api/skills/summary/ - one aggregated row per skill. Public."""
-    rows = vega.skill_summary_rows()
+    # Recomputing the aggregates for every anonymous request is the costly
+    # part, so they are cached. The key carries a cheap fingerprint of the
+    # data, so a change shows up at once instead of after the cache expires.
+    stamp = SkillAssessment.objects.aggregate(n=Count("pk"), last=Max("pk"), at=Max("assessed_on"))
+    key = "public:skill-summary:{n}:{last}:{at}".format(**stamp)
+    rows = cache.get_or_set(key, vega.skill_summary_rows, 60)
     if request.GET.get("format", "").lower() == "csv":
         response = HttpResponse(content_type="text/csv; charset=utf-8")
         response["Access-Control-Allow-Origin"] = "*"
