@@ -3,6 +3,8 @@
 import logging
 from datetime import timedelta
 
+from django.core.exceptions import PermissionDenied, SuspiciousOperation
+from django.http import Http404
 from django.utils import timezone
 
 log = logging.getLogger("beacon.support")
@@ -17,6 +19,10 @@ class RecordErrorsMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
+        # Not-found and forbidden are answers, not faults; recording them
+        # would bury real errors under every mistyped URL and bot probe.
+        if isinstance(exception, (Http404, PermissionDenied, SuspiciousOperation)):
+            return None
         # Never let the recorder turn one error into two.
         try:
             from .models import ErrorEvent

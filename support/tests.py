@@ -233,3 +233,11 @@ class ErrorRecordingTests(TestCase):
         self.assertEqual((event.kind, event.path, event.user), ("ValueError", "/today/", request.user))
         self.assertNotIn("secret", event.path + event.message)
         self.assertNotIn("private", event.message)
+
+    def test_not_found_is_not_an_error(self):
+        from django.http import Http404
+        from django.test import RequestFactory
+        from .middleware import RecordErrorsMiddleware
+        request = RequestFactory().get("/nope/")
+        RecordErrorsMiddleware(lambda r: None).process_exception(request, Http404())
+        self.assertFalse(ErrorEvent.objects.exists())

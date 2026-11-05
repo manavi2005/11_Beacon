@@ -15,7 +15,7 @@
   <div class="tile"><div class="tile__n tnum">{{ stats.users }}</div><div class="tile__l">people</div><div class="tile__s">+{{ stats.new_day }} today · +{{ stats.new_week }} this week</div></div>
   <div class="tile"><div class="tile__n tnum">{{ stats.active_today }}</div><div class="tile__l">practised today</div><div class="tile__s">{{ stats.active_week }} this week</div></div>
   <div class="tile"><div class="tile__n tnum">{{ stats.answers_day }}</div><div class="tile__l">answers, 24h</div><div class="tile__s">{{ stats.interviews_day }} mock interviews</div></div>
-  <div class="tile"><div class="tile__n tnum">{{ open_tickets }}</div><div class="tile__l">open reports</div><div class="tile__s">{{ errors_day }} server errors, 24h</div></div>
+  <div class="tile"><div class="tile__n tnum">{{ open_tickets }}</div><div class="tile__l">open reports</div><div class="tile__s">{{ errors_day }} server error{{ errors_day|pluralize }}, 24h</div></div>
 </section>
 
 <div class="grid grid--2 mt-24">
