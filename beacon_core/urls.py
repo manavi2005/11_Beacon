@@ -10,7 +10,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     # v2 owns "/" and its own paths; v1 pages keep theirs.
     path("", include("studio.urls")),
     path("", include("preparation.urls")),

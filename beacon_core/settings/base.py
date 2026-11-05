@@ -303,6 +303,15 @@ LOCAL_LLM_DEVICE = os.environ.get("LOCAL_LLM_DEVICE", "")
 if "test" in sys.argv:
     LOCAL_LLM_ENABLED = False
 
+# The admin lives at a path that can be changed per deployment, so bots
+# hunting for /admin/ login forms don't find it. Must end with a slash.
+ADMIN_URL = os.environ.get("DJANGO_ADMIN_URL", "admin/").strip("/") + "/"
+
+# Cap what one request can make the server hold in memory.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 300
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+
 # Abuse limits (beacon_core/security.py). Off for the test suite, where one
 # process signs in hundreds of times; the security tests switch them on.
 RATE_LIMITS_ENABLED = "test" not in sys.argv
