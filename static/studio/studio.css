@@ -231,6 +231,7 @@ p { margin: 0; }
   padding: 12px 14px; border-radius: 14px; background: rgba(11, 13, 26, .45); border: 1px solid var(--line);
 }
 .queue__name { font-weight: 500; }
+.queue__why { display: block; font-size: .8rem; color: var(--text-3); margin-top: 2px; }
 .queue__n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
   background: var(--ink-3); color: var(--text-2); flex: none; }
 
