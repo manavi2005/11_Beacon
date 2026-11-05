@@ -49,7 +49,8 @@
     {% endwith %}
     <div class="rail__foot">
       <a class="rail__minor" href="{% url 'preparation:my_plan' %}">Weekly plan</a>
-      {% if user.is_staff %}<a class="rail__minor" href="{% url 'preparation:dashboard' %}">Coach view</a>{% endif %}
+      {% if user.is_staff %}<a class="rail__minor" href="{% url 'support:overview' %}">Support console</a>
+      <a class="rail__minor" href="{% url 'preparation:dashboard' %}">Coach view</a>{% endif %}
       <form method="post" action="{% url 'preparation:logout' %}">{% csrf_token %}
         <button class="rail__minor rail__logout" type="submit">Log out</button>
       </form>

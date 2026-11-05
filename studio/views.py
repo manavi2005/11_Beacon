@@ -33,6 +33,8 @@ from preparation.models import CandidateProfile, PreparationPlan, SkillAssessmen
 
 from . import about, ai, blueprint, cards, chat, engine, interview
 from .templatetags.studio_text import coach_html
+from support.models import SupportTicket
+
 from .models import Card, DayLog, InterviewSession, Preferences, RoleBlueprint, SkillMemory
 
 SESSION_KEY = "studio_session"
@@ -94,7 +96,7 @@ def home(request):
         return render(request, "studio/landing.html", {"roles": roles if len(roles) >= 6 else []})
     if not _profile(request):
         if request.user.is_staff:
-            return redirect("preparation:dashboard")
+            return redirect("support:overview")
         return redirect("studio:start")
     return redirect("studio:today")
 
@@ -546,6 +548,8 @@ def you(request):
             "days": profile.days.count() if profile else 0,
         },
         "provider": ai.label() if ai.enabled() else "Off (offline coaching)",
+        "tickets": SupportTicket.objects.filter(user=request.user)[:5],
+        "ticket_categories": SupportTicket.Category.choices,
     })
 
 
