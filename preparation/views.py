@@ -56,6 +56,7 @@ from . import coach
 from . import local_llm
 from . import practice
 from . import visibility
+from beacon_core.security import relaxed_csp
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -883,6 +884,7 @@ def _chart_or_404(number):
     return vega.CHARTS[number]
 
 @login_required
+@relaxed_csp("https://cdn.jsdelivr.net", allow_eval=True)
 def vega_lite_page(request):
     """The page that embeds both Vega-Lite charts."""
     charts_info = [

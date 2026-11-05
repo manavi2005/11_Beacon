@@ -61,7 +61,7 @@
     {% block content %}{% endblock %}
   </main>
   <div class="toast" role="status" aria-live="polite" hidden></div>
-  <script>window.BEACON = {csrf: "{{ csrf_token }}"};</script>
+  <script nonce="{{ csp_nonce }}">window.BEACON = {csrf: "{{ csrf_token }}"};</script>
   <script src="{% static 'studio/studio.js' %}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
