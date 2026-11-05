@@ -61,12 +61,17 @@ Django 5, server-rendered pages, vanilla JS, no build step.
 ```
 studio/          the product (v2)
   blueprint.py     role -> skills and the bar for each, cached per role (any field)
-  engine.py        readiness, today's queue, forecast, forgiving streaks, XP
+  engine.py        readiness, forecast, streaks, XP, and the ranking: one
+                   scoring function orders today's skills (urgency, gap, market
+                   demand, cohort difficulty with Bayesian shrinkage, exploration)
   models.py        SkillMemory holds the forgetting curve: due at 85% recall
   cards.py         fresh questions per person and skill; grading with feedback
   interview.py     mock interviewer turns and the STAR report
   chat.py          the coach, grounded in the person's own progress
   reminders.py     opt-in daily nudges
+support/         staff console: diagnosis and fixes per person, problem
+                 reports, error log, append-only audit trail (/staff/)
+beacon_core/security.py   rate limits, brute-force lockout, CSP and headers
 preparation/     the original data model (profiles, skills, assessments, plans),
                  public API, charts and the coach/cohort views
 templates/studio, static/studio   the design system and pages
@@ -92,4 +97,5 @@ CI runs the same on every push.
 - [How the AI features work](docs/ai-system.md)
 - [Public API](docs/public-api/README.md)
 - [Deploying](docs/deployment/DEPLOY.md)
+- [Security and abuse protection](docs/security.md)
 - [Course history and assignment documentation](docs/course-history.md)

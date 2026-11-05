@@ -14,8 +14,9 @@ bash scripts/deploy_pythonanywhere.sh
 ```
 
 The script backs up the live database, pulls `main` without touching that
-database, installs `requirements-production.txt`, migrates, collects static
-files, checks the configuration and lists any missing settings. Then press
+database, installs `requirements-production.txt`, migrates, creates the
+shared cache table, collects static files, runs Django's deploy checks and
+lists any missing settings. Then press
 **Web tab > Reload** and open `/healthz/`:
 
 ```json
@@ -36,13 +37,17 @@ GOOGLE_OAUTH_CLIENT_ID=<from Google Cloud console>
 GOOGLE_OAUTH_CLIENT_SECRET=<from Google Cloud console>
 SITE_URL=https://manavi2005.pythonanywhere.com
 # optional
+DJANGO_ADMIN_URL=<something-hard-to-guess>/   # default admin/
+AI_ACTIONS_SITE_PER_HOUR=6000                  # whole-site AI cap
 ADZUNA_APP_ID=
 ADZUNA_APP_KEY=
 EMAIL_HOST_USER=
 EMAIL_HOST_PASSWORD=
 ```
 
-Generate the secret key with:
+`DJANGO_SECRET_KEY` is required: production refuses to start without a
+long random one, because the development default is public and would let
+anyone forge a session. Generate one with:
 
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
@@ -88,6 +93,26 @@ cd ~/11_Beacon && /home/<user>/.virtualenvs/<venv>/bin/python manage.py send_rem
 Reminders are opt-in per user, sent at most once a day, and skipped on days
 the person already practised.
 
+### 5. Support console
+
+Staff accounts get the support console at `/staff/`: usage and AI health,
+people search, a per-person diagnosis with one-click fixes, problem reports
+from the You page, server errors and an audit log. Make yourself a
+superuser once, in a Bash console:
+
+```bash
+python manage.py createsuperuser --settings=beacon_core.settings.production
+```
+
+or promote the account you already sign in with:
+
+```bash
+python manage.py shell --settings=beacon_core.settings.production -c "from django.contrib.auth.models import User; User.objects.filter(username='YOUR_USERNAME').update(is_staff=True, is_superuser=True)"
+```
+
+Superusers can then make other people staff from the console. Security
+details are in [../security.md](../security.md).
+
 ## Free accounts and outbound internet
 
 PythonAnywhere's free tier can only reach sites on its
@@ -108,3 +133,6 @@ use a paid account, which has unrestricted outbound access.
 | Google: `redirect_uri_mismatch` | URI not registered | add it exactly as listed above |
 | `"ai": "paused"` on `/healthz/` | host not on the allowlist, or a bad key | see the section above |
 | Lost signups after a pull | live DB overwritten | restore the newest `~/db-live-*.sqlite3` backup the script made |
+| `ImproperlyConfigured: Set DJANGO_SECRET_KEY` | key missing or weak | generate one (above), put it in `.env`, Reload |
+| "no such table: beacon_cache" | cache table missing | `python manage.py createcachetable --settings=beacon_core.settings.production` |
+| Someone locked out of sign-in | 8 wrong passwords in 15 min | wait, or Support console > their page > Unlock sign-in |
