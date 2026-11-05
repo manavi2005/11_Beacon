@@ -83,7 +83,11 @@ CACHES = {
 
 # Under load SQLite writers queue for a lock; wait for it instead of failing
 # with "database is locked". (At real scale, move to Postgres: see DEPLOY.md.)
-DATABASES["default"].setdefault("OPTIONS", {})["timeout"] = 20  # noqa: F405
+DATABASES = {  # noqa: F405 - a copy, so base.py's dict is never changed
+    **DATABASES,  # noqa: F405
+    "default": {**DATABASES["default"],  # noqa: F405
+                "OPTIONS": {**DATABASES["default"].get("OPTIONS", {}), "timeout": 20}},  # noqa: F405
+}
 
 # Warnings and errors, including every rate-limit trip, go to the server's
 # error log, where PythonAnywhere shows them on the Web tab.
