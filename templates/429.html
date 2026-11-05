@@ -1,0 +1,13 @@
+{% extends "studio/base.html" %}
+{% block title %}Slow down{% endblock %}
+{% block chrome %}{% endblock %}
+{% block stage_class %}stage--focus{% endblock %}
+{% block content %}
+<div class="landing-hero" style="min-height:80vh;justify-content:center">
+  <div class="beam-hero" aria-hidden="true"></div>
+  <div class="eyebrow">Too many requests</div>
+  <h1 class="display">Let's take <em>a short pause</em>.</h1>
+  <p class="lede">{{ message|default:"That was a lot of requests in a short time. Please wait a few minutes and try again." }}</p>
+  <div class="row" style="justify-content:center"><a class="btn btn--beam btn--big" href="/">Back to Beacon</a></div>
+</div>
+{% endblock %}

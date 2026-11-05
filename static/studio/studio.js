@@ -212,6 +212,12 @@
     if (message && !window.confirm(message)) evt.preventDefault();
   });
 
+  // Toggles that save on change: <input data-autosubmit> (no inline handlers,
+  // so the Content-Security-Policy can forbid them).
+  document.addEventListener("change", (evt) => {
+    if (evt.target.matches && evt.target.matches("[data-autosubmit]") && evt.target.form) evt.target.form.submit();
+  });
+
   document.addEventListener("DOMContentLoaded", () => {
     B.animateRings();
     document.querySelectorAll("[data-trend]").forEach(B.trend);

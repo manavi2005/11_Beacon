@@ -25,12 +25,14 @@ pip install --quiet -r requirements-production.txt
 
 echo "==> 4/6 Apply database migrations"
 python manage.py migrate --noinput --settings=$SETTINGS
+# The shared cache that rate limits and the AI circuit breaker use.
+python manage.py createcachetable --settings=$SETTINGS
 
 echo "==> 5/6 Collect static files"
 python manage.py collectstatic --noinput --settings=$SETTINGS > /dev/null
 
 echo "==> 6/6 Check the configuration"
-python manage.py check --settings=$SETTINGS
+python manage.py check --deploy --fail-level ERROR --settings=$SETTINGS
 python - <<'PY'
 import os
 for name in ("DJANGO_SECRET_KEY", "LUMEN_API_KEY", "GOOGLE_OAUTH_CLIENT_ID", "SITE_URL"):

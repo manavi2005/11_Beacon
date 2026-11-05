@@ -29,7 +29,7 @@ Django prints it as page text.
   count-up and grow-in animations can start from zero. Without JavaScript
   the class never appears and everything renders at its final value.
   {% endcomment %}
-  <script>
+  <script nonce="{{ csp_nonce }}">
     document.documentElement.classList.add("js");
     try { if (localStorage.getItem("beacon-dev-notes") === "1") document.documentElement.classList.add("show-dev"); } catch (e) {}
   </script>

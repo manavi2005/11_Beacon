@@ -10,6 +10,7 @@
 """
 
 import json
+import os
 from datetime import date as date_cls
 from functools import wraps
 
@@ -26,34 +27,45 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from beacon_core import security
 from preparation import onboarding as v1_onboarding
 from preparation.models import CandidateProfile, PreparationPlan, SkillAssessment
 
 from . import about, ai, blueprint, cards, chat, engine, interview
 from .templatetags.studio_text import coach_html
+from support.models import SupportTicket
+
 from .models import Card, DayLog, InterviewSession, Preferences, RoleBlueprint, SkillMemory
 
 SESSION_KEY = "studio_session"
 
 
+# AI actions cost money and provider quota, so they are capped three ways:
+# per person (one runaway tab or script), per network address (many fake
+# accounts from one machine) and for the whole site (a botnet of addresses
+# still can't run up an unbounded bill). All generous for real use.
 AI_ACTIONS_PER_HOUR = 150
+AI_ACTIONS_PER_IP_PER_HOUR = int(os.environ.get("AI_ACTIONS_PER_IP_PER_HOUR", "400"))
+AI_ACTIONS_SITE_PER_HOUR = int(os.environ.get("AI_ACTIONS_SITE_PER_HOUR", "6000"))
+HOUR = 3600
+BUSY = "You've done a lot this hour. Take a breather and come back in a few minutes."
 
 
 def ai_budget(view):
-    """Cap AI-backed actions per person per hour, so one runaway script or
-    tab can't run up the provider bill. Generous for real use."""
     @wraps(view)
     def wrapped(request, *args, **kwargs):
-        key = f"studio:ai-budget:{request.user.pk}:{timezone.now():%Y%m%d%H}"
-        used = cache.get_or_set(key, 0, 3600)
-        if used >= AI_ACTIONS_PER_HOUR:
-            return JsonResponse(
-                {"error": "You've done a lot this hour. Take a breather and come back in a few minutes."},
-                status=429)
-        try:
-            cache.incr(key)
-        except ValueError:
-            cache.set(key, 1, 3600)
+        if security.hit("ai-user", request.user.pk, HOUR) > AI_ACTIONS_PER_HOUR:
+            return JsonResponse({"error": BUSY}, status=429)
+        if getattr(settings, "RATE_LIMITS_ENABLED", True):
+            ip = security.client_ip(request)
+            if security.hit("ai-ip", ip, HOUR) > AI_ACTIONS_PER_IP_PER_HOUR:
+                security.log.warning("AI cap per address reached: ip=%s", ip)
+                return JsonResponse({"error": BUSY}, status=429)
+            if security.hit("ai-site", "all", HOUR) > AI_ACTIONS_SITE_PER_HOUR:
+                security.log.error("site-wide AI cap reached")
+                return JsonResponse(
+                    {"error": "Beacon is very busy right now. Please try again in a little while."},
+                    status=503)
         return view(request, *args, **kwargs)
     return wrapped
 
@@ -84,7 +96,7 @@ def home(request):
         return render(request, "studio/landing.html", {"roles": roles if len(roles) >= 6 else []})
     if not _profile(request):
         if request.user.is_staff:
-            return redirect("preparation:dashboard")
+            return redirect("support:overview")
         return redirect("studio:start")
     return redirect("studio:today")
 
@@ -416,6 +428,7 @@ def interview_report(request, pk):
 
 @login_required
 @require_POST
+@ai_budget
 def transcribe(request):
     """Speech-to-text for browsers without built-in recognition (Firefox).
     Forwards the recording to the configured provider's Whisper-style
@@ -535,6 +548,8 @@ def you(request):
             "days": profile.days.count() if profile else 0,
         },
         "provider": ai.label() if ai.enabled() else "Off (offline coaching)",
+        "tickets": SupportTicket.objects.filter(user=request.user)[:5],
+        "ticket_categories": SupportTicket.Category.choices,
     })
 
 

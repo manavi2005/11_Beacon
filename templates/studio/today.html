@@ -50,7 +50,7 @@
       <ol class="queue">
         {% for m in plan %}
           <li>
-            <span class="row"><span class="queue__n">{{ forloop.counter }}</span><span class="queue__name">{{ m.skill.name }}</span></span>
+            <span class="row"><span class="queue__n">{{ forloop.counter }}</span><span><span class="queue__name">{{ m.skill.name }}</span>{% if m.why_today %}<span class="queue__why">{{ m.why_today }}</span>{% endif %}</span></span>
             {% if m.reps and m.is_due %}<span class="chip chip--memory">Review · fading</span>
             {% elif not m.reps %}<span class="chip">New</span>
             {% else %}<span class="chip chip--beam">Close the gap</span>{% endif %}

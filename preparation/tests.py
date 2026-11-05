@@ -267,6 +267,10 @@ class OrmQueryTests(TestCase):
             second_html,
         )
 
+        # The Content-Security-Policy nonce is fresh on every response too.
+        first_html = re.sub(r'nonce="[^"]*"', 'nonce=""', first_html)
+        second_html = re.sub(r'nonce="[^"]*"', 'nonce=""', second_html)
+
         self.assertEqual(first_html, second_html)
 
     def test_get_search_spans_relationships(self):

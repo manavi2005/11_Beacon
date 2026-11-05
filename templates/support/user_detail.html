@@ -1,0 +1,189 @@
+{% extends "support/base.html" %}
+{% load support_extras %}
+{% block title %}{{ person.username }} · Support{% endblock %}
+{% block content %}
+<a class="small muted" href="{% url 'support:users' %}">← People</a>
+<header class="staff-head mt-8">
+  <div>
+    <div class="eyebrow">{% if profile %}{{ profile.get_experience_level_display }}{% else %}Not set up{% endif %}</div>
+    <h1 class="display">{{ person.get_full_name|default:person.username }}</h1>
+    <p class="small muted">{{ person.username }}{% if person.email %} · {{ person.email }}{% endif %}
+      · joined {{ person.date_joined|date:"M j, Y" }}
+      · last sign-in {% if person.last_login %}{{ person.last_login|timesince }} ago{% else %}never{% endif %}
+      {% if social %} · signs in with {{ social|join:", "|title }}{% endif %}</p>
+  </div>
+  <div class="row">
+    {% if not person.is_active %}<span class="status status--error">Suspended</span>{% endif %}
+    {% if person.is_superuser %}<span class="chip chip--memory">Superuser</span>{% elif person.is_staff %}<span class="chip chip--memory">Staff</span>{% endif %}
+  </div>
+</header>
+
+<section class="card mt-16" aria-labelledby="diag">
+  <div class="card__head"><h2 id="diag">Diagnosis</h2><span class="small muted">Checked just now</span></div>
+  <ul class="findings">
+    {% for f in findings %}
+    <li class="finding finding--{{ f.level }}">
+      <div><strong>{{ f.title }}</strong>{% if f.detail %}<p class="small muted">{{ f.detail }}</p>{% endif %}</div>
+      {% if f.fix %}{% include "support/_action.html" with name=f.fix text=labels|get:f.fix cls="btn--beam" %}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<div class="grid grid--2 mt-24">
+  <section class="card">
+    <div class="card__head"><h2>Goal</h2>{% if blueprint %}<span class="chip{% if blueprint.source == 'AI' %} chip--good{% endif %}">{{ blueprint.get_source_display }}</span>{% endif %}</div>
+    {% if profile %}
+    <dl class="facts">
+      <dt>Role</dt><dd>{{ profile.target_role }}</dd>
+      {% if profile.target_company %}<dt>Company</dt><dd>{{ profile.target_company }}</dd>{% endif %}
+      <dt>Interview</dt><dd>{{ profile.target_interview_date|date:"M j, Y"|default:"No date" }}</dd>
+      <dt>Readiness</dt><dd class="tnum">{{ readiness }}%</dd>
+      <dt>Streak</dt><dd class="tnum">{{ streak.days }} day{{ streak.days|pluralize }}{% if streak.done_today %} · practised today{% endif %}</dd>
+      <dt>Level</dt><dd class="tnum">{{ level.level }} · {{ level.xp }} XP</dd>
+      <dt>Reminders</dt><dd>{% if prefs.email_reminders %}On{% else %}Off{% endif %}</dd>
+      <dt>AI this hour</dt><dd class="tnum">{{ ai_used }}</dd>
+    </dl>
+    {% if profile.resume_summary %}<details class="mt-16"><summary class="small">Background they gave</summary><p class="small">{{ profile.resume_summary }}</p></details>{% endif %}
+    {% else %}<p class="muted">They signed up but haven't chosen a goal.</p>{% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2>Account actions</h2></div>
+    <div class="action-grid">
+      {% if person.is_active %}{% include "support/_action.html" with name="suspend" text="Suspend account" cls="btn--danger" confirm="Suspend this account? They will be signed out." %}
+      {% else %}{% include "support/_action.html" with name="reactivate" text="Reactivate account" %}{% endif %}
+      {% include "support/_action.html" with name="unlock_login" text="Unlock sign-in" %}
+      {% include "support/_action.html" with name="reset_ai_budget" text="Reset AI allowance" %}
+      {% if profile %}
+      {% include "support/_action.html" with name="resync_skills" text="Re-sync skills" %}
+      {% include "support/_action.html" with name="rebuild_plan" text="Rebuild weekly plan" %}
+      {% include "support/_action.html" with name="refresh_blueprint" text="Refresh role blueprint" confirm="Regenerate their skills from a fresh blueprint? Their levels are kept." %}
+      {% include "support/_action.html" with name="make_due" text="Make every skill due" %}
+      {% include "support/_action.html" with name="close_stuck_interviews" text="Close stuck interviews" %}
+      {% include "support/_action.html" with name="discard_stale_cards" text="Discard stale questions" %}
+      {% endif %}
+      {% if user.is_superuser and person != user %}
+        {% if person.is_staff %}{% include "support/_action.html" with name="revoke_staff" text="Revoke staff" cls="btn--danger" confirm="Remove staff access?" %}
+        {% else %}{% include "support/_action.html" with name="grant_staff" text="Make staff" confirm="Give this person access to the support console and everyone's data?" %}{% endif %}
+      {% endif %}
+    </div>
+    <p class="small muted mt-16">Every action is recorded in the audit log with your name.</p>
+  </section>
+</div>
+
+{% if profile %}
+<section class="card mt-24">
+  <div class="card__head"><h2>Skills</h2><span class="small muted">Ranked as Beacon would order their next session</span></div>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>#</th><th>Skill</th><th>Why next</th><th class="num">Score</th><th class="num">Retention</th><th>Due</th><th class="num">Reviews</th><th>Level / bar</th></tr></thead>
+    <tbody>
+    {% for m in ranked %}
+    <tr>
+      <td class="tnum">{{ forloop.counter }}</td>
+      <td><strong>{{ m.skill.name }}</strong></td>
+      <td class="small">{{ m.why_today }}</td>
+      <td class="num tnum" title="{% for k, v in m.rank_parts.items %}{{ k }} {{ v|floatformat:2 }} {% endfor %}">{{ m.rank_score|floatformat:2 }}</td>
+      <td class="num tnum">{% widthratio m|retention 1 100 %}%</td>
+      <td class="small">{% if m.reps == 0 %}new{% elif m|is_due %}<span class="status status--warn">due</span>{% else %}{{ m.due_at|timeuntil }}{% endif %}</td>
+      <td class="num tnum">{{ m.reps }}{% if m.lapses %} <span class="muted">({{ m.lapses }} lapse{{ m.lapses|pluralize }})</span>{% endif %}</td>
+      <td>
+        <form method="post" action="{% url 'support:user_action' person.pk %}" class="adjust">{% csrf_token %}
+          <input type="hidden" name="action" value="adjust_skill"><input type="hidden" name="memory_id" value="{{ m.pk }}">
+          <label class="sr-only" for="s{{ m.pk }}">Level</label>
+          <input class="input input--tiny" id="s{{ m.pk }}" name="strength" type="number" min="0" max="100" step="1" value="{{ m.strength|floatformat:0 }}">
+          <span class="muted">/</span>
+          <label class="sr-only" for="r{{ m.pk }}">Bar</label>
+          <input class="input input--tiny" id="r{{ m.pk }}" name="required" type="number" min="1" max="100" value="{{ m.required }}">
+          <button class="btn btn--ghost btn--small" type="submit">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card mt-24">
+  <div class="card__head"><h2>Recent practice</h2><span class="small muted">Newest 25</span></div>
+  <ul class="list">
+    {% for c in cards %}
+    <li>
+      <details>
+        <summary class="spread">
+          <span><span class="chip">{{ c.get_kind_display }}</span> {{ c.skill.name }} · <span class="small">{{ c.prompt|truncatechars:90 }}</span></span>
+          <span class="small tnum">{% if c.answered %}{{ c.score }}/100{% else %}<span class="muted">unanswered</span>{% endif %}
+            {% if c.source != "ai" %}<span class="chip chip--beam">offline</span>{% endif %} · {{ c.created_at|timesince }} ago</span>
+        </summary>
+        <div class="detail small">
+          <p><strong>Question.</strong> {{ c.prompt }}</p>
+          {% if c.response %}<p><strong>Their answer.</strong> {{ c.response.answer|default:c.response.pick|default:"(skipped)" }}</p>{% endif %}
+          {% if c.feedback.headline %}<p><strong>Feedback.</strong> {{ c.feedback.headline }}</p>{% endif %}
+          {% if c.feedback.graded_by %}<p class="muted">Graded by {{ c.feedback.graded_by }}.</p>{% endif %}
+        </div>
+      </details>
+    </li>
+    {% empty %}<li class="muted small">No practice yet.</li>{% endfor %}
+  </ul>
+</section>
+
+<div class="grid grid--2 mt-24">
+  <section class="card">
+    <div class="card__head"><h2>Mock interviews</h2></div>
+    <ul class="list">
+      {% for i in interviews %}
+      <li class="spread small"><span>{{ i.get_mode_display }} · {{ i.role }}</span>
+        <span class="tnum">{% if i.finished_at %}{{ i.score|default:"-" }}/100{% else %}<span class="status status--warn">unfinished</span>{% endif %} · {{ i.started_at|timesince }} ago</span></li>
+      {% empty %}<li class="muted small">None yet.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <div class="card__head"><h2>Last 14 days</h2></div>
+    <ul class="list">
+      {% for d in days %}
+      <li class="spread small"><span>{{ d.date|date:"D M j" }}{% if d.mood %} · {{ d.get_mood_display }}{% endif %}</span>
+        <span class="tnum">{{ d.cards_done }} answers · {{ d.interviews_done }} interviews · {{ d.xp }} XP{% if d.readiness is not None %} · {{ d.readiness }}%{% endif %}</span></li>
+      {% empty %}<li class="muted small">No activity yet.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endif %}
+
+<div class="grid grid--2 mt-24">
+  <section class="card">
+    <div class="card__head"><h2>Problem reports</h2></div>
+    <ul class="list">
+      {% for t in tickets %}
+      <li>
+        <div class="spread"><span class="chip">{{ t.get_category_display }}</span><span class="small muted">{{ t.created_at|timesince }} ago · {{ t.get_status_display }}</span></div>
+        <p class="small">{{ t.message }}</p>
+        {% if t.page %}<p class="small muted">On {{ t.page }}</p>{% endif %}
+        <form method="post" action="{% url 'support:resolve_report' t.pk %}" class="stack-sm">{% csrf_token %}
+          <input type="hidden" name="back" value="user">
+          {% if t.status == "OPEN" %}
+          <label class="sr-only" for="note{{ t.pk }}">Reply</label>
+          <textarea class="input" id="note{{ t.pk }}" name="note" rows="2" placeholder="Reply they'll see on their You page">{{ t.staff_note }}</textarea>
+          <button class="btn btn--small" type="submit">Resolve</button>
+          {% else %}<p class="small muted">Reply: {{ t.staff_note|default:"(none)" }}</p>
+          <input type="hidden" name="reopen" value="1"><button class="btn btn--ghost btn--small" type="submit">Reopen</button>{% endif %}
+        </form>
+      </li>
+      {% empty %}<li class="muted small">None.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="card">
+    <div class="card__head"><h2>Errors and history</h2></div>
+    <ul class="list">
+      {% for e in errors %}<li class="small"><code>{{ e.kind }}</code> {{ e.method }} {{ e.path }} <span class="muted">· {{ e.created_at|timesince }} ago</span>{% if e.message %}<div class="muted">{{ e.message|truncatechars:160 }}</div>{% endif %}</li>
+      {% empty %}<li class="muted small">No errors recorded for them.</li>{% endfor %}
+    </ul>
+    <h3 class="small mt-16">Staff changes</h3>
+    <ul class="list">
+      {% for a in audit %}<li class="small">{{ labels|get:a.action|default:a.action }} by <strong>{{ a.actor.username|default:"(deleted)" }}</strong> <span class="muted">· {{ a.created_at|timesince }} ago</span>{% if a.detail.result %}<div class="muted">{{ a.detail.result }}</div>{% endif %}</li>
+      {% empty %}<li class="muted small">No staff changes.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

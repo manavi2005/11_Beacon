@@ -25,8 +25,16 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if h not in ("127.0.0.1", "localhost")
 ]
 
-# A real deployment must supply its own key through the environment.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", SECRET_KEY)  # noqa: F405
+# A real deployment must supply its own key through the environment. The
+# development fallback is public (it is in this repository), and anyone who
+# knows the key can forge session cookies, so production refuses to start
+# without a real one rather than running insecurely.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if len(SECRET_KEY) < 40 or SECRET_KEY.startswith("django-insecure") or "replace" in SECRET_KEY:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "Set DJANGO_SECRET_KEY in .env to a long random value (see docs/deployment/DEPLOY.md)."
+    )
 
 # PythonAnywhere terminates HTTPS at its proxy and forwards plain HTTP to
 # Django, with X-Forwarded-Proto saying what the visitor used. Without this,
@@ -36,11 +44,64 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", SECRET_KEY)  # noqa: F405
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
-# Basic hardening that costs nothing to switch on.
+# The proxy sets X-Real-IP itself, so rate limits can trust it here (and
+# only here: locally there is no proxy and the header could be invented).
+TRUST_PROXY_HEADERS = True
+
+# Hardening that costs nothing to switch on.
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# Pages read the CSRF token from the template, never the cookie, so scripts
+# don't need to see it.
+CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+# Browsers remember to use https for a year, so a network attacker can't
+# downgrade a visit to http. No includeSubDomains: the parent domain isn't ours.
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", str(60 * 60 * 24 * 365)))
+# PythonAnywhere's "Force HTTPS" switch does the redirect; set this on any
+# host without one.
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "false").lower() in ("1", "true", "yes")
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+# Deliberate, so `check --deploy` stays quiet about them: HSTS preload and
+# includeSubDomains are one-way doors for a domain we don't fully own, and
+# the https redirect is done by the host (see SECURE_SSL_REDIRECT above).
+SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W008", "security.W021"]
+
+# Several web workers serve requests at once. Rate-limit counters and the AI
+# circuit breaker must be shared between them, or each worker keeps its own
+# count and every limit is multiplied by the number of workers. The database
+# cache is shared and needs no extra service (deploy runs createcachetable).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "beacon_cache",
+        "OPTIONS": {"MAX_ENTRIES": 50000},
+    }
+}
+
+# Under load SQLite writers queue for a lock; wait for it instead of failing
+# with "database is locked". (At real scale, move to Postgres: see DEPLOY.md.)
+DATABASES = {  # noqa: F405 - a copy, so base.py's dict is never changed
+    **DATABASES,  # noqa: F405
+    "default": {**DATABASES["default"],  # noqa: F405
+                "OPTIONS": {**DATABASES["default"].get("OPTIONS", {}), "timeout": 20}},  # noqa: F405
+}
+
+# Warnings and errors, including every rate-limit trip, go to the server's
+# error log, where PythonAnywhere shows them on the Web tab.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "WARNING"},
+        "django.security": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "beacon": {"handlers": ["console"], "level": "INFO"},
+    },
+}
 
 # The local transformers model stays off here. Its weights alone are several
 # times PythonAnywhere's 512 MB quota, and a free-tier worker has neither the

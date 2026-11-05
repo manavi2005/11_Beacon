@@ -29,7 +29,7 @@
       <li><span class="muted">Days logged</span><span class="tnum">{{ counts.days }}</span></li>
       <li><span class="muted">AI coach</span><span>{{ provider }}</span></li>
     </ul>
-    <p class="small muted mt-16">Your answers are sent to the AI model only to grade them and write feedback. Voice is transcribed in your browser where possible, and audio is never stored.</p>
+    <p class="small muted mt-16">Your answers are sent to the AI model only to grade them and write feedback. Voice is transcribed in your browser where possible, and audio is never stored. If you report a problem, Beacon's support team can look at your account to help, and every change they make is logged.</p>
     <div class="row mt-16">
       <a class="btn" href="{% url 'studio:export_data' %}">Download everything</a>
     </div>
@@ -92,7 +92,7 @@
   <h2 class="h3">Reminders</h2>
   <form method="post" class="mt-8">{% csrf_token %}
     <label class="row" style="cursor:pointer">
-      <input type="checkbox" name="email_reminders" {% if prefs.email_reminders %}checked{% endif %} onchange="this.form.submit()" style="width:18px;height:18px;accent-color:var(--beam-1)">
+      <input type="checkbox" name="email_reminders" {% if prefs.email_reminders %}checked{% endif %} data-autosubmit style="width:18px;height:18px;accent-color:var(--beam-1)">
       <span>Email me when skills start to fade{% if user.email %} <span class="muted small">({{ user.email }})</span>{% endif %}</span>
     </label>
     <noscript><button class="btn mt-8" type="submit">Save</button></noscript>
@@ -110,4 +110,30 @@
   </form>
 </section>
 {% endif %}
+
+<section class="card mt-24" id="help">
+  <h2 class="h3">Something not right?</h2>
+  <p class="small muted mt-8">Tell us what happened. A real person reads every report, and their reply shows up here.</p>
+  <form method="post" action="{% url 'report_problem' %}" class="mt-16 help-form">{% csrf_token %}
+    <label class="sr-only" for="help-cat">What's it about</label>
+    <select class="input" id="help-cat" name="category">
+      {% for value, label in ticket_categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+    <label class="sr-only" for="help-msg">What happened</label>
+    <textarea class="input mt-8" id="help-msg" name="message" rows="3" maxlength="3000" required placeholder="What were you doing, and what went wrong?"></textarea>
+    <input type="hidden" name="page" value="{{ request.GET.from|default:'' }}">
+    <button class="btn mt-8" type="submit">Send report</button>
+  </form>
+  {% if tickets %}
+  <ul class="list mt-16">
+    {% for t in tickets %}
+    <li style="display:block">
+      <div class="spread"><span class="small">{{ t.get_category_display }}</span><span class="chip{% if t.status == 'DONE' %} chip--good{% endif %}">{{ t.get_status_display }}</span></div>
+      <p class="small muted mt-8">{{ t.message|truncatechars:160 }}</p>
+      {% if t.status == "DONE" and t.staff_note %}<p class="small mt-8"><strong>Reply:</strong> {{ t.staff_note }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
 {% endblock %}

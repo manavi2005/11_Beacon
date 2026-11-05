@@ -52,7 +52,7 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@6.4.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@6.4.3"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@7.3.0"></script>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     // Replace each PNG fallback with the live, interactive chart. If embedding
     // fails for any reason, the PNG stays where it is.
     document.querySelectorAll(".vega-chart").forEach(function (el) {

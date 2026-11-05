@@ -465,3 +465,88 @@ class DeletingTests(TestCase):
         self.assertEqual(self.client.post(reverse("studio:delete_interview", args=[session.pk])).status_code, 404)
         self.assertEqual(self.client.get(reverse("studio:delete_plan", args=[plan.pk])).status_code, 405)
         self.assertTrue(self.profile.plans.exists())
+
+
+@override_settings(LLM_ENABLED=False)
+class RankingTests(TestCase):
+    """The scoring function behind today's session."""
+
+    def setUp(self):
+        user = User.objects.create_user("r", password="x")
+        self.profile = CandidateProfile.objects.create(user=user, target_role="Nurse",
+                                                       experience_level="STU")
+        self.now = timezone.now()
+
+    def memory(self, name, **fields):
+        skill = Skill.objects.create(name=name)
+        defaults = {"strength": 50, "required": 70, "due_at": self.now + timedelta(days=3)}
+        defaults.update(fields)
+        return SkillMemory.objects.create(candidate=self.profile, skill=skill, **defaults)
+
+    def test_bayesian_average_keeps_sparse_skills_near_the_prior(self):
+        # Three perfect answers barely move it; three hundred do.
+        self.assertLess(engine.shrunk_mean(3, 100) - engine.COHORT_PRIOR, 10)
+        self.assertGreater(engine.shrunk_mean(300, 100), 95)
+        self.assertEqual(engine.shrunk_mean(0, 0), engine.COHORT_PRIOR)
+
+    def test_wider_gap_ranks_higher_all_else_equal(self):
+        small = self.memory("Charting", strength=65)
+        wide = self.memory("Medication safety", strength=20)
+        ranked = engine.rank([small, wide], now=self.now)
+        self.assertEqual(ranked[0], wide)
+        self.assertEqual(wide.why_today, "Widest gap to your bar")
+
+    def test_fading_skill_outranks_a_fresh_one(self):
+        fading = self.memory("Triage", strength=60, reps=4, stability=2,
+                             last_practiced=self.now - timedelta(days=20))
+        fresh = self.memory("Handover", strength=60, reps=4, stability=30,
+                            last_practiced=self.now - timedelta(days=1))
+        ranked = engine.rank([fresh, fading], now=self.now)
+        self.assertEqual(ranked[0], fading)
+        self.assertIn("Fading", fading.why_today)
+
+    def test_market_demand_breaks_a_tie(self):
+        a = self.memory("Wound care")
+        b = self.memory("Epic charting")
+        ranked = engine.rank([a, b], now=self.now, trending=["Epic EHR"])
+        self.assertEqual(ranked[0], b)
+
+    def test_practised_hours_ago_is_pushed_down(self):
+        just_now = self.memory("IV insertion", strength=30, reps=1,
+                               last_practiced=self.now - timedelta(hours=1))
+        other = self.memory("Patient education", strength=40, reps=1,
+                            last_practiced=self.now - timedelta(days=3))
+        self.assertEqual(engine.rank([just_now, other], now=self.now)[0], other)
+
+    def test_cohort_signal_needs_volume_before_it_counts(self):
+        hard = self.memory("Sepsis recognition")
+        easy = self.memory("Vital signs")
+        peer = CandidateProfile.objects.create(user=User.objects.create_user("p"),
+                                               experience_level="STU")
+        for _ in range(2):  # two bad answers: too few to matter
+            Card.objects.create(candidate=peer, skill=hard.skill, kind="SHORT", prompt="q",
+                                score=10, answered_at=self.now)
+        _, parts = engine.score(hard, now=self.now,
+                                cohort=engine.cohort_stats([hard.skill_id], "STU"))
+        self.assertLess(parts["cohort"], 0.02)
+        for _ in range(60):
+            Card.objects.create(candidate=peer, skill=hard.skill, kind="SHORT", prompt="q",
+                                score=10, answered_at=self.now)
+        cohort = engine.cohort_stats([hard.skill_id, easy.skill_id], "STU")
+        ranked = engine.rank([easy, hard], now=self.now, stage="STU")
+        self.assertEqual(ranked[0], hard)
+        self.assertGreater(cohort[hard.skill_id][0], 50)
+
+    def test_cohort_is_per_career_stage(self):
+        m = self.memory("Delegation")
+        senior = CandidateProfile.objects.create(user=User.objects.create_user("s"),
+                                                 experience_level="MID")
+        Card.objects.create(candidate=senior, skill=m.skill, kind="SHORT", prompt="q",
+                            score=5, answered_at=self.now)
+        self.assertEqual(engine.cohort_stats([m.skill_id], "STU"), {})
+
+    def test_due_skills_still_come_first(self):
+        due = self.memory("Infection control", strength=69, due_at=self.now - timedelta(hours=1))
+        not_due = self.memory("Care planning", strength=10)
+        plan = engine.queue([not_due, due], now=self.now)
+        self.assertEqual(plan[0], due)

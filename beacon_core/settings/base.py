@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "preparation",
     # v2 product experience: Today loop, sessions, voice interviews
     "studio",
+    "support",
 ]
 
 # Which Site row the social callbacks belong to. Changing the deployed
@@ -98,12 +99,15 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "beacon_core.security.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "beacon_core.security.AbuseGuardMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "support.middleware.RecordErrorsMiddleware",
     # allauth needs this to handle its own redirects and to keep the social
     # login flow's state between the outbound request and the callback.
     # Without it allauth raises ImproperlyConfigured at the first request.
@@ -128,6 +132,7 @@ TEMPLATES = [
                 "preparation.context_processors.google_oauth",
                 # The site menu, built from preparation/navigation.py.
                 "preparation.navigation.navigation",
+                "beacon_core.security.csp_nonce",
             ],
         },
     },
@@ -299,6 +304,19 @@ LOCAL_LLM_DEVICE = os.environ.get("LOCAL_LLM_DEVICE", "")
 # pipeline, so the guard costs no coverage.
 if "test" in sys.argv:
     LOCAL_LLM_ENABLED = False
+
+# The admin lives at a path that can be changed per deployment, so bots
+# hunting for /admin/ login forms don't find it. Must end with a slash.
+ADMIN_URL = os.environ.get("DJANGO_ADMIN_URL", "admin/").strip("/") + "/"
+
+# Cap what one request can make the server hold in memory.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 300
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+
+# Abuse limits (beacon_core/security.py). Off for the test suite, where one
+# process signs in hundreds of times; the security tests switch them on.
+RATE_LIMITS_ENABLED = "test" not in sys.argv
 
 # A first-time Google sign-in creates an account with no profile, exactly
 # like the signup form. Send it to onboarding too, instead of the cohort
