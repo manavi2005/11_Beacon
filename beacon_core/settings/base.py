@@ -98,10 +98,12 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "beacon_core.security.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "beacon_core.security.AbuseGuardMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # allauth needs this to handle its own redirects and to keep the social
@@ -128,6 +130,7 @@ TEMPLATES = [
                 "preparation.context_processors.google_oauth",
                 # The site menu, built from preparation/navigation.py.
                 "preparation.navigation.navigation",
+                "beacon_core.security.csp_nonce",
             ],
         },
     },
@@ -299,6 +302,10 @@ LOCAL_LLM_DEVICE = os.environ.get("LOCAL_LLM_DEVICE", "")
 # pipeline, so the guard costs no coverage.
 if "test" in sys.argv:
     LOCAL_LLM_ENABLED = False
+
+# Abuse limits (beacon_core/security.py). Off for the test suite, where one
+# process signs in hundreds of times; the security tests switch them on.
+RATE_LIMITS_ENABLED = "test" not in sys.argv
 
 # A first-time Google sign-in creates an account with no profile, exactly
 # like the signup form. Send it to onboarding too, instead of the cohort
