@@ -9,8 +9,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from support import views as support_views
+
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
+    path("staff/", include("support.urls")),
+    path("help/report/", support_views.report_problem, name="report_problem"),
     # v2 owns "/" and its own paths; v1 pages keep theirs.
     path("", include("studio.urls")),
     path("", include("preparation.urls")),
