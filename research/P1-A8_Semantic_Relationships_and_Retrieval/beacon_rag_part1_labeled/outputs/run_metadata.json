@@ -1,0 +1,33 @@
+{
+  "generation_model": "Qwen/Qwen3-4B-Instruct-2507",
+  "embedding_models": {
+    "small_384": "BAAI/bge-small-en-v1.5",
+    "medium_768": "BAAI/bge-base-en-v1.5",
+    "large_1024": "BAAI/bge-large-en-v1.5"
+  },
+  "device": "cuda:0",
+  "llm_dtype": "torch.float16",
+  "generation_model_load_seconds": 6.2500584,
+  "paragraph_count": 30,
+  "corpus_word_count": 3021,
+  "chunking_strategies": [
+    "fixed_length",
+    "overlapping_paragraph",
+    "hybrid"
+  ],
+  "top_k_main": 3,
+  "max_new_tokens": 220,
+  "embedding_batch_size": 16,
+  "query_count": 6,
+  "main_configuration_count": 9,
+  "main_evaluation_rows": 54,
+  "retrieval_metrics": [
+    "context_recall",
+    "context_precision",
+    "context_f1",
+    "noise_rate"
+  ],
+  "automatic_answer_metric": "answer_keyword_coverage_proxy (lexical proxy only)",
+  "human_answer_quality_formula": "1 + 9 * (0.35*accuracy + 0.25*structure + 0.25*instruction_adherence + 0.15*clarity); human ratings 1-5 normalized to 0-1",
+  "note": "Measured results are produced by executing this notebook on the local machine; this package contains no fabricated benchmark numbers."
+}
