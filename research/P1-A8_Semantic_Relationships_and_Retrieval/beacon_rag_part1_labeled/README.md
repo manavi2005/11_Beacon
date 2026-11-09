@@ -5,14 +5,14 @@ This submission builds a retrieval-augmented generation (RAG) assistant for **Be
 ## Files
 
 ```text
-beacon_rag_submission/
+beacon_rag_part1_labeled/
 ├── rag_system.ipynb
 ├── rag_analysis.md
 ├── requirements.txt
 ├── README.md
 ├── data/
 │   └── beacon_knowledge_base.json
-└── outputs/                 # created by the notebook
+└── outputs/                 # written by the notebook (the submitted run is included)
 ```
 
 The JSON corpus is an additional required input to the notebook. It contains 30 complete paragraphs (about 3,000 words), each with an ID, section, topic, source label, and text. The knowledge base was prepared from the supplied Beacon `README.md`, `models.py`, and A6/A7 `system_design.md` / model-selection notebook. It describes product features and documented model/data behavior; it is not a user's private candidate profile or resume.
@@ -28,6 +28,10 @@ The JSON corpus is an additional required input to the notebook. It contains 30 
 | Large | `BAAI/bge-large-en-v1.5` | 1024 |
 
 These are three sizes from the same BGE v1.5 family. Their model cards are available at [BGE small](https://huggingface.co/BAAI/bge-small-en-v1.5), [BGE base](https://huggingface.co/BAAI/bge-base-en-v1.5), and [BGE large](https://huggingface.co/BAAI/bge-large-en-v1.5). The BGE cards identify the 384/768/1024 dimensional variants and list MIT licensing.
+
+### Answer-quality judge
+
+Answers are scored on the team's A7 rubric by **`nemotron-3-super-120b-a12b`**, served by UIUC NCSA Lumen through an OpenAI-compatible API. It is a different, much larger model than the generator, so Qwen never grades its own answers. The scores are reported as LLM-judge scores, not human ratings. Every verdict is cached in `outputs/answer_quality_llm_judge.csv`, so **re-running the notebook without a key reproduces the same scores**. A key is only needed when an answer changes (for example on a different GPU, where greedy decoding can differ slightly).
 
 ### Generation
 
@@ -78,7 +82,22 @@ python -c "import torch; print('CUDA:', torch.cuda.is_available()); print('MPS:'
 
 Expected behavior: the RTX 5090 desktop should report CUDA as available; an Apple Silicon Mac should report MPS as available. If both are false, the notebook falls back to CPU, but running the 4B generation model in FP32 can use a substantial share of a 24 GB system's memory. GPU/MPS execution is recommended for this submission.
 
-### 4. Start Jupyter
+### 4. (Optional) Key for the answer-quality judge
+
+Only needed if answers change and need new scores. Any OpenAI-compatible endpoint works:
+
+```powershell
+$env:JUDGE_API_KEY = "<your Lumen key>"        # PowerShell
+```
+
+```bash
+export JUDGE_API_KEY="<your Lumen key>"         # macOS / Linux
+# optional overrides: JUDGE_BASE_URL, JUDGE_MODEL
+```
+
+`LUMEN_API_KEY` is also accepted. Never commit a key.
+
+### 5. Start Jupyter
 
 From the `beacon_rag_submission` directory (the directory containing this README):
 
@@ -121,11 +140,16 @@ The notebook creates these files under `outputs/`:
 - `retrieved_contexts.csv` — each retrieved chunk, rank, similarity, source paragraph IDs, and full text;
 - `configuration_summary.csv` — mean metrics by each of the nine configurations;
 - `scaling_results.csv` — smaller versus larger corpus experiment;
-- `before_after_topk.csv` — top-k improvement comparison;
-- `failure_candidates.csv` — low-scoring cases or near misses to review;
+- `before_after_topk.csv` — the top-k 3→5 attempt (kept: it did not help);
+- `failure_analysis_candidates.csv` — the weakest cases, with full retrieved text and answers;
+- `answer_quality_llm_judge.csv` — every judge verdict (four 1–5 ratings, truncation flag, unsupported claims, comment), cached by content hash;
+- `before_after_query_refinement.csv` — Step 3.3 Fix A, all 9 configurations, before vs after;
+- `before_after_answer_budget.csv` — Step 3.3 Fix B, every answer that hit the token limit, before vs after;
 - `run_metadata.json` — model IDs, device, and run settings.
 
-The notebook reports `answer_keyword_coverage_proxy`, not a definitive semantic score. Review generated answers and retrieved chunks, then add blinded human answer-quality ratings from 1 to 5 as described in `rag_analysis.md`. Do not describe a failure or improvement unless the saved outputs support it.
+Answer quality is the A7 rubric score from the judge model; `answer_keyword_coverage_proxy` is kept as a cheap lexical cross-check only. Human ratings remain optional: fill `outputs/answer_quality_review_template.csv`, save it as `outputs/answer_quality_reviews.csv`, and the notebook reports them alongside the judge.
+
+**Submitted run:** executed end to end on an Apple M4 Pro (24 GB, MPS, FP16). The team's first run on an RTX 5090 produced identical retrieval results (retrieval is deterministic); answers and latencies differ slightly by device.
 
 ## Reproducibility notes
 
@@ -136,7 +160,7 @@ The notebook reports `answer_keyword_coverage_proxy`, not a definitive semantic 
 - This is a local, in-memory vector-search prototype; the `rag_analysis.md` design section explains what should change for a production system serving 10,000 users per day.
 
 
-## Part 2 and Part 3 evaluation workflow
+## Part 2 and Part 3 evaluation workflow (details)
 
 After the nine-configuration experiment runs, the notebook renders assignment-labeled Markdown conclusions from the measured outputs and saves the full retrieved passages in `outputs/retrieved_contexts.csv` and `outputs/evaluation_table_with_retrieved_chunks.csv`.
 
