@@ -1,0 +1,43 @@
+{
+  "Q1": [
+    "Beacon creates a role blueprint for a target role that lists the skills likely tested in interviews and the expected proficiency bar for each skill, cached per role.",
+    "Skills are sourced from a shared catalog with standardized names, categories (technical, behavioral, domain knowledge, communication), and uniqueness constraints to ensure consistent labeling across c",
+    "Beacon computes a skill gap by subtracting the candidate's current proficiency (from SkillAssessment) from the role's required level, treating negative gaps as zero.",
+    "It ranks skills for next work using a function that weighs gap size, urgency (deadlines), market demand, cohort difficulty (with Bayesian shrinkage), and exploration, and when multiple target roles ex",
+    "The highest\u2011ranked skill becomes the candidate's next focus, recorded in a PreparationPlan that provides a time\u2011boxed roadmap toward the target role."
+  ],
+  "Q2": [
+    "Readiness percent is computed by, for each skill, taking proficiency divided by required level (capped at 1.0), averaging those ratios across all assessed skills, and multiplying by 100.",
+    "If a candidate has no assessments, readiness percent is defined as zero.",
+    "When required level is zero, the ratio for that skill is treated as 1.0.",
+    "Capping each skill's ratio at 1.0 prevents a proficiency above the required level from contributing more than 1.0, so a strong skill cannot compensate for a weakness in another skill.",
+    "The resulting average reflects overall progress toward meeting all skill requirements, not a prediction of hiring decisions."
+  ],
+  "Q3": [
+    "Beacon stores a human\u2011readable target role (or list of target roles) in the CandidateProfile.",
+    "The profile holds resume information as a plain\u2011text resume summary and optionally as an uploaded resume file.",
+    "Experience is captured via an experience\u2011level field (e.g., student, new graduate, early\u2011career, etc.) and related details such as interests and target company.",
+    "Beacon records interview\u2011related constraints: a target interview date (deadline) and an optional preparation timeline in weeks."
+  ],
+  "Q4": [
+    "Beacon breaks the answer down into the STAR components (Situation, Task, Action, Result) to evaluate each part separately.",
+    "It assesses quality by looking for specific, concrete actions and a measurable outcome, rejecting answers that are vague or lack a result regardless of word count.",
+    "When an answer is vague or missing a result, Beacon identifies the missing evidence, distinguishes what was described as action versus result, and notes that length alone does not determine quality.",
+    "Feedback highlights the absent STAR elements, offers a stronger example answer using the candidate's own words, and avoids inventing achievements or details not provided.",
+    "In spoken rehearsal, the mock interviewer asks follow\u2011up questions to elicit missing STAR information and then gives a debrief that connects observations to concrete improvement steps for the next att"
+  ],
+  "Q5": [
+    "Beacon marks a preparation task as completed only when a linked TaskAttempt record shows a passed attempt, not merely by setting the task status to 'done'.",
+    "Each TaskAttempt stores concrete evidence of work: activity type, submitted response, score, pass/fail flag, feedback, grading method, and optional before\u2011and\u2011after skill ratings.",
+    "The TaskAttempt is linked to its PlanTask via a foreign key, so the completed task is directly connected to the evidence of skill progress.",
+    "Beacon derives the plan\u2019s overall completion percentage from the count of tasks whose status is 'done' (i.e., have a passed attempt), providing a progress figure backed by the detailed attempt records",
+    "The before\u2011and\u2011after ratings in TaskAttempt allow the system to update and display how demonstrated performance changes a candidate\u2019s skill rating over time."
+  ],
+  "Q6": [
+    "Candidate\u2011controlled text (resume, interview answers) is placed in a clearly marked data block and the model is instructed to treat it as information, not as executable instructions, reducing prompt\u2011i",
+    "The system prompt defines the model\u2019s role, task, constraints, output format, safety boundaries, and response length, ensuring embedded user content cannot override the system rules.",
+    "Before display, Beacon validates the AI reply using JSON schemas, allowed score ranges, HTML escaping, and limited formatting (bold text and bullets), checking structure and content beyond mere JSON p",
+    "If validation fails (invalid schema, out\u2011of\u2011range scores, disallowed content), Beacon falls back to transparent, field\u2011neutral rules or handles the error instead of showing unchecked model output.",
+    "Every AI call includes a fallback (LLM_ENABLED=false) that provides deterministic behavior, complementing validation to prevent reliance on a potentially compromised model response."
+  ]
+}
