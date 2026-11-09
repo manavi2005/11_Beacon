@@ -1,30 +1,28 @@
+# P1-A8 — Beacon RAG: Semantic Relationships and Retrieval
+
+**Project:** Beacon, an AI interview-preparation coach · **Team:** Career Coaches
+**Generation model:** `Qwen/Qwen3-4B-Instruct-2507`, from the team's A6/A7 model selection, fixed across every experiment
+**Embedding models:** BGE small / base / large v1.5 (384 / 768 / 1,024 dimensions)
+**Answer-quality judge:** `nemotron-3-super-120b-a12b` (UIUC NCSA Lumen), A7 rubric
+
+Every number below comes from one end-to-end execution of `rag_system.ipynb` (Apple M4 Pro, MPS, FP16), saved under `outputs/`. Nothing is estimated except where a section says "assume".
+
+## Summary
+
+- **Smaller embeddings were as good or better.** BGE small had the best retrieval (F1 0.597 against 0.539 for large) at a ninth of the search time. Answer quality was flat across sizes.
+- **Chunking trades retrieval precision for answer completeness.** Fixed-length chunks scored best on retrieval (F1 0.635). Whole-section hybrid chunks scored lowest (0.452, precision capped at 1/3 by construction) but produced the best answers (7.36/10), at +73% prompt tokens. Retrieval F1 and answer quality were uncorrelated (r ≈ 0.0).
+- **The most common failure was generation, not retrieval.** 59% of answers were cut off at the 220-token limit. Adding a 150-word budget removed every truncation and raised answer quality from 6.66 to 7.71 while making generation 18% faster.
+- **Two retrieval fixes were tried and did not help** (top-k 3→5, splitting two-part questions). They are reported with their numbers. The remaining retrieval failure is vocabulary mismatch, and the next step is a lexical (BM25) hybrid.
+
 ## Part 1: Build the RAG Pipeline (90 pts)
 
-### Step 1.1: Define Your Knowledge Base (10 pts)
-The Beacon interview-coaching corpus is loaded from `data/beacon_knowledge_base.json`. The notebook validates paragraph counts and word lengths.
-
-### Step 1.2: Text Representation & Chunking (25 pts)
-Paragraphs are coherent source records with stable IDs. Fixed-length chunks pack whole sentences toward 180 words within sections; overlapping chunks use two paragraphs with a one-paragraph stride; hybrid chunks group complete paragraphs within sections up to 360 words. Source IDs are preserved.
-
-### Step 1.3: Embedding Pipeline (15 pts)
-BGE small/base/large v1.5 produce normalized 384/768/1024-dimensional embeddings, stored in a NumPy vector index with chunk metadata.
-
-### Step 1.4: Retrieval System (20 pts)
-The query is embedded using the matching BGE model, compared with stored vectors using cosine similarity, and the top-k chunks are returned with full text and source IDs.
-
-### Step 1.5: Generation Pipeline (20 pts)
-A fixed Qwen3-4B-Instruct-2507 model receives a system instruction, retrieved chunk context, and the user query. It generates a cited response. The same model and generation settings are used across all nine configurations.
-
----
-
-# P1-A8 — Beacon RAG Analysis
-
-**Project:** Beacon, an AI interview-preparation coach  
-**Team:** Career Coaches  
-**Generation model:** `Qwen/Qwen3-4B-Instruct-2507` (fixed across all experiments)  
-**Embedding models:** BGE small/base/large v1.5 (384/768/1024 dimensions)
-
-> **Experimental integrity note:** This report contains the system design, corpus definition, evaluation method, and analysis framework. Numeric retrieval, answer, and latency results must come from executing `rag_system.ipynb` on the team's machines. No experimental outcomes have been invented in this report. Fill the result tables and failure examples from the generated CSV files after the run.
+| Step | Where | What it does |
+|---|---|---|
+| 1.1 Knowledge base | `data/beacon_knowledge_base.json`, §1 | 30 paragraphs, 3,021 words, 10 topic sections; the notebook asserts 80–200 words per paragraph and a total of 2,000–5,000 |
+| 1.2 Chunking | §1.2–1.3 | Fixed (sentence-packed to 180 words), overlapping paragraphs (window 2, stride 1), hybrid (whole sections up to 360 words). Never splits a sentence or crosses a section |
+| 1.3 Embeddings | §2.1 | Three BGE sizes, normalised vectors in a NumPy index with chunk metadata |
+| 1.4 Retrieval | §2.1 | Query embedded with the same model and BGE query prefix, cosine similarity, top-k |
+| 1.5 Generation | §2.2 | System instruction + retrieved context + user query → Qwen3-4B, answer cites chunk IDs |
 
 ## 1. Knowledge base and document representation
 
@@ -96,7 +94,7 @@ flowchart LR
 
 ## 3. Experiment setup and evaluation
 
-### 3.1 Nine configurations
+### 3.0 Nine configurations
 
 The notebook runs the following matrix:
 
@@ -106,9 +104,9 @@ The notebook runs the following matrix:
 | BGE base (768) | ✓ | ✓ | ✓ |
 | BGE large (1024) | ✓ | ✓ | ✓ |
 
-Each configuration receives the same six test queries, top-k=3, the same knowledge base, the same generation model, the same prompt, and the same decoding settings. The main experiment therefore contains 54 query-level outputs (9 configurations × 6 queries).
+Each configuration receives the same six test queries, top-k=3, the same knowledge base, the same generation model (Qwen3-4B-Instruct-2507, greedy decoding, 220 new tokens), the same prompt, and the same decoding settings. The main experiment therefore contains 54 query-level outputs (9 configurations × 6 queries).
 
-### Step 2.1: Define Test Queries (10 pts)
+### 3.1 Test queries
 
 1. How does Beacon turn a target role into a personalized skill blueprint and decide what a candidate should focus on next?
 2. How is the readiness percentage calculated, and why can a strong skill not hide a weakness in another skill?
@@ -119,7 +117,7 @@ Each configuration receives the same six test queries, top-k=3, the same knowled
 
 Each query has a manually assigned set of relevant paragraph IDs and expected answer terms in the notebook. These labels are withheld from retrieval and generation; they are used only after retrieval to evaluate evidence coverage.
 
-### 3.3 Evaluation metrics
+### 3.2 Evaluation metrics
 
 | Metric | Calculation | Interpretation |
 |---|---|---|
@@ -128,154 +126,262 @@ Each query has a manually assigned set of relevant paragraph IDs and expected an
 | Context F1 | `2 × precision × recall ÷ (precision + recall)` | Harmonic mean balancing recall and precision |
 | Noise rate | 1 − context precision | Share of retrieved chunks that did not match the gold labels |
 | Answer keyword coverage (proxy) | Expected terms present in answer ÷ expected terms | Reproducible lexical proxy; not a full semantic quality score |
-| Human answer quality | Four human ratings (1–5), combined with A7 weights into a 1–10 score | Manual semantic assessment using the prior model-selection rubric |
+| Answer quality (1–10) | A7 rubric, four 1–5 ratings weighted 0.35/0.25/0.25/0.15, scored by an independent judge model against a fixed per-question checklist | Semantic quality of the final answer (LLM judge; see below) |
 | Retrieval latency | Query embedding + similarity search time | Time spent finding evidence |
 | Generation latency | Time inside model generation | Time spent producing the response |
 | Total query latency | Retrieval latency + generation latency | End-to-end measured query time, excluding one-time model loading |
 
-**How the prior notebooks score answers:** `ai_prototype(2).ipynb` evaluates its STAR-grading route using **format reliability** (share of replies in the requested valid JSON shape) and **judgement accuracy** (share placed on the correct side of the grading threshold). Its evaluation section also names instruction adherence, task accuracy, safety, speed, and footprint. It does not define a retrieval-quality calculation. `multi_model_system.ipynb` defines the weighted generation-quality score: accuracy (0.35), structure (0.25), instruction adherence (0.25), and clarity (0.15), with `score_1_to_10 = 1 + 9 × quality`.
+### How answer quality is scored
 
-**Human rating rubric for this RAG task:** rate each dimension from 1 to 5 and normalize it as `(rating − 1) ÷ 4`. Accuracy = whether factual claims are correct and supported by retrieved evidence; structure = whether every part of the question is answered in a clear order; instruction adherence = whether the answer stays within context, cites retrieved chunks accurately, and admits missing information; clarity = completeness, readability, concision, and absence of repetition/truncation. Apply the same A7 weights and 1–10 conversion formula. Fill the four rating columns in `outputs/answer_quality_review_template.csv`, then save the completed file as `outputs/answer_quality_reviews.csv`. The notebook reads those ratings and computes the composite score.
+The A7 rubric (accuracy 0.35, structure 0.25, instruction adherence 0.25, clarity 0.15; `1 + 9 × quality`) is applied to every answer by an **independent judge model**, `nemotron-3-super-120b-a12b` on UIUC NCSA Lumen. It is roughly 30× larger than the Qwen generator and from a different family, so Qwen never grades itself. To make the nine configurations comparable, the judge first extracted **one fixed checklist of 4–5 key points per question** from that question's gold paragraphs (`outputs/judge_key_points.json`). Every answer to a question is checked against the same points, scored with fixed anchors (accuracy 5 = every key point present and nothing wrong; 3 = about half; an answer cut off mid-sentence scores clarity ≤ 2), at temperature 0. Every verdict, with its missed points and unsupported claims, is in `outputs/answer_quality_llm_judge.csv`.
 
-The keyword metric is deliberately labelled a proxy. It may penalize a valid paraphrase or reward a phrase that appears without being explained correctly. It should be read alongside retrieved chunks and human review, not as a replacement for semantic answer quality.
+These are **LLM-judge scores and are labelled as such everywhere**. They are not human ratings. Two checks on the judge:
 
-### Step 2.2: Evaluation Table (40 pts) — Populate after execution
+- **It discriminates.** An earlier, looser prompt gave every complete answer 10/10, so its score only measured truncation. With the fixed checklist and anchors, scores range from 3.81 to 9.21 (mean 7.07), and judge accuracy correlates with retrieval recall (r = 0.35).
+- **It is noisy at about ±0.7.** Seven identical answers were re-judged with the same chunks in a different order (a side effect of Fix A below). Their scores moved by 0.72 points on average (maximum 1.34). **Differences under about 1 point between configurations are within judge noise** and are not treated as findings below. In one case (row 1) the answer's last citation was cut off (`[FIX-00`), and the judge marked a claim as unsupported even though chunk FIX-006 does support it. So truncation also costs points through lost citations.
 
-The notebook writes `outputs/configuration_summary.csv` and renders dynamic Markdown answers after the model-testing cell. The numeric placeholders below remain blank until the notebook is run; the notebook does not fabricate model results. Copy the measured means into this report:
+Key points checked per question:
 
-| Embedding model | Chunking strategy | Mean context recall | Mean context precision | Mean context F1 | Mean answer keyword coverage proxy | Mean human answer quality (1–10) | Mean total latency (s) |
-|---|---|---:|---:|---:|---:|---:|
-| BGE small (384) | Fixed | — | — | — | — | — | — |
-| BGE small (384) | Overlap | — | — | — | — | — | — |
-| BGE small (384) | Hybrid | — | — | — | — | — | — |
-| BGE base (768) | Fixed | — | — | — | — | — | — |
-| BGE base (768) | Overlap | — | — | — | — | — | — |
-| BGE base (768) | Hybrid | — | — | — | — | — | — |
-| BGE large (1024) | Fixed | — | — | — | — | — | — |
-| BGE large (1024) | Overlap | — | — | — | — | — | — |
-| BGE large (1024) | Hybrid | — | — | — | — | — | — |
+- **Q1:** Beacon creates a role blueprint for a target role that lists the skills likely tested in interviews and the expected proficiency bar for each skill, cached per role. · Skills are sourced from a shared catalog with standardized names, categories (technical, behavioral, domain knowledge, communication), and uniqueness constraints to ensure consistent labeling across c · Beacon computes a skill gap by subtracting the candidate's current proficiency (from SkillAssessment) from the role's required level, treating negative gaps as zero. · It ranks skills for next work using a function that weighs gap size, urgency (deadlines), market demand, cohort difficulty (with Bayesian shrinkage), and exploration, and when multiple target roles ex · The highest‑ranked skill becomes the candidate's next focus, recorded in a PreparationPlan that provides a time‑boxed roadmap toward the target role.
+- **Q2:** Readiness percent is computed by, for each skill, taking proficiency divided by required level (capped at 1.0), averaging those ratios across all assessed skills, and multiplying by 100. · If a candidate has no assessments, readiness percent is defined as zero. · When required level is zero, the ratio for that skill is treated as 1.0. · Capping each skill's ratio at 1.0 prevents a proficiency above the required level from contributing more than 1.0, so a strong skill cannot compensate for a weakness in another skill. · The resulting average reflects overall progress toward meeting all skill requirements, not a prediction of hiring decisions.
+- **Q3:** Beacon stores a human‑readable target role (or list of target roles) in the CandidateProfile. · The profile holds resume information as a plain‑text resume summary and optionally as an uploaded resume file. · Experience is captured via an experience‑level field (e.g., student, new graduate, early‑career, etc.) and related details such as interests and target company. · Beacon records interview‑related constraints: a target interview date (deadline) and an optional preparation timeline in weeks.
+- **Q4:** Beacon breaks the answer down into the STAR components (Situation, Task, Action, Result) to evaluate each part separately. · It assesses quality by looking for specific, concrete actions and a measurable outcome, rejecting answers that are vague or lack a result regardless of word count. · When an answer is vague or missing a result, Beacon identifies the missing evidence, distinguishes what was described as action versus result, and notes that length alone does not determine quality. · Feedback highlights the absent STAR elements, offers a stronger example answer using the candidate's own words, and avoids inventing achievements or details not provided. · In spoken rehearsal, the mock interviewer asks follow‑up questions to elicit missing STAR information and then gives a debrief that connects observations to concrete improvement steps for the next att
+- **Q5:** Beacon marks a preparation task as completed only when a linked TaskAttempt record shows a passed attempt, not merely by setting the task status to 'done'. · Each TaskAttempt stores concrete evidence of work: activity type, submitted response, score, pass/fail flag, feedback, grading method, and optional before‑and‑after skill ratings. · The TaskAttempt is linked to its PlanTask via a foreign key, so the completed task is directly connected to the evidence of skill progress. · Beacon derives the plan’s overall completion percentage from the count of tasks whose status is 'done' (i.e., have a passed attempt), providing a progress figure backed by the detailed attempt records · The before‑and‑after ratings in TaskAttempt allow the system to update and display how demonstrated performance changes a candidate’s skill rating over time.
+- **Q6:** Candidate‑controlled text (resume, interview answers) is placed in a clearly marked data block and the model is instructed to treat it as information, not as executable instructions, reducing prompt‑i · The system prompt defines the model’s role, task, constraints, output format, safety boundaries, and response length, ensuring embedded user content cannot override the system rules. · Before display, Beacon validates the AI reply using JSON schemas, allowed score ranges, HTML escaping, and limited formatting (bold text and bullets), checking structure and content beyond mere JSON p · If validation fails (invalid schema, out‑of‑range scores, disallowed content), Beacon falls back to transparent, field‑neutral rules or handles the error instead of showing unchecked model output. · Every AI call includes a fallback (LLM_ENABLED=false) that provides deterministic behavior, complementing validation to prevent reliance on a potentially compromised model response.
 
-The actual retrieved text is in `outputs/retrieved_contexts.csv`; `outputs/evaluation_results.csv` includes the generated answers and query-level measurements. These files satisfy the requirement to show retrieved chunks, not just final answers.
+## Part 2: System Experiments (100 pts)
 
-## 4. Analysis questions — complete from measured outputs
+### Step 2.1: Define Test Queries (10 pts)
+
+Six realistic questions a Beacon user or teammate would ask (listed in §3.1 above), each with hand-labelled gold paragraphs used **only** for evaluation. Q1, Q2, Q5 and Q6 are two-part questions; Q3 and Q4 are single requests. Q1 and Q5 deliberately need evidence from more than one section.
+
+### Step 2.2: Evaluation Table (40 pts)
+
+**Per configuration** (mean over the six queries; latency = query embedding + search + generation on an Apple M4 Pro, MPS, FP16):
+
+| Embedding model | Chunking | Context recall | Context precision | Context F1 | Noise rate | Answer quality (judge, 1–10) | Answers cut off | Mean latency (s) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| BGE small (384) | Fixed | 0.836 | 0.611 | 0.697 | 0.389 | 7.11 | 3/6 | 9.24 |
+| BGE small (384) | Overlap | 0.775 | 0.556 | 0.642 | 0.444 | 6.93 | 3/6 | 8.93 |
+| BGE small (384) | Hybrid | 0.808 | 0.333 | 0.452 | 0.667 | 7.49 | 4/6 | 10.17 |
+| BGE base (768) | Fixed | 0.753 | 0.556 | 0.627 | 0.444 | 6.16 | 4/6 | 8.93 |
+| BGE base (768) | Overlap | 0.753 | 0.556 | 0.627 | 0.444 | 7.24 | 4/6 | 9.13 |
+| BGE base (768) | Hybrid | 0.808 | 0.333 | 0.452 | 0.667 | 7.11 | 4/6 | 10.40 |
+| BGE large (1024) | Fixed | 0.719 | 0.500 | 0.582 | 0.500 | 7.17 | 2/6 | 8.34 |
+| BGE large (1024) | Overlap | 0.719 | 0.500 | 0.582 | 0.500 | 6.93 | 4/6 | 9.07 |
+| BGE large (1024) | Hybrid | 0.808 | 0.333 | 0.452 | 0.667 | 7.49 | 4/6 | 9.99 |
+
+**Every configuration × query, with the retrieved chunks.** Below are the 54 rows: the chunks retrieved in rank order with the paragraphs each contains, retrieval quality, answer quality, the judge's key-point coverage, latency, and the judge's note. The **full text** of every retrieved chunk and every answer is in `outputs/evaluation_table_with_retrieved_chunks.csv` (one row per configuration and query, chunk text included) and `outputs/retrieved_contexts.csv` (one row per retrieved chunk, with similarity score). The notebook's Step 2.2 output displays the same evidence.
+
+| # | Embedding | Chunking | Query | Retrieved chunks (rank order) → source paragraphs | Recall | Precision | Answer quality (1–10) | Key points | Latency (s) | Notes |
+|---:|---|---|---|---|---:|---:|---:|---:|---:|---|
+| 1 | small | Fixed | Q1 | FIX-005 (B07+B08); FIX-001 (B01+B02); FIX-006 (B08+B09) | 0.60 | 0.67 | 3.81 | 0/5 | 10.5 | **Cut off at 220 tokens.** The answer covers only fragments of the required points, omits key details about the skill catalog uniqueness, gap flooring, multiple target roles, and the PreparationPlan, and ends mid‑sentence with an incomplete citation. |
+| 2 | small | Fixed | Q2 | FIX-008 (B11+B12); FIX-006 (B08+B09); FIX-007 (B10+B11) | 1.00 | 0.67 | 8.43 | 3/5 | 6.7 | Answer covers calculation and compensation rationale but omits zero‑required‑level handling and the non‑prediction nature of readiness. |
+| 3 | small | Fixed | Q3 | FIX-004 (B05+B06); FIX-003 (B04+B05); FIX-001 (B01+B02) | 1.00 | 0.67 | 9.21 | 3/4 | 10.2 | **Cut off at 220 tokens.** The answer covers target role, resume, and interview deadline correctly but omits the interests and target company details that are part of the experience‑level key point. |
+| 4 | small | Fixed | Q4 | FIX-012 (B17+B18); FIX-011 (B16+B17); FIX-001 (B01+B02) | 1.00 | 0.67 | 5.50 | 2/5 | 10.2 | **Cut off at 220 tokens.** The answer covers STAR breakdown and feedback principles but omits several nuances (word‑count irrelevance, action vs result distinction, follow‑up questions) and is cut off mid‑sentence. |
+| 5 | small | Fixed | Q5 | FIX-014 (B20+B21); FIX-011 (B16+B17); FIX-010 (B14+B15) | 0.75 | 0.67 | 7.30 | 3/5 | 7.9 | Answer covers recording completion and evidence but omits foreign‑key linkage and overall completion percentage derivation. |
+| 6 | small | Fixed | Q6 | FIX-015 (B22+B23); FIX-011 (B16+B17); FIX-004 (B05+B06) | 0.67 | 0.33 | 8.43 | 3/5 | 9.9 | Answer correctly covers protection and validation mechanisms but omits the fallback/error‑handling details. |
+| 7 | small | Overlap | Q1 | OVL-005 (B07+B08); OVL-001 (B01+B02); OVL-002 (B02+B03) | 0.40 | 0.33 | 6.29 | 2/5 | 10.5 | **Cut off at 220 tokens.** Answer covers blueprint and skill catalog but omits gap calculation, ranking logic, and PreparationPlan, and is cut off mid-sentence. |
+| 8 | small | Overlap | Q2 | OVL-008 (B11+B12); OVL-007 (B10+B11); OVL-006 (B08+B09) | 1.00 | 0.67 | 6.74 | 3/5 | 6.4 | The answer covers most key points but omits the zero‑required‑level rule and the non‑prediction nature, and lacks citations for several claims. |
+| 9 | small | Overlap | Q3 | OVL-004 (B05+B06); OVL-003 (B04+B05); OVL-001 (B01+B02) | 1.00 | 0.67 | 7.64 | 3/4 | 10.5 | **Cut off at 220 tokens.** Answer covers target role, resume, experience level, and interview deadline but omits the interests and target company details required for the experience point, and ends abruptly with an incomplete sentence. |
+| 10 | small | Overlap | Q4 | OVL-012 (B17+B18); OVL-011 (B16+B17); OVL-001 (B01+B02) | 1.00 | 0.67 | 7.30 | 3/5 | 9.6 | Answer covers core STAR evaluation and feedback but omits spoken rehearsal details and the candidate's own words aspect. |
+| 11 | small | Overlap | Q5 | OVL-014 (B20+B21); OVL-008 (B11+B12); OVL-011 (B16+B17) | 0.25 | 0.33 | 7.30 | 3/5 | 6.0 | Answer covers recording completion and evidence but omits foreign‑key link and completion‑percentage derivation. |
+| 12 | small | Overlap | Q6 | OVL-015 (B22+B23); OVL-016 (B23+B24); OVL-012 (B17+B18) | 1.00 | 0.67 | 6.29 | 3/5 | 10.5 | **Cut off at 220 tokens.** Answer covers the first three key points but omits fallback handling and is truncated, reducing clarity. |
+| 13 | small | Hybrid | Q1 | HYB-003 (B07+B08+B09); HYB-001 (B01+B02+B03); HYB-006 (B16+B17+B18) | 0.60 | 0.33 | 7.30 | 3/5 | 11.3 | **Cut off at 220 tokens.** Answer covers blueprint creation, catalog usage, and ranking logic but omits the gap computation detail and the PreparationPlan output. |
+| 14 | small | Hybrid | Q2 | HYB-004 (B10+B11+B12); HYB-005 (B13+B14+B15); HYB-007 (B19+B20+B21) | 1.00 | 0.33 | 8.43 | 3/5 | 6.8 | Answer covers calculation, zero-assessment case, and anti-compensation rationale, but omits the zero‑required‑level rule and the statement that readiness measures progress, not hiring prediction. |
+| 15 | small | Hybrid | Q3 | HYB-002 (B04+B05+B06); HYB-001 (B01+B02+B03); HYB-003 (B07+B08+B09) | 1.00 | 0.33 | 7.64 | 3/4 | 11.4 | **Cut off at 220 tokens.** Answer covers most points but omits interests/target company from experience and ends with a truncated citation. |
+| 16 | small | Hybrid | Q4 | HYB-006 (B16+B17+B18); HYB-001 (B01+B02+B03); HYB-008 (B22+B23+B24) | 1.00 | 0.33 | 5.73 | 3/5 | 11.3 | **Cut off at 220 tokens.** The answer covers the core STAR evaluation and handling of vague/no‑result answers but omits the spoken‑rehearsal follow‑up aspect and is truncated, reducing clarity and structural completeness. |
+| 17 | small | Hybrid | Q5 | HYB-007 (B19+B20+B21); HYB-006 (B16+B17+B18); HYB-004 (B10+B11+B12) | 0.25 | 0.33 | 7.64 | 2/5 | 9.0 | Answer covers the first two key points but omits the foreign‑key link, the plan‑level completion percentage, and explicit mention of before‑and‑after ratings. |
+| 18 | small | Hybrid | Q6 | HYB-008 (B22+B23+B24); HYB-006 (B16+B17+B18); HYB-001 (B01+B02+B03) | 1.00 | 0.33 | 8.20 | 5/5 | 11.2 | **Cut off at 220 tokens.** Answer covers all key points but omits explicit mention of HTML escaping and is truncated, affecting clarity. |
+| 19 | base | Fixed | Q1 | FIX-005 (B07+B08); FIX-001 (B01+B02); FIX-006 (B08+B09) | 0.60 | 0.67 | 3.81 | 0/5 | 10.6 | **Cut off at 220 tokens.** The answer covers only fragments of the required points, omits key details about the skill catalog uniqueness, gap flooring, multiple target roles, and the PreparationPlan, and ends mid‑sentence with an incomplete citation. |
+| 20 | base | Fixed | Q2 | FIX-008 (B11+B12); FIX-007 (B10+B11); FIX-006 (B08+B09) | 1.00 | 0.67 | 8.09 | 3/5 | 6.5 | Answer covers calculation and anti‑compensation logic but omits zero‑required‑level handling and the non‑predictive nature of readiness. |
+| 21 | base | Fixed | Q3 | FIX-004 (B05+B06); FIX-003 (B04+B05); FIX-005 (B07+B08) | 1.00 | 0.67 | 8.20 | 3/4 | 10.2 | **Cut off at 220 tokens.** Answer covers target role, resume, and interview deadline correctly but omits interests and target company from experience details and ends with a truncated citation. |
+| 22 | base | Fixed | Q4 | FIX-012 (B17+B18); FIX-001 (B01+B02); FIX-015 (B22+B23) | 0.67 | 0.33 | 4.94 | 1/5 | 10.3 | **Cut off at 220 tokens.** The answer covers only the basic STAR breakdown and misses several key aspects of Beacon's evaluation process. |
+| 23 | base | Fixed | Q5 | FIX-014 (B20+B21); FIX-004 (B05+B06); FIX-013 (B19+B20) | 0.25 | 0.33 | 6.74 | 3/5 | 5.8 | Answer covers recording via TaskAttempt and evidence details but omits the foreign‑key link and overall completion percentage derivation. |
+| 24 | base | Fixed | Q6 | FIX-015 (B22+B23); FIX-004 (B05+B06); FIX-016 (B23+B24) | 1.00 | 0.67 | 5.16 | 3/5 | 10.1 | **Cut off at 220 tokens.** Answer covers protection and validation but omits fallback mechanisms, lacks citations for validation claims, and is truncated mid-sentence. |
+| 25 | base | Overlap | Q1 | OVL-005 (B07+B08); OVL-001 (B01+B02); OVL-006 (B08+B09) | 0.60 | 0.67 | 7.41 | 2/5 | 10.5 | **Cut off at 220 tokens.** Answer covers the blueprint creation and ranking logic but omits key details about the skill catalog, gap computation, and PreparationPlan, and is truncated mid-sentence. |
+| 26 | base | Overlap | Q2 | OVL-008 (B11+B12); OVL-007 (B10+B11); OVL-006 (B08+B09) | 1.00 | 0.67 | 6.74 | 3/5 | 6.5 | The answer covers most key points but omits the zero‑required‑level rule and the non‑prediction nature, and lacks citations for several claims. |
+| 27 | base | Overlap | Q3 | OVL-004 (B05+B06); OVL-003 (B04+B05); OVL-005 (B07+B08) | 1.00 | 0.67 | 9.21 | 3/4 | 10.6 | **Cut off at 220 tokens.** Answer covers all key points except missing details about interests and target company within the experience point. |
+| 28 | base | Overlap | Q4 | OVL-012 (B17+B18); OVL-014 (B20+B21); OVL-001 (B01+B02) | 0.67 | 0.33 | 7.07 | 4/5 | 10.5 | **Cut off at 220 tokens.** The answer covers most key points but omits the debrief step in spoken rehearsal and ends abruptly, affecting structure and clarity. |
+| 29 | base | Overlap | Q5 | OVL-014 (B20+B21); OVL-013 (B19+B20); OVL-002 (B02+B03) | 0.25 | 0.33 | 7.30 | 3/5 | 6.2 | Answer covers task completion evidence and rating evolution but omits foreign‑key link and plan‑level completion percentage. |
+| 30 | base | Overlap | Q6 | OVL-015 (B22+B23); OVL-016 (B23+B24); OVL-013 (B19+B20) | 1.00 | 0.67 | 5.73 | 3/5 | 10.5 | **Cut off at 220 tokens.** The answer covers the first three key points but omits specific fallback details and ends abruptly, leaving claims unsupported and the response incomplete. |
+| 31 | base | Hybrid | Q1 | HYB-003 (B07+B08+B09); HYB-001 (B01+B02+B03); HYB-002 (B04+B05+B06) | 0.60 | 0.33 | 5.50 | 2/5 | 11.2 | **Cut off at 220 tokens.** Answer covers blueprint and ranking but omits uniqueness constraints, gap floor, and PreparationPlan, and ends mid‑sentence. |
+| 32 | base | Hybrid | Q2 | HYB-004 (B10+B11+B12); HYB-003 (B07+B08+B09); HYB-005 (B13+B14+B15) | 1.00 | 0.33 | 8.43 | 3/5 | 7.1 | The answer covers most key points but omits the zero‑required‑level rule and the statement that readiness is not a hiring prediction. |
+| 33 | base | Hybrid | Q3 | HYB-002 (B04+B05+B06); HYB-003 (B07+B08+B09); HYB-001 (B01+B02+B03) | 1.00 | 0.33 | 5.95 | 3/4 | 11.2 | **Cut off at 220 tokens.** The answer covers most required information but omits interests/target company, contains incorrect citations, and is truncated mid‑sentence. |
+| 34 | base | Hybrid | Q4 | HYB-006 (B16+B17+B18); HYB-008 (B22+B23+B24); HYB-001 (B01+B02+B03) | 1.00 | 0.33 | 7.07 | 4/5 | 11.3 | **Cut off at 220 tokens.** The answer covers most evaluation aspects but omits the spoken rehearsal follow‑up and debrief component and is cut off mid‑sentence. |
+| 35 | base | Hybrid | Q5 | HYB-007 (B19+B20+B21); HYB-003 (B07+B08+B09); HYB-002 (B04+B05+B06) | 0.25 | 0.33 | 8.65 | 4/5 | 10.4 | The answer covers most key points but omits the derivation of overall completion percentage and includes an unsupported claim about linkage to CandidateProfile. |
+| 36 | base | Hybrid | Q6 | HYB-008 (B22+B23+B24); HYB-002 (B04+B05+B06); HYB-007 (B19+B20+B21) | 1.00 | 0.33 | 7.07 | 4/5 | 11.2 | **Cut off at 220 tokens.** Answer covers four of five key points but is truncated, affecting structure and clarity. |
+| 37 | large | Fixed | Q1 | FIX-005 (B07+B08); FIX-001 (B01+B02); FIX-002 (B02+B03) | 0.40 | 0.33 | 5.50 | 2/5 | 10.4 | **Cut off at 220 tokens.** Answer covers blueprint and skill catalog but omits gap computation, ranking logic, and PreparationPlan, and is cut off mid-sentence. |
+| 38 | large | Fixed | Q2 | FIX-008 (B11+B12); FIX-007 (B10+B11); FIX-006 (B08+B09) | 1.00 | 0.67 | 8.09 | 3/5 | 6.4 | Answer covers calculation and anti‑compensation logic but omits zero‑required‑level handling and the non‑predictive nature of readiness. |
+| 39 | large | Fixed | Q3 | FIX-003 (B04+B05); FIX-004 (B05+B06); FIX-002 (B02+B03) | 1.00 | 0.67 | 7.64 | 3/4 | 10.1 | **Cut off at 220 tokens.** The answer covers most required points but omits interests/target company from experience details, includes an unsupported claim about optional primary concern, and is truncated mid‑sentence. |
+| 40 | large | Fixed | Q4 | FIX-011 (B16+B17); FIX-012 (B17+B18); FIX-002 (B02+B03) | 1.00 | 0.67 | 7.64 | 2/5 | 8.2 | The answer covers the core STAR breakdown and feedback mechanisms but omits several nuanced aspects of the evaluation process, such as the word‑count irrelevance, action‑vs‑result distinction, and spoken‑rehearsal follow‑up behavior. |
+| 41 | large | Fixed | Q5 | FIX-002 (B02+B03); FIX-001 (B01+B02); FIX-014 (B20+B21) | 0.25 | 0.33 | 6.51 | 2/5 | 5.7 | Answer covers the core completion logic and evidence storage but omits the foreign‑key link, overall completion percentage derivation, and explicit skill‑rating update mechanism. |
+| 42 | large | Fixed | Q6 | FIX-015 (B22+B23); FIX-002 (B02+B03); FIX-001 (B01+B02) | 0.67 | 0.33 | 7.64 | 2/5 | 9.2 | Answer correctly describes the data‑block protection and system‑prompt safeguards, and covers validation basics, but omits HTML escaping, validation‑failure fallback, and the deterministic LLM_ENABLED=false fallback. |
+| 43 | large | Overlap | Q1 | OVL-005 (B07+B08); OVL-001 (B01+B02); OVL-002 (B02+B03) | 0.40 | 0.33 | 6.29 | 2/5 | 10.5 | **Cut off at 220 tokens.** Answer covers blueprint and skill catalog but omits gap calculation, ranking logic, and PreparationPlan, and is cut off mid-sentence. |
+| 44 | large | Overlap | Q2 | OVL-008 (B11+B12); OVL-007 (B10+B11); OVL-006 (B08+B09) | 1.00 | 0.67 | 6.74 | 3/5 | 6.6 | The answer covers most key points but omits the zero‑required‑level rule and the non‑prediction nature, and lacks citations for several claims. |
+| 45 | large | Overlap | Q3 | OVL-003 (B04+B05); OVL-004 (B05+B06); OVL-002 (B02+B03) | 1.00 | 0.67 | 5.73 | 2/4 | 10.7 | **Cut off at 220 tokens.** The answer covers target role and resume fully but omits interests/target company and the preparation timeline, and ends with an incomplete citation. |
+| 46 | large | Overlap | Q4 | OVL-012 (B17+B18); OVL-011 (B16+B17); OVL-002 (B02+B03) | 1.00 | 0.67 | 7.07 | 4/5 | 10.5 | **Cut off at 220 tokens.** The answer covers most key points but omits the spoken rehearsal aspect and is truncated, affecting structure and clarity. |
+| 47 | large | Overlap | Q5 | OVL-002 (B02+B03); OVL-001 (B01+B02); OVL-014 (B20+B21) | 0.25 | 0.33 | 7.30 | 3/5 | 5.5 | Answer covers recording completion and evidence details but omits the foreign‑key link and how overall plan completion is derived. |
+| 48 | large | Overlap | Q6 | OVL-015 (B22+B23); OVL-002 (B02+B03); OVL-012 (B17+B18) | 0.67 | 0.33 | 8.43 | 3/5 | 10.7 | **Cut off at 220 tokens.** Answer covers protection and validation well but omits the deterministic LLM_ENABLED=false fallback and only partially mentions the fallback-on-failure detail. |
+| 49 | large | Hybrid | Q1 | HYB-003 (B07+B08+B09); HYB-001 (B01+B02+B03); HYB-002 (B04+B05+B06) | 0.60 | 0.33 | 5.50 | 2/5 | 11.3 | **Cut off at 220 tokens.** Answer covers blueprint and ranking but omits uniqueness constraints, gap floor, and PreparationPlan, and ends mid‑sentence. |
+| 50 | large | Hybrid | Q2 | HYB-004 (B10+B11+B12); HYB-003 (B07+B08+B09); HYB-007 (B19+B20+B21) | 1.00 | 0.33 | 7.86 | 3/5 | 7.1 | Answer covers calculation and capping rationale but omits the zero‑required‑level rule and the non‑predictive nature of readiness. |
+| 51 | large | Hybrid | Q3 | HYB-002 (B04+B05+B06); HYB-001 (B01+B02+B03); HYB-003 (B07+B08+B09) | 1.00 | 0.33 | 7.64 | 3/4 | 11.4 | **Cut off at 220 tokens.** Answer covers most points but omits interests/target company from experience and ends with a truncated citation. |
+| 52 | large | Hybrid | Q4 | HYB-006 (B16+B17+B18); HYB-001 (B01+B02+B03); HYB-009 (B25+B26+B27) | 1.00 | 0.33 | 6.51 | 4/5 | 11.4 | **Cut off at 220 tokens.** The answer covers most key points but omits the spoken rehearsal aspect and is truncated mid‑sentence, affecting clarity and instruction adherence. |
+| 53 | large | Hybrid | Q5 | HYB-001 (B01+B02+B03); HYB-007 (B19+B20+B21); HYB-006 (B16+B17+B18) | 0.25 | 0.33 | 9.21 | 4/5 | 7.2 | The answer covers all key points except the derivation of the plan’s overall completion percentage. |
+| 54 | large | Hybrid | Q6 | HYB-008 (B22+B23+B24); HYB-001 (B01+B02+B03); HYB-006 (B16+B17+B18) | 1.00 | 0.33 | 8.20 | 4/5 | 11.5 | **Cut off at 220 tokens.** Answer covers protection and validation well but omits details about the LLM_ENABLED=false fallback and is cut off mid-sentence. |
 
 ### Step 2.3: Compare Embedding Models (20 pts)
 
-Use `configuration_summary.csv` and aggregate the metrics across chunking strategies. Discuss:
+| Embedding model | Context recall | Context precision | Context F1 | Answer quality (1–10) | Passage embedding (s, per strategy) | Query retrieval (s) |
+|---|---:|---:|---:|---:|---:|---:|
+| BGE small (384) | 0.806 | 0.500 | **0.597** | 7.18 | 0.33 | **0.010** |
+| BGE base (768) | 0.771 | 0.481 | 0.569 | 6.84 | 0.38 | 0.041 |
+| BGE large (1024) | 0.749 | 0.444 | 0.539 | 7.19 | 0.87 | 0.089 |
 
-- Whether 384 → 768 → 1024 dimensions increased context recall or precision.
-- Whether answer keyword coverage and blinded human ratings moved in the same direction as retrieval metrics.
-- Whether a larger embedding model improved quality enough to justify greater embedding compute, storage, and latency.
-- Whether any query behaved differently from the overall average.
-
-**Finding:** [Insert the measured comparison. Do not assume the largest model wins.]
+- **Retrieval quality:** it went *down* as embedding size went up. Context F1 was 0.597 → 0.569 → 0.539 and recall 0.806 → 0.771 → 0.749. The clearest single case is Q1 with fixed chunks. The small model ranked FIX-006 (B08+B09, skill-gap prioritisation) third, at similarity 0.794. The large model ranked two product-overview chunks above it, FIX-001 at 0.783 and FIX-002 at 0.768, so recall fell from 0.60 to 0.40.
+- **Answer quality:** flat. Small 7.18, base 6.84 and large 7.19 all lie within the judge's ±0.7 noise. Answer quality depended far more on whether the answer was cut off (see Part 3) than on the embedding model.
+- **Did larger embeddings always perform better? No.** On a 3,000-word corpus with distinct, well-separated topics, the 384-dimension model already separates the sections. The larger models added cost (2.6× the passage-embedding time, 9× the query retrieval time, 2.7× the bytes per vector) and no measurable benefit. Bigger embeddings pay off when many passages are near-duplicates or the vocabulary is subtle, which this corpus is not.
 
 ### Step 2.4: Compare Chunking Strategies (20 pts)
 
-Compare the three strategies across the same embedding model and query. Discuss:
+| Chunking | Chunks | Mean words / chunk | Context recall | Context precision | Context F1 | Answer quality (1–10) | Prompt tokens | Latency (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Fixed length | 20 | ~150 | 0.769 | **0.556** | **0.635** | 6.81 | **755** | **8.83** |
+| Overlapping paragraphs | 20 | ~205 | 0.749 | 0.537 | 0.617 | 7.03 | 935 | 9.04 |
+| Hybrid (whole section) | 10 | ~305 | **0.808** | 0.333 | 0.452 | **7.36** | 1,310 | 10.19 |
 
-- Whether fixed chunks were more precise but occasionally missed neighboring explanation.
-- Whether overlap increased evidence recall while duplicating content or increasing noise.
-- Whether hybrid chunks preserved complete concepts but returned broader context.
-- How retrieved-context differences affected the grounded answer and its citations.
-
-**Finding:** [Insert the measured comparison and cite specific query IDs/chunk IDs.]
+- **Which worked better?** It depends on the measure. Fixed-length chunking had the best retrieval F1 and was the cheapest and fastest. Hybrid had the best recall and the best answers (7.36, a margin of 0.3–0.5 that is inside judge noise). **For the final answer, hybrid is the better choice for this corpus. For retrieval efficiency, fixed is.**
+- **Why hybrid looks worst on precision:** a hybrid chunk is a whole section (3 paragraphs). Most questions' evidence lives in one section, so at most one of the three retrieved chunks can be relevant, and **precision is capped at 0.33 by construction**, the exact value hybrid scored for every model. The same property gives it high recall: one hit brings in the entire section, including neighbouring paragraphs the question needs (e.g. B10–B12 for Q2).
+- **Effect on retrieval relevance:** in this corpus, fixed-length and overlapping chunks cover almost the same spans. A 180-word sentence-packed chunk usually spans two ~100-word paragraphs, so FIX-00*n* and OVL-00*n* contain the same paragraph pairs. That is why they score identically with the base and large models. Overlap's extra repeated paragraph raised prompt size by 24% without improving recall.
+- **Effect on final answers:** larger chunks give the generator complete explanations, which helped answer completeness. Retrieval F1 and answer quality are essentially uncorrelated (r ≈ 0.0) across the 54 runs. **Optimising retrieval metrics alone would have chosen the configuration with the weakest answers.** Hybrid's larger prompts cost +555 input tokens and +1.4 s per query compared with fixed.
 
 ### Step 2.5: Data Scaling Experiment (10 pts)
 
-The notebook compares the first 18 paragraphs (smaller subset) with the full 30-paragraph corpus. It uses three queries whose gold evidence is contained in both datasets. `outputs/scaling_results.csv` reports context recall, precision, noise, keyword coverage, and latency.
+BGE base, hybrid chunking, Q1–Q3 (whose evidence is in both corpora), top-k 3:
 
-| Dataset | Paragraphs | Mean context recall | Mean context precision | Mean noise rate | Mean answer keyword coverage | Mean total latency (s) |
-|---|---:|---:|---:|---:|---:|---:|
-| Smaller subset | 18 | — | — | — | — | — |
-| Full corpus | 30 | — | — | — | — | — |
+| Dataset | Paragraphs | Chunks | Context recall | Context precision | Noise rate | Keyword coverage | Latency (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Smaller subset | 18 | 6 | 0.867 | 0.333 | 0.667 | 0.667 | 9.86 |
+| Full corpus | 30 | 10 | 0.867 | 0.333 | 0.667 | 0.667 | 9.79 |
 
-**Finding:** [Explain whether adding paragraphs improved evidence coverage or introduced distractors. Separate the number of documents from their topical relevance.]
+- **Retrieval quality:** unchanged. The same three chunks were retrieved in the same order for all three questions (e.g. Q1: HYB-003, HYB-001, HYB-002 in both).
+- **Noise:** unchanged. The 12 added paragraphs (sections 7–10: retention, AI safety, architecture, operations) are on different topics from Q1–Q3, so none of them outranked the existing chunks. The noise that is present comes from the precision cap of hybrid chunks, not from corpus size.
+- **Latency:** unchanged. Exact search over 10 instead of 6 vectors is negligible.
+- **What this does and doesn't show:** adding *off-topic* documents did not hurt retrieval. Noise grows when the new documents are *near-topic* (e.g. a second document about readiness that contradicts the first). That is the case to test before adding, say, user-generated content to the index.
 
 ## Part 3: Failure Analysis & Improvement (60 pts)
 
 ### Step 3.1: Failure Cases (30 pts)
 
-Use `outputs/failure_candidates.csv` as a starting point, then inspect the corresponding full chunk texts in `outputs/retrieved_contexts.csv`. If fewer than three rows cross the provisional thresholds, discuss the three weakest near misses instead and label them as near misses.
+**Failure 1: wrong chunks retrieved (Q1, BGE large, fixed; row 37).** Recall 0.40, precision 0.33, 2/5 key points, quality 5.50, and the answer is cut off.
+Retrieved, in order: FIX-005 (B07+B08, blueprint and catalog) 0.810, **FIX-001 (B01+B02, product overview) 0.783, FIX-002 (B02+B03, product overview) 0.768**. The evidence for the second half of the question ("decide what a candidate should focus on next": B09 skill-gap prioritisation, B10 assessment, B13 plan) was never retrieved. The judge's missed points are the gap calculation, the ranking function, and the PreparationPlan. The answer filled the space with daily practice and spaced repetition from the overview chunk, which is true but not what was asked.
 
-| Case | Embedding / chunking | Query ID | Retrieved chunk IDs | Observed failure | Likely root cause | Evidence |
-|---|---|---|---|---|---|---|
-| 1 | [fill] | [fill] | [fill] | [wrong / incomplete / unsupported answer] | [chunking / embedding / query / prompt / generation] | [refer to exact retrieved text and answer] |
-| 2 | [fill] | [fill] | [fill] | [fill] | [fill] | [fill] |
-| 3 | [fill] | [fill] | [fill] | [fill] | [fill] | [fill] |
+**Failure 2: incomplete context (Q5, every configuration; e.g. BGE small, overlap; row 11).** Recall 0.25, 3/5 key points, quality 7.30.
+Retrieved: OVL-014 (B20+B21, coaching and progress evidence) 0.813, OVL-008 (B11+B12, assessment and readiness) 0.791, OVL-011 (B16+B17, practice) 0.775. **No configuration ever retrieved B13–B15**, the plan and task section that defines PlanTask status, completion date and `completion_percent`. Mean Q5 recall over all 9 configurations is 0.31. The answer stays within its context (no unsupported claims), but it misses the completion-percentage calculation and the TaskAttempt→PlanTask link. It is incomplete, not hallucinated.
+
+**Failure 3: correct context, broken answer (Q3, BGE base, fixed; row 21).** Recall **1.00**, precision 0.67, but the answer stops at `…distinguishing the profile from the login identity [FIX-00`. The judge still gives it 8.2, because everything before the cut is correct, but the closing point and its citation are lost.
+This is the most common failure: **32 of 54 answers (59%) hit the 220-token limit**, and the judge flagged 29 of them as cut off. Truncated answers average 6.66/10 against 7.66 for complete ones, with clarity 2.38 against 4.91. The worst score in the whole run, 3.81 (row 1), is a truncated Q1 answer whose last citation was lost. Losing it also made a supported claim look unsupported.
 
 ### Step 3.2: Root Cause Analysis (15 pts)
 
-Root-cause guide:
-
-- **Chunking:** the required explanation was split across chunks, merged with a different idea, or too broad to rank clearly.
-- **Embedding model:** semantically relevant language was not ranked highly even though the source passage existed and the query was clear.
-- **Query formulation:** the question omitted a key term, used an ambiguous phrase, or asked multiple questions at once.
-- **Prompt / generation:** relevant evidence was retrieved but the model ignored it, made an unsupported inference, or failed to cite its context.
-- **Knowledge-base coverage:** the requested answer was not present in the supplied project materials. Do not call this a retrieval failure when the corpus itself lacks the fact.
+| Failure | Chunking? | Embedding model? | Query formulation? | Root cause, with evidence |
+|---|---|---|---|---|
+| 1. Q1 wrong chunks | Partly. Fixed chunks split blueprint (B07–B08) from prioritisation (B09), so each half has to win on its own. | **Yes.** The same query and chunks with BGE small ranked FIX-006 third (0.794); BGE large preferred the generic overview (0.783, 0.768). | **Yes.** Two requests in one sentence; the vector is dominated by "Beacon… target role… personalized", the vocabulary of the overview paragraphs. | Embedding model plus a two-part query: the overview paragraphs act as "hub" passages that resemble every Beacon question. |
+| 2. Q5 incomplete context | Partly. In hybrid, B21 (progress evidence) shares a chunk with spaced repetition and coaching, diluting it. | No. All three models fail the same way. | **Yes, primarily.** The question says "preparation-task completion" and "evidence of skill progress"; the corpus says *PlanTask status*, *completed_at*, *completion_percent* and *TaskAttempt passed*. "Progress" and "evidence" match B20–B21 and the readiness paragraphs better than the plan/task section. | Vocabulary mismatch between how a user asks and how the knowledge base describes the data model. |
+| 3. Truncated answers | No: recall was 1.00. | No. | No. | **Generation configuration:** a fixed 220-token ceiling with no instruction about length. Qwen writes thorough answers with citations after every sentence and runs out of budget. Not a retrieval problem at all. |
 
 ### Step 3.3: System Improvement (15 pts)
 
-The notebook implements one controlled change: increase top-k from 3 to 5 for query Q1, while keeping BGE-base, hybrid chunking, the generation model, and prompt unchanged. Use `outputs/before_after_topk.csv`.
+Three changes were tried, each changing one thing and measured before and after. Two did not help and are reported as such.
 
-| Setting | top-k | Context recall | Context precision | Noise rate | Answer keyword coverage | Total latency (s) |
-|---|---:|---:|---:|---:|---:|---:|
-| Before | 3 | — | — | — | — | — |
-| After | 5 | — | — | — | — | — |
+**Attempt 1: top-k 3 → 5 (for failure 1; Q1, BGE base, hybrid).** It did not help.
 
-**Interpretation:** [State whether the change improved recall, whether precision/noise worsened, whether the answer improved, and whether extra context increased latency. If it did not improve the result, report that honestly and propose another fix.]
+| top-k | Retrieved | Recall | Precision | F1 | Noise | Latency (s) |
+|---:|---|---:|---:|---:|---:|---:|
+| 3 | HYB-003, HYB-001, HYB-002 | 0.60 | 0.33 | 0.43 | 0.67 | 11.29 |
+| 5 | + HYB-007, HYB-009 | 0.60 | 0.20 | 0.30 | 0.80 | 12.68 |
+
+The two extra chunks were spaced repetition (B19–B21) and architecture (B25–B27), not the missing B10/B13. More context added only noise, plus 1.4 s.
+
+**Attempt 2: query refinement by splitting two-part questions (for failures 1 and 2; all 9 configurations).** It did not help. Q1, Q2, Q5 and Q6 were split at the "and" joining their two requests, using only the question's own words. The original question and both parts each retrieved their top 10, the lists were fused with reciprocal rank fusion, and the top 3 were kept (`outputs/before_after_query_refinement.csv`).
+
+| Query | Recall before → after | Precision before → after | F1 before → after |
+|---|---|---|---|
+| Q1 | 0.533 → 0.467 | 0.444 → 0.370 | 0.475 → **0.404** |
+| Q2 | 1.000 → 1.000 | 0.556 → 0.556 | 0.700 → 0.700 |
+| Q5 | 0.306 → 0.306 | 0.370 → 0.370 | 0.332 → 0.332 |
+| Q6 | 0.889 → 0.852 | 0.444 → 0.407 | 0.581 → 0.542 |
+
+The sub-query "How does Beacon decide what a candidate should focus on next?" matched the *daily practice* paragraphs (FIX-011, OVL-011), not prioritisation. Q5's parts still never reached B13–B15. This confirms the root-cause analysis for failure 2: the problem is vocabulary, not question structure. Splitting a question can't fix words the corpus doesn't use. **Next experiment:** add a lexical retriever (BM25) alongside the dense one, or rewrite queries into the corpus's terms, and add synonyms such as "task completion → PlanTask status / completion_percent" to paragraph metadata.
+
+**Fix B: answer budget (for failure 3; every answer that hit the limit). It worked.** The same retrieved chunks and the same model were used, with one added instruction ("Answer in at most 150 words") and a 400-token ceiling instead of 220 (`outputs/before_after_answer_budget.csv`):
+
+| 32 answers that hit the limit | Before | After |
+|---|---:|---:|
+| Cut off by the token limit | 32 / 32 | **0 / 32** |
+| Flagged as truncated by the judge | 29 / 32 | **0 / 32** |
+| Mean output tokens | 220 | 173 |
+| Mean generation time (s) | 10.72 | **8.81 (−18%)** |
+| Judge clarity (1–5) | 2.38 | **4.88** |
+| Judge answer quality (1–10) | 6.66 | **7.71 (+1.05)** |
+| Answers that scored higher / lower | n/a | 23 higher, 9 lower |
+
+The gain is larger than the judge's ±0.7 noise and is consistent: 23 of 32 answers improved. The fix was also *cheaper and faster*, because the model now plans a complete short answer instead of being cut off mid-way. The trade-off: judge accuracy fell slightly (3.25 → 2.91), because a 150-word answer leaves out some secondary key points. A ~200-word budget is the next setting to try.
 
 ## Part 4: System Design Reflection (50 pts)
 
 ### Step 4.1: Cost Awareness (15 pts)
 
-- **Embedding dimension:** for float32 vectors, one vector uses approximately `dimensions × 4 bytes`. That is 1,536 bytes at 384 dimensions, 3,072 bytes at 768 dimensions, and 4,096 bytes at 1,024 dimensions. At this assignment's corpus size, vector storage is small; at larger scale, dimension affects index memory, disk storage, and similarity-computation cost.
-- **Chunk size:** smaller chunks create more vectors and index entries, increasing embedding work and index overhead. Larger chunks reduce the number of vectors but may retrieve irrelevant material and consume more LLM context tokens per result.
-- **Top-k:** increasing k normally increases retrieved text, input tokens, prompt processing, and generation latency. It can improve evidence coverage but may add noise and distract the generator.
-- **One-time versus per-query cost:** model download and loading are startup costs. Query embedding, vector search, and LLM generation recur per user query. The notebook reports model load separately from per-query latency.
+Measured in this run, from most to least important for Beacon:
+
+1. **Chunk size: the biggest per-query cost.** Retrieved chunks are pasted into the prompt, so chunk size times top-k sets the LLM input. Hybrid prompts averaged **1,310 input tokens against 755 for fixed (+73%)**, and generation took 10.1 s against 8.8 s. LLM tokens are the dominant recurring cost of a RAG system, so this matters more than anything about the vector index. Smaller chunks create more vectors (20 against 10 here), but that is a one-time ingestion cost.
+2. **Top-k: multiplies the same cost.** Going from 3 to 5 added two whole chunks (about +600 tokens with hybrid) and +1.4 s, and reduced quality (Attempt 1). Top-k should be the smallest value that reaches the evidence.
+3. **Embedding size: matters for storage and search at scale, barely at all here.** A float32 vector is 1,536 / 3,072 / 4,096 bytes at 384 / 768 / 1,024 dimensions. Passage embedding took 2.6× longer and query search 9× longer for large than small. At 10 chunks that is milliseconds. At 10 million chunks it means 15 GB against 41 GB of index RAM and proportionally slower search, so the measured result (small is at least as good) is also the cheap choice.
+4. **Output length:** Fix B showed that bounding the answer *cut* generation time by 18%, so the prompt is a cost lever too.
 
 ### Step 4.2: RAG vs Alternatives (15 pts)
 
-| Approach | When to use | Beacon example | Main trade-off |
+| Approach | When to use | Beacon example | Trade-off |
 |---|---|---|---|
-| RAG | Answers need to be grounded in changing or inspectable project knowledge and source evidence should be shown | Explain how CandidateProfile, SkillAssessment, task progress, or Beacon features work | Adds retrieval/indexing complexity; quality depends on corpus, chunks, and embeddings |
-| Fine-tuning | Desired behavior, style, or task format should be learned from many representative examples | Train a coach to consistently grade STAR answers using a curated dataset of reviewed examples | Requires quality training data and retraining; does not automatically provide up-to-date project facts |
-| Pure prompting | Task is self-contained and required facts fit in the prompt | Ask the model to rewrite a supplied practice answer or produce a one-off explanation from a provided profile | No retrieval setup, but the model cannot reliably know private or changing project facts not included in the prompt |
+| **RAG** | Answers must be grounded in facts that change or must be cited, and the fact base is too large for one prompt | "How is my readiness calculated?", "What does a mock interview report contain?", answered from Beacon's own documentation with chunk citations | Quality depends on retrieval (Failures 1–2); adds an index to maintain and ~1,000 prompt tokens per query |
+| **Fine-tuning** | A *behaviour* or *format* must be consistent across thousands of calls, and labelled examples exist | Grading STAR answers in Beacon's exact rubric and JSON shape (the A7 small-model work) | Needs curated training data and retraining when the behaviour changes; poor at storing facts that change, such as product details |
+| **Pure prompting** | The task is self-contained and everything needed fits in the prompt | Rewriting a user's own answer more concisely; generating a practice question from a role title | Cheapest and simplest, but the model can't know Beacon-specific or private facts it isn't given, and it will guess |
 
-RAG is appropriate for this assignment because the objective is to retrieve Beacon-specific knowledge and inspect how retrieval changes the generated answer. Fine-tuning and prompting solve different problems and are not mutually exclusive with RAG.
+Beacon already uses all three. Pure prompting writes practice questions, a prompted grader with a validated schema grades answers (fine-tuning is the A7 option for it), and RAG suits questions about the product and the person's own data.
 
-### Step 4.3: System Design (20 pts) — Scale to 10K users/day
+### Step 4.3: System Design (20 pts) — scaling to 10,000 users/day
 
-The team's A7 system-design document estimated five AI jobs per active user per day for its earlier Beacon workload. At 10,000 daily active users, that was approximately 50,000 AI jobs/day and 16–19 million tokens/day under the A7 token assumptions. These are A7 planning estimates, not measurements of the new RAG feature; RAG context adds input tokens and must be measured separately.
+**Diagram**
 
-A production design should:
+```mermaid
+flowchart LR
+    U[User] --> Q[Query: Django view]
+    Q --> C{Answer cache<br/>hit?}
+    C -- yes --> R[Response]
+    C -- no --> E[Query embedding<br/>BGE small, batched]
+    E --> V[(Vector store<br/>pgvector / FAISS<br/>versioned index)]
+    V --> X[Retrieved context<br/>top-3 chunks + citations]
+    X --> L[LLM: Qwen3-4B<br/>on vLLM, continuous batching]
+    L --> G[Validate: citations exist,<br/>length, JSON schema]
+    G --> R
+    G -. failure .-> F[Fallback: offline answer<br/>or 'not documented']
+    D[Docs and data changes] --> I[Ingestion worker:<br/>chunk, embed changed paragraphs only] --> V
+```
 
-1. **Separate web traffic from inference:** keep Django web workers stateless where possible and send RAG requests to an inference service behind a queue.
-2. **Persist and version the index:** store embeddings and chunk metadata in a persistent vector store; re-embed only changed source paragraphs and keep a corpus/index version for reproducibility.
-3. **Batch and cache embeddings:** batch ingestion and query embedding where latency allows; cache embeddings for identical normalized queries and unchanged documents.
-4. **Control generation throughput:** use bounded queues, request timeouts, concurrency limits, and a GPU inference server with dynamic batching. Apply backpressure rather than allowing memory exhaustion.
-5. **Protect candidate data:** keep candidate-specific data behind authentication and row-level authorization; separate shared Beacon product knowledge from private resumes, answers, and progress records.
-6. **Measure quality and operations:** track recall/precision on a reviewed query set, citation support, p50/p95 latency, token use, queue depth, error rate, and model/index versions.
-7. **Degrade safely:** if retrieval returns no relevant context, say that the knowledge base does not document the answer. If generation fails, use the existing transparent fallback pattern rather than fabricate an answer.
+`User → Query → Embedding → Vector Store → Retrieved Context → LLM → Response`, plus the three things production needs: a cache in front, validation behind, and an ingestion path that keeps the index current.
 
-### Additional design priorities
+**Load at 10,000 users/day.** Assume 3 RAG questions per active user per day, so 30,000 queries/day. At about 1,000 input + 180 output tokens each (measured), that is **~35 million tokens/day**. Spread over a 12-hour active day with a 3× peak, it is about 2 queries/s at peak. Each answer took ~9 s *unbatched* on one laptop GPU, so serving sequentially would need ~20 parallel workers at peak. The design therefore serves the model with **continuous batching** (vLLM on one data-centre GPU handles dozens of concurrent requests), or uses a hosted API.
 
-For the prototype, optimize retrieval relevance and evidence visibility before tuning infrastructure. Once a chunking/embedding combination is selected, optimize index persistence, ingestion caching, query batching, and top-k. At production scale, generation throughput and concurrency will likely dominate compute cost, while vector storage remains relatively modest for a Beacon product knowledge base. Candidate-specific privacy controls are a design requirement, not an optional optimization.
+**What I would optimise, in order (from the measurements):**
+1. **Generation, which is 99% of latency.** Retrieval took 0.01–0.09 s against ~9 s of generation. Batch on a GPU server, stream tokens to the user, and keep the 150–200-word budget from Fix B, which cut generation time by 18%.
+2. **Prompt size.** Use BGE small with top-3 and section-sized chunks only where the answer quality justifies the +73% tokens. Cache answers to frequent questions (product FAQs repeat across users); embeddings of unchanged paragraphs are cached by content hash.
+3. **Retrieval recall.** Add BM25 hybrid search and a synonym map to fix the vocabulary-mismatch failure (Failure 2). Down-weight the generic overview paragraphs that crowd out specific evidence (Failure 1).
+4. **Safety and privacy.** Keep the shared product-knowledge index separate from per-user data. Any personal retrieval (a user's own answers or plans) is filtered by user ID *inside* the vector query, so one user's data can never be retrieved for another.
+5. **Monitoring.** Re-run this notebook's six-question benchmark on each index or model change, and alert on recall drops, the truncation rate, p95 latency and token spend.
 
-## 7. Limitations
+## Limitations
 
-- The supplied Beacon corpus is documentation-derived and intentionally excludes real user data. It supports product and data-model questions, not personalized career advice for a real candidate.
-- The fixed paragraph gold labels are manually curated for this assignment. They are useful for repeatable evaluation but do not represent every possible relevant chunk.
-- Keyword coverage is a lexical proxy. Human ratings and source inspection are required for semantic answer quality.
-- Local latency depends on GPU/CPU, OS, PyTorch build, thermals, memory pressure, and model cache state. Compare configurations on the same machine and report hardware with the results.
-- The notebook uses an exact NumPy index because the corpus is small. A production 10K-user system needs a persistent, concurrency-safe index and an inference-serving layer.
-
-## 8. References
-
-- Beacon product README supplied by the team.
-- Beacon `models.py` supplied by the team.
-- Team A7 `system_design.md` and A6/A7 model-selection notebook supplied by the team.
-- [BGE small v1.5 model card](https://huggingface.co/BAAI/bge-small-en-v1.5).
-- [BGE base v1.5 model card](https://huggingface.co/BAAI/bge-base-en-v1.5).
-- [BGE large v1.5 model card](https://huggingface.co/BAAI/bge-large-en-v1.5).
-- [Qwen3-4B-Instruct-2507 model card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507).
+- **Answer quality comes from an LLM judge, not humans.** It is independent of the generator, uses fixed checklists, and its noise was measured (±0.7), but it can misread a case (row 1). The human-rating columns remain in `outputs/answer_quality_review_template.csv` for a reviewer to add.
+- Six questions and one 30-paragraph corpus. Differences of a few hundredths in recall are one chunk on one question. The conclusions above rest on patterns that repeat across configurations.
+- Gold labels were assigned by hand and may be stricter or looser than a reader would be.
+- Latency is from one Apple M4 Pro (MPS, FP16). The team's first run on an RTX 5090 retrieved identical chunks for all 54 cases, and 45 of 54 answers were word-for-word identical.
