@@ -49,5 +49,3 @@ research/model-selection-lab/.ipynb_checkpoints/
 # Packaged copies of research folders (built locally, not tracked)
 research/*.zip
 
-# Course submission notes, kept out of the repository
-canvas-submission*
