@@ -28,7 +28,7 @@
       <div class="bar mt-8"><span style="width:{% widthratio ai_site ai_site_cap 100 %}%"></span></div>
     </div>
     <p class="small muted mt-16">{{ stats.offline_share }}% of questions in the last 24h came from the offline fallback.</p>
-    {% if ai.state == "paused" %}
+    {% if ai.state == "paused" or ai.state == "slow" %}
     <form method="post" action="{% url 'support:resume_ai' %}" class="mt-16">{% csrf_token %}
       <button class="btn" type="submit">Resume AI now</button>
       <p class="small muted mt-8">Beacon pauses AI for 5 minutes after the provider fails. Resume once it's fixed.</p>

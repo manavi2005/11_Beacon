@@ -104,7 +104,8 @@ def _generate(profile, skill, kind, difficulty, is_review):
     if avoid:
         lines.append("Do NOT repeat or lightly reword any of these earlier prompts:\n- "
                      + "\n- ".join(p[:160] for p in avoid))
-    data = ai.ask_json(SYSTEM, "\n".join(lines), temperature=0.9)
+    data = ai.ask_json(SYSTEM, "\n".join(lines), temperature=0.9,
+                       budget=ai.BUDGETS["card"], interactive=True)
     prompt = ai.clean(data.get("prompt"), 700)
     if not prompt:
         raise ai.Unavailable("No prompt.")
@@ -192,7 +193,7 @@ def _ai_grade(card, answer):
         + ('"star": {"situation", "task", "action", "result"} each 0-100, ' if story else "")
         + '"model_answer": a stronger version of THEIR answer in under 120 words, keeping their real '
         'details}',
-        temperature=0.3,
+        temperature=0.3, budget=ai.BUDGETS["grade"], interactive=True,
     )
     try:
         score = clamp(int(data.get("score")))

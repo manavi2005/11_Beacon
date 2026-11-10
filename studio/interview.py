@@ -106,6 +106,7 @@ def _ai_next(session, followed_up):
         "question: mix behavioural questions with ones specific to this role's real work. "
         'Return {"follow_up": true|false, "say": what you say next}',
         max_tokens=4000, temperature=0.8, timeout=45,
+        budget=ai.BUDGETS["interview"], interactive=True,
     )
     say = ai.clean(data.get("say"), 600)
     if not say:
@@ -161,7 +162,7 @@ def _ai_report(session):
         '"rewrite": {"question": the question they answered weakest, "stronger": a stronger '
         'answer using their real details, 5-7 sentences}, "next_step": one sentence on what to '
         "practise next}",
-        max_tokens=8000, temperature=0.3, timeout=90,
+        max_tokens=8000, temperature=0.3, timeout=90, budget=ai.BUDGETS["report"],
     )
     try:
         overall = clamp(int(data.get("overall")))

@@ -550,3 +550,77 @@ class RankingTests(TestCase):
         not_due = self.memory("Care planning", strength=10)
         plan = engine.queue([not_due, due], now=self.now)
         self.assertEqual(plan[0], due)
+
+
+@override_settings(LLM_ENABLED=True, LLM_API_KEY="", LLM_BASE_URL="https://x.test", LLM_MODEL="m",
+                   LLM_KEYLESS_BASE_URL="https://keyless.test")
+class SpeedTests(TestCase):
+    """A slow or rate-limited free provider must never hold a practice session hostage."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        from . import ai
+        cache.delete(ai.SLOW_KEY)
+        cache.delete(ai.DOWN_KEY)
+
+    tearDown = setUp
+
+    def test_budget_caps_retries_on_a_busy_free_tier(self):
+        import time
+        from unittest import mock
+        from preparation import coach
+        busy = mock.Mock(status_code=429)
+        with mock.patch.object(coach.requests, "post", return_value=busy) as post, \
+                mock.patch.object(coach.time, "sleep") as sleep:
+            with self.assertRaises(coach.CoachBusy):
+                coach._chat([{"role": "user", "content": "q"}], patient=True, budget=12)
+        # Without a budget it would wait 6 s and 10 s and try three times;
+        # with 12 s it may wait once at most and never starts a doomed retry.
+        self.assertLessEqual(post.call_count, 2)
+        self.assertLessEqual(sum(c.args[0] for c in sleep.call_args_list), 6)
+
+    def test_each_attempt_timeout_fits_inside_the_budget(self):
+        from unittest import mock
+        from preparation import coach
+        with mock.patch.object(coach.requests, "post", side_effect=coach.requests.Timeout) as post:
+            with self.assertRaises(coach.CoachError):
+                coach._chat([{"role": "user", "content": "q"}], timeout=60, budget=20)
+        self.assertLessEqual(post.call_args.kwargs["timeout"], 20)
+
+    def test_a_timeout_puts_interactive_features_in_slow_mode(self):
+        from unittest import mock
+        from preparation import coach
+        from . import ai
+        with mock.patch.object(coach, "_chat", side_effect=coach.CoachError("The AI coach took too long to answer.")):
+            with self.assertRaises(ai.Unavailable):
+                ai.ask_json("s", "u", interactive=True)
+        self.assertTrue(ai.slow())
+        self.assertTrue(ai.enabled())  # slow, not down: setup and reports still use the model
+        with mock.patch.object(coach, "_chat") as chat:
+            with self.assertRaises(ai.Unavailable):
+                ai.ask_json("s", "u", interactive=True)
+            chat.assert_not_called()  # instant fallback, no second wait
+            chat.return_value = '{"ok": 1}'
+            self.assertEqual(ai.ask_json("s", "u"), {"ok": 1})  # non-interactive still tries
+
+    def test_practice_card_is_instant_in_slow_mode(self):
+        import time
+        from unittest import mock
+        from django.core.cache import cache
+        from preparation import coach
+        from . import ai
+        User.objects.create_user("fast", password="pw-12345")
+        self.client.login(username="fast", password="pw-12345")
+        with override_settings(LLM_ENABLED=False):
+            bp = post_json(self.client, reverse("studio:start_blueprint"), {"role": "Pastry chef"}).json()
+            post_json(self.client, reverse("studio:start"), {"role": bp["title"], "blueprint": bp["slug"],
+                                                              "ratings": {s["name"]: 30 for s in bp["skills"]}})
+        self.client.get(reverse("studio:session"))
+        cache.set(ai.SLOW_KEY, "took too long", ai.SLOW_SECONDS)
+        with mock.patch.object(coach, "_chat") as chat:
+            t = time.monotonic()
+            r = post_json(self.client, reverse("studio:session_next"))
+            self.assertLess(time.monotonic() - t, 2)
+            chat.assert_not_called()
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("card", r.json())
