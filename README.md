@@ -19,26 +19,50 @@ Built by Manavi Chaudhry, Chu-Yun Hwang and Meet Kailash Mali.
 
 ## Run it
 
+Requires Python 3.11 and about 1 GB of disk for the Python packages, plus model downloads (below).
+
 ```bash
+git clone https://github.com/manavi2005/11_Beacon.git && cd 11_Beacon
 python3.11 -m venv .venv && source .venv/bin/activate
-pip install -r requirements-production.txt   # or requirements.txt to include the local model
-cp .env.example .env                          # set DJANGO_SECRET_KEY and LUMEN_API_KEY
+pip install -r requirements.txt     # includes torch, transformers, sentence-transformers
+cp .env.example .env                # then set DJANGO_SECRET_KEY (and optionally an AI key, below)
 python manage.py migrate
 python manage.py runserver
 ```
 
-Open <http://127.0.0.1:8000>, sign up, and type the role you're working toward.
+Open <http://127.0.0.1:8000>, sign up, and type the role you're working toward. To skip setup, `python manage.py seed_demo_data` adds demo accounts (see `preparation/management/commands/seed_demo_data.py`).
 
-### The AI provider
+`requirements-production.txt` is the same list without torch and transformers, for small hosts: everything still works, Ask Beacon uses keyword search, and answer screening is skipped.
 
-Every AI feature goes through one OpenAI-compatible endpoint configured in `.env`:
+### Using the AI features
+
+| Feature | Where | Try |
+|---|---|---|
+| **Ask Beacon** (retrieval over Beacon's guide, local embeddings) | **Ask** in the side bar, `/ask/` | "How is my readiness percentage calculated?" |
+| Practice questions and grading | **Practice**, `/session/` | Answer a question; feedback appears under it |
+| Mock interview with a STAR report | **Interview**, `/interview/` | Speak or type answers |
+| Coach chat | **Coach**, `/coach/` | "What should I focus on this week?" |
+| Resume reading and role suggestions | Setup, `/start/` | Upload a PDF resume |
+
+How each one works, the model choices and the evaluation are in **[README_AI.md](README_AI.md)**. To re-run the evaluation: `python manage.py evaluate_ask`.
+
+### Models and downloads
+
+No model weights are in the repository (`.gitignore` excludes `*.bin`, `*.safetensors`, `*.pt`, `*.pth`). Models download from Hugging Face into `~/.cache/huggingface` on first use:
+
+| Model | Used for | Size | When it downloads |
+|---|---|---:|---|
+| `BAAI/bge-small-en-v1.5` | Ask Beacon embeddings | ~130 MB | First question on `/ask/` (about 5 s to build the index) |
+| `Qwen/Qwen2.5-1.5B-Instruct` | Local answer screening in the weekly-plan tasks | ~3 GB | First screened answer; set `LOCAL_LLM_ENABLED=false` to skip |
+
+Text generation uses an open-weight model through one OpenAI-compatible endpoint configured in `.env`:
 
 | Setting | Effect |
 |---|---|
-| `LUMEN_API_KEY` | Uses UIUC NCSA Lumen (`nemotron-3-super-120b-a12b` by default, `LLM_MODEL` to change). Recommended. |
-| `LLM_API_KEY` + `LLM_BASE_URL` + `LLM_MODEL` | Any other OpenAI-compatible provider (Groq, OpenRouter, Hugging Face, Ollama). |
-| neither | A free, keyless public model. Slower, but everything works. |
-| `LLM_ENABLED=false` | No AI at all. Every feature falls back to transparent, field-neutral rules, which is how the tests run. |
+| `LUMEN_API_KEY` | UIUC NCSA Lumen, `nemotron-3-super-120b-a12b` (free for the university). Recommended locally. |
+| `LLM_API_KEY` | Groq's free tier, `openai/gpt-oss-120b` by default (`LLM_BASE_URL` and `LLM_MODEL` point it anywhere OpenAI-compatible, e.g. Ollama at `http://localhost:11434/v1`). |
+| neither | A free keyless public endpoint serving `gpt-oss-20b`. Slower, but everything works. |
+| `LLM_ENABLED=false` | No AI. Every feature falls back to transparent rules, which is how the tests run. |
 
 Keys live only in `.env`, which git ignores.
 
@@ -68,6 +92,7 @@ studio/          the product (v2)
   cards.py         fresh questions per person and skill; grading with feedback
   interview.py     mock interviewer turns and the STAR report
   chat.py          the coach, grounded in the person's own progress
+  knowledge/       Ask Beacon: guide, chunking, local embeddings, BM25, cited answers
   reminders.py     opt-in daily nudges
 support/         staff console: diagnosis and fixes per person, problem
                  reports, error log, append-only audit trail (/staff/)
@@ -75,7 +100,7 @@ beacon_core/security.py   rate limits, brute-force lockout, CSP and headers
 preparation/     the original data model (profiles, skills, assessments, plans),
                  public API, charts and the coach/cohort views
 templates/studio, static/studio   the design system and pages
-research/        model-selection labs, multi-model cost analysis, small-LM study
+research/        model-selection lab, multi-model cost analysis, small-LM study, RAG study
 docs/            AI system design, public API, deployment, project history
 ```
 
@@ -94,7 +119,8 @@ CI runs the same on every push.
 
 ## More
 
-- [How the AI features work](docs/ai-system.md)
+- [How the AI works: workflow, models, evaluation](README_AI.md)
+- [Prompting and output validation in detail](docs/ai-system.md)
 - [Public API](docs/public-api/README.md)
 - [Deploying](docs/deployment/DEPLOY.md)
 - [Security and abuse protection](docs/security.md)
