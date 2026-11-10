@@ -43,9 +43,12 @@ MAX_QUESTION_CHARS = 300
 # Below these, nothing in the guide is about the question, and Beacon says so
 # instead of letting the model improvise. Calibrated on 9 on-topic and 6
 # off-topic questions: bge-small similarity was 0.66+ on topic and 0.52 or
-# less off topic; keyword scores were 5.6+ on topic and 2.5 or less off.
+# less off topic. Keyword scores were 2.5 or less off topic; on topic they
+# reached as low as 3.5 for paraphrased questions ("Why does Beacon keep
+# asking me about skills I already practised?"), so the bar sits at 3.0.
+# At 4.0, keyword-only mode wrongly declined 2 of 5 realistic questions.
 MIN_DENSE_SIMILARITY = 0.60
-MIN_KEYWORD_SCORE = 4.0
+MIN_KEYWORD_SCORE = 3.0
 
 _lock = threading.Lock()
 _index = None  # built once per process on first use
