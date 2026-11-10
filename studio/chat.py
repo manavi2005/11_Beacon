@@ -57,7 +57,8 @@ def reply(profile, history, message):
     messages += history[-MAX_TURNS:]
     messages.append({"role": "user", "content": message})
     try:
-        return ai.ask_text(SYSTEM, messages, max_tokens=4000, temperature=0.6, timeout=60)
+        return ai.ask_text(SYSTEM, messages, max_tokens=4000, temperature=0.6, timeout=60,
+                           budget=ai.BUDGETS["chat"])
     except ai.Unavailable:
         return fallback(profile)
 

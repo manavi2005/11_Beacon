@@ -200,7 +200,8 @@ def get_blueprint(title, stage=""):
     try:
         # Generated once per role and stage while the person waits on a
         # loading screen, so it gets more time than a practice question.
-        data = _validate(ai.ask_json(SYSTEM, _prompt(title, stage, excerpts), timeout=120), title)
+        data = _validate(ai.ask_json(SYSTEM, _prompt(title, stage, excerpts), timeout=120,
+                                         budget=ai.BUDGETS["blueprint"]), title)
         source, label = RoleBlueprint.Source.AI, ai.label()
     except ai.Unavailable:
         if existing:
