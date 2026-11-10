@@ -237,7 +237,7 @@ ACCOUNT_EMAIL_VERIFICATION = "none"
 #
 # Three tiers, picked automatically:
 #   1. LLM_API_KEY set     -> LLM_BASE_URL / LLM_MODEL (default: Groq,
-#                             open-weight Llama 3.3 70B). Fast and reliable.
+#                             OpenAI's open-weight gpt-oss-120b). Fast and reliable.
 #   2. no key (default)    -> Pollinations' free anonymous tier, which needs no
 #                             account at all and serves OpenAI's open-weight
 #                             gpt-oss-20b. Slower and rate-limited, but it means
@@ -259,10 +259,12 @@ if LUMEN_API_KEY:
     LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "low")
 else:
     LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-    LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+    # Groq retired Llama 3.3 70B; gpt-oss-120b answers a practice question in
+    # under a second there. Low reasoning effort keeps replies short and fast.
+    LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")
     LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
     LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "Groq")
-    LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "")
+    LLM_REASONING_EFFORT = os.environ.get("LLM_REASONING_EFFORT", "low")
 # Speech-to-text for voice interviews (free on Lumen).
 LLM_SPEECH_MODEL = os.environ.get("LLM_SPEECH_MODEL", "granite-speech-4.1-2b-plus")
 LLM_KEYLESS_BASE_URL = os.environ.get("LLM_KEYLESS_BASE_URL", "https://text.pollinations.ai/openai")

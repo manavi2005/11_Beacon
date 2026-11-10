@@ -6,7 +6,7 @@ Two engines behind one interface, so the page never breaks:
          With no key it uses Pollinations' free anonymous tier (OpenAI's
          open-weight gpt-oss-20b, no account needed); with LLM_API_KEY set
          it uses LLM_BASE_URL / LLM_MODEL, by default Groq's free tier with
-         open-weight Llama 3.3 70B. Both are on PythonAnywhere's outbound
+         open-weight gpt-oss-120b. Both are on PythonAnywhere's outbound
          allowlist, so it works on the deployed site with no local model. Swapping provider later - Hugging
          Face, OpenRouter, Together, a self-hosted vLLM or Ollama - is a
          change of those three settings, not of this code, because they all
