@@ -1,7 +1,7 @@
 # Dependencies for multi_model_system.ipynb.
 #
 # Separate from the Django project's requirements.txt at the repository root:
-# P1-A7 Part 1 is a standalone benchmarking lab and shares no code with the
+# the multi-model benchmark is a standalone study and shares no code with the
 # web application.
 #
 #   python3.11 -m venv .venv
