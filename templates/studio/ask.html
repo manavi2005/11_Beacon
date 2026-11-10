@@ -1,0 +1,59 @@
+{% extends "studio/base.html" %}
+{% load studio_text %}
+{% block title %}Ask Beacon{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero__text">
+    <div class="eyebrow">Ask Beacon</div>
+    <h1 class="display">How does Beacon <em>work</em>?</h1>
+    <p class="lede">Ask anything about your plan, readiness, practice, interviews or your data. Answers come only from Beacon's guide, with the passages they're based on.</p>
+  </div>
+</section>
+
+<section class="card mt-24">
+  <form method="post" class="ask-form">{% csrf_token %}
+    <label class="sr-only" for="ask-q">Your question</label>
+    <input class="input" id="ask-q" name="question" value="{{ question }}" maxlength="300" autocomplete="off"
+           placeholder="e.g. How is my readiness percentage calculated?" autofocus>
+    <button class="btn btn--beam" type="submit">Ask</button>
+  </form>
+  {% if error %}<p class="care-note mt-16" role="alert">{{ error }}</p>{% endif %}
+  {% if not result %}
+  <div class="row mt-16">
+    {% for q in examples %}
+    <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="question" value="{{ q }}">
+      <button class="chip chip--button" type="submit">{{ q }}</button></form>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+{% if result %}
+<section class="card mt-24" aria-live="polite">
+  <div class="card__head">
+    <h2 class="h3">{{ result.question }}</h2>
+    {% if result.status == "answered" %}<span class="chip chip--good">Answered from the guide</span>
+    {% elif result.status == "not_covered" %}<span class="chip">Not in the guide</span>
+    {% else %}<span class="chip chip--beam">Passages only</span>{% endif %}
+  </div>
+  <div class="ask-answer">{{ result.answer|coach_html }}</div>
+  {% if result.status != "not_covered" %}
+  <h3 class="small muted mt-24">Based on these parts of the guide</h3>
+  <ol class="ask-sources">
+    {% for c in result.retrieval.chunks %}
+    <li{% if c.id in result.cited %} class="is-cited"{% endif %}>
+      <details{% if result.status == "passages_only" %} open{% endif %}>
+        <summary><strong>[{{ c.id }}] {{ c.section }}</strong>{% if c.id in result.cited %} <span class="chip chip--good">cited</span>{% endif %}</summary>
+        <p class="small">{{ c.text }}</p>
+      </details>
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+  <p class="small muted mt-16">
+    Search: {% if result.retrieval.mode == "hybrid" %}meaning + keywords{% elif result.retrieval.mode == "dense" %}meaning{% else %}keywords{% endif %}
+    ({{ result.retrieval_seconds|floatformat:2 }} s){% if result.model %} · Answer: {{ result.model }} ({{ result.generation_seconds|floatformat:1 }} s){% endif %}{% if embeddings is False %} · Embedding model unavailable here, so keyword search only.{% endif %}
+  </p>
+</section>
+{% endif %}
+{% endblock %}

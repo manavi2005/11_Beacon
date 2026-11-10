@@ -484,3 +484,15 @@ textarea.input { resize: vertical; line-height: 1.55; }
 .list form { margin: 0; flex: none; }
 .notices { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
 .notice { padding: 12px 16px; border-radius: 14px; background: rgba(111, 227, 176, .1); border: 1px solid rgba(111, 227, 176, .3); color: #c9f5e0; animation: rise .4s; }
+
+/* Ask Beacon */
+.ask-form { display: flex; gap: 10px; }
+.ask-form .input { flex: 1; }
+.chip--button { cursor: pointer; font: inherit; font-size: 13px; }
+.chip--button:hover { border-color: var(--beam-1); color: var(--text); }
+.ask-answer { font-size: 16px; line-height: 1.6; }
+.ask-sources { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.ask-sources summary { cursor: pointer; }
+.ask-sources li.is-cited summary strong { color: var(--text); }
+@media (max-width: 640px) { .ask-form { flex-direction: column; } }
+.inline-form { display: inline; margin: 0; }

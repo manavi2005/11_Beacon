@@ -19,3 +19,5 @@ vl-convert-python==1.9.0.post1
 accelerate>=1.0
 torch>=2.4
 transformers>=4.51
+# Ask Beacon embeddings (BAAI/bge-small-en-v1.5, ~130 MB, downloaded on first use).
+sentence-transformers>=3.4

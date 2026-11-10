@@ -31,7 +31,7 @@ from beacon_core import security
 from preparation import onboarding as v1_onboarding
 from preparation.models import CandidateProfile, PreparationPlan, SkillAssessment
 
-from . import about, ai, blueprint, cards, chat, engine, interview
+from . import about, ai, blueprint, cards, chat, engine, interview, knowledge
 from .templatetags.studio_text import coach_html
 from support.models import SupportTicket
 
@@ -657,3 +657,33 @@ def healthz(request):
          "ai": "paused" if paused else ("on" if ai.enabled() else "off")},
         status=200 if db_ok else 503,
     )
+
+
+# --------------------------------------------------------------------------
+# Ask Beacon: questions about how Beacon works, answered from its guide
+# --------------------------------------------------------------------------
+ASK_EXAMPLES = [
+    "How is my readiness percentage calculated?",
+    "How does Beacon decide what I should practise next?",
+    "How does Beacon review a STAR answer?",
+    "What happens to my resume after I upload it?",
+    "How does Beacon record that I finished a task?",
+]
+
+
+@login_required
+def ask_page(request):
+    """GET: the question form. POST: retrieve from the guide and answer."""
+    context = {"examples": ASK_EXAMPLES, "question": "", "result": None, "error": "",
+               "embeddings": None}
+    if request.method == "POST":
+        context["question"] = str(request.POST.get("question", ""))[:knowledge.MAX_QUESTION_CHARS + 50]
+        if security.hit("ai-user", request.user.pk, HOUR) > AI_ACTIONS_PER_HOUR:
+            context["error"] = BUSY
+        else:
+            try:
+                context["result"] = knowledge.ask(context["question"])
+            except knowledge.AskError as exc:
+                context["error"] = str(exc)
+        context["embeddings"] = knowledge.embeddings_available()
+    return render(request, "studio/ask.html", context)
