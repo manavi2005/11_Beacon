@@ -1,19 +1,17 @@
 """Views for the preparation app.
 
-Assignment 2, Section 2 requires four *kinds* of view. The four marked for
-grading are labelled below so the mapping is obvious to a reader:
+The skill catalog and plan pages use four *kinds* of Django view:
 
     1. FBV  - HttpResponse   -> skill_catalog_manual   (/skills/manual/)
     2. FBV  - render()       -> skill_catalog_render   (/skills/)
     3. CBV  - base View      -> PlanBoardView          (/plans/cbv-base/)
     4. CBV  - generic CBV    -> PlanTaskListView       (/tasks/)
 
-Everything else in this file is either the Part 4 dashboard (kept so the
-existing URL still works) or an extra generic CBV that was cheap to add.
+The dashboard (kept so the existing URL still works) and the extra generic
+CBVs sit alongside them.
 
 The two FBVs deliberately render the *same* template, so the only difference
-between them is how the response is plumbed - that is the whole point of the
-exercise, and it is also what Section 3 means by "template reuse".
+between them is how the response is plumbed, and the template is reused.
 """
 
 import csv
@@ -69,7 +67,7 @@ def _skill_context(request, view_label, explainer):
 
     Supports an optional ?q= filter. That filter is not decoration: passing a
     nonsense value (e.g. /skills/?q=zzzz) empties the queryset, which is how we
-    capture the empty-state screenshot Section 3 asks for without deleting any
+    show the empty state without deleting any
     rows from the database.
     """
     query = request.GET.get("q", "").strip()
@@ -213,7 +211,7 @@ class PlanTaskDetailView(DetailView):
 
 
 # ---------------------------------------------------------------------------
-# Part 4 dashboard (kept so the existing route keeps working)
+# Dashboard (kept so the existing route keeps working)
 # ---------------------------------------------------------------------------
 @login_required
 def dashboard(request):
@@ -266,7 +264,7 @@ def dashboard(request):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 1 - Detail pages, addressed by primary key
+# Detail pages, addressed by primary key
 #
 # Each list page links every row to its own detail page. The links are written
 # as {{ object.get_absolute_url }} rather than {% url %}, so the model decides
@@ -381,7 +379,7 @@ class CandidateListView(ListView):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2 - Search form 1: GET
+# Search form 1: GET
 #
 # The skill catalog is public reference data. A filtered view of it is worth
 # sharing, bookmarking and reloading, so the filter belongs in the URL:
@@ -455,7 +453,7 @@ def skill_search(request):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2 - Search form 2: POST
+# Search form 2: POST
 #
 # Candidate records are personal: real names, email addresses, the role
 # somebody is quietly job-hunting for. A GET search would write that straight
@@ -524,7 +522,7 @@ class CandidateSearchView(View):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2 - Aggregations
+# Aggregations
 # ---------------------------------------------------------------------------
 @login_required
 def insights(request):
@@ -613,7 +611,7 @@ def insights(request):
 
 
 # ---------------------------------------------------------------------------
-# SECTION 4 - Matplotlib charts served as PNG endpoints
+# Matplotlib charts served as PNG endpoints
 #
 # Each endpoint returns image/png rather than HTML, so the URL can be used
 # directly as the src of an <img>. The drawing itself lives in charts.py; the
@@ -748,17 +746,17 @@ def skill_api(request):
 
 
 # ===========================================================================
-# ASSIGNMENT 4
+# Charts, reports and market data
 # ===========================================================================
 # ---------------------------------------------------------------------------
-# Part 1.1 - Internal JSON API for charts
+# Internal JSON API for charts
 #
 # GET only, JSON only, rows straight from the models. Each response is a bare
 # array of flat records, which is what Vega-Lite's data: {url: ...} reads
 # without any format hints.
 #
 # Access-Control-Allow-Origin: * lets a page on another origin - the online
-# Vega-Lite editor, or a classmate's site - fetch these URLs from the
+# Vega-Lite editor, or another site - fetch these URLs from the
 # browser. That is safe here because the endpoints are read-only and return
 # no personal data: assessment rows carry scores, never names or emails.
 # ---------------------------------------------------------------------------
@@ -807,8 +805,7 @@ def public_api(view):
 def api_login_required(view):
     """A protected JSON endpoint: 401 with a JSON body when signed out.
 
-    Assignment 5 allows exactly one public API. Every other JSON endpoint
-    sits behind this. @login_required would not do here: it answers with a
+    Only one API is public. Every other JSON endpoint sits behind this. @login_required would not do here: it answers with a
     302 to the HTML login page, which a script, a spreadsheet or Vega-Lite
     would try to parse as data. A 401 says plainly what is wrong.
 
@@ -833,7 +830,7 @@ def api_login_required(view):
 
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 5, PART 3 - THE ONE PUBLIC API
+# The public API
 #
 # /api/skills/summary/ is the only endpoint that answers without a login.
 # It is the safe one to publish: every row is an aggregate over a skill
@@ -880,14 +877,14 @@ def api_assessments(request):
     """/api/assessments/ - one row per skill assessment. Protected.
 
     Anonymous rows (no names), but still one row per person per skill, so it
-    stays behind login: Assignment 5 allows one public API, and the
-    aggregated summary is the one to publish.
+    stays behind login: only one API is public, and the aggregated summary
+    is the one to publish.
     """
     return JsonResponse(vega.assessment_rows(), safe=False)
 
 
 # ---------------------------------------------------------------------------
-# Part 1.2 - Vega-Lite charts
+# Vega-Lite charts
 #
 # Every chart is reachable three ways:
 #   /vega-lite/                 both charts embedded in a page (vega-embed)
@@ -928,7 +925,7 @@ def vega_lite_png(request, number):
 
 
 # ---------------------------------------------------------------------------
-# Part 2 - External API (Jobicy), triangulated with internal skill gaps
+# External API (Jobicy), triangulated with internal skill gaps
 #
 # Two views over the same market.market_report():
 #   /api/market-demand/?q=<role>   the processed result as JSON
@@ -973,7 +970,7 @@ def market_page(request):
 
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 4, PART 3 - CSV and JSON exports, and the reports page
+# CSV and JSON exports, and the reports page
 #
 # Both exports describe the same model (CandidateProfile) and are built from
 # the same rows, in preparation/exports.py. The only thing that differs here
@@ -1060,7 +1057,7 @@ def reports_page(request):
     return render(request, "preparation/reports.html", context)
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 5, PART 1 - Internal Django Authentication
+# Authentication
 # ---------------------------------------------------------------------------
 
 def login_view(request):
@@ -1123,7 +1120,7 @@ def signup_view(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            # The backend has to be named explicitly. Part 2 added allauth's
+            # The backend has to be named explicitly. Google login added allauth's
             # backend alongside ModelBackend, and with more than one
             # configured Django cannot infer which authenticated a user that
             # came from form.save() rather than from authenticate(), so
@@ -1170,8 +1167,7 @@ def api_whoami(request):
 
     URL: /api/whoami/
 
-    Assignment 5 asks for at least one protected API. This returns 401 with a
-    JSON body rather than using @login_required, because that decorator
+    This returns 401 with a JSON body rather than using @login_required, because that decorator
     answers with a 302 to an HTML login page: fine for a browser, useless to
     anything parsing JSON, which sees a redirect to markup instead of an
     error it can act on.
@@ -1196,7 +1192,7 @@ def api_whoami(request):
 
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 5 - command palette data (Ctrl/Cmd+K)
+# Command palette data (Ctrl/Cmd+K)
 #
 # Protected like every API except the one public summary: the list carries
 # candidate names. The palette fetches it once, the first time it is opened,
@@ -1251,7 +1247,7 @@ def api_palette(request):
 
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 5 - the start-from-scratch journey
+# The start-from-scratch journey
 #
 #   /welcome/                    onboarding: goal + self-rating per skill
 #   /me/                         your readiness, gaps and week-by-week plan
@@ -1453,7 +1449,7 @@ def coach_ask(request):
 
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 6, PART 2.2 - THE LOCAL MODEL IN A VIEW
+# The local model in a view
 #
 # preparation/local_llm.py holds the weights in this process through the
 # transformers library. These two endpoints are the only places it is reached

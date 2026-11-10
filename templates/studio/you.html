@@ -11,7 +11,7 @@
     {% if profile %}
       <ul class="list mt-16">
         <li><span class="muted">Role</span><span>{{ profile.target_role }}</span></li>
-        <li><span class="muted">Organisation</span><span>{{ profile.target_company|default:"—" }}</span></li>
+        <li><span class="muted">Organisation</span><span>{{ profile.target_company|default:"Not set" }}</span></li>
         <li><span class="muted">Date</span><span>{{ profile.target_interview_date|default:"Not set" }}</span></li>
         <li><span class="muted">Stage</span><span>{{ profile.get_experience_level_display }}</span></li>
       </ul>

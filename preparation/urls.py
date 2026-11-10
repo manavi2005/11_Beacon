@@ -4,7 +4,7 @@ Every route carries a name= so templates and views can reverse them instead of
 hard-coding paths. Because app_name is set, the full reference is namespaced:
 {% url 'preparation:skill_catalog_render' %}.
 
-Section 2 routes (the four marked for grading):
+The four core catalog and plan routes, one per kind of Django view:
 
     /skills/manual/    -> FBV,  HttpResponse
     /skills/           -> FBV,  render()
@@ -19,31 +19,31 @@ from . import views
 app_name = "preparation"
 
 urlpatterns = [
-    # Part 4 dashboard
+    # Dashboard
     path("dashboard/", views.dashboard, name="dashboard"),
-    # --- Section 2: function-based views -----------------------------------
+    # --- Function-based views ----------------------------------------------
     path("skills/manual/", views.skill_catalog_manual, name="skill_catalog_manual"),
     path("skills/", views.skill_catalog_render, name="skill_catalog_render"),
-    # --- Section 2: class-based views --------------------------------------
+    # --- Class-based views -------------------------------------------------
     path("plans/cbv-base/", views.PlanBoardView.as_view(), name="plan_board"),
     path("tasks/create/", views.PlanTaskCreateView.as_view(), name="task_create"),
     path("tasks/", views.PlanTaskListView.as_view(), name="task_list"),
     # Extra generic CBV
     path("tasks/<int:pk>/", views.PlanTaskDetailView.as_view(), name="task_detail"),
     # =====================================================================
-    # ASSIGNMENT 3
+    # Detail pages, search, insights and charts
     # =====================================================================
-    # Section 1 - detail pages addressed by primary key
+    # Detail pages addressed by primary key
     path("skills/<int:pk>/", views.SkillDetailView.as_view(), name="skill_detail"),
     path("plans/<int:pk>/", views.PlanDetailView.as_view(), name="plan_detail"),
     path("candidates/", views.CandidateListView.as_view(), name="candidate_list"),
     path("candidates/<int:pk>/", views.CandidateDetailView.as_view(), name="candidate_detail"),
-    # Section 2 - the two search forms
+    # The two search forms
     path("search/skills/", views.skill_search, name="skill_search"),
     path("search/candidates/", views.CandidateSearchView.as_view(), name="candidate_search"),
-    # Section 2 - aggregations
+    # Aggregations
     path("insights/", views.insights, name="insights"),
-    # -- Section 4: Matplotlib charts ---------------------------------------
+    # -- Matplotlib charts --------------------------------------------------
     # The page that displays them, then one PNG endpoint per chart. Each .png
     # URL returns image/png directly, so it works as an <img src> and can be
     # opened on its own.
@@ -63,19 +63,19 @@ urlpatterns = [
 
     path("api/skills/", views.skill_api, name="skill_api"),
     # =====================================================================
-    # ASSIGNMENT 4
+    # Chart APIs, Vega-Lite, market data and reports
     # =====================================================================
-    # Part 1.1 - internal JSON API, chart-ready
+    # Internal JSON API, chart-ready
     path("api/skills/summary/", views.api_skill_summary, name="api_skill_summary"),
     path("api/assessments/", views.api_assessments, name="api_assessments"),
-    # Part 1.2 - Vega-Lite: the page, each spec, and each chart as a PNG
+    # Vega-Lite: the page, each spec, and each chart as a PNG
     path("vega-lite/", views.vega_lite_page, name="vega_lite"),
     path("vega-lite/chart<int:number>.json", views.vega_lite_spec, name="vega_lite_spec"),
     path("vega-lite/chart<int:number>.png", views.vega_lite_png, name="vega_lite_png"),
-    # Part 2 - external API (Jobicy) joined with internal skill gaps
+    # External API (Jobicy) joined with internal skill gaps
     path("api/market-demand/", views.api_market_demand, name="api_market_demand"),
     path("market/", views.market_page, name="market"),
-    # Part 3 - reports page, and the two downloads it links to. The URLs end
+    # Reports page, and the two downloads it links to. The URLs end
     # in .csv and .json so the path itself says what comes back, and so the
     # file keeps a sensible name if someone saves it with right-click.
     path("reports/", views.reports_page, name="reports"),
@@ -91,7 +91,7 @@ urlpatterns = [
     ),
 
     # =====================================================================
-    # ASSIGNMENT 5, PART 1 - Internal Django Authentication
+    # Authentication
     # =====================================================================
     path("accounts/login/", views.login_view, name="login"),
     path("accounts/signup/", views.signup_view, name="signup"),

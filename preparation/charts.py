@@ -1,6 +1,6 @@
 """Server-side chart rendering for Beacon.
 
-Assignment 3, Section 4. Every chart here is drawn from a live ORM query and
+Every chart here is drawn from a live ORM query and
 returned as a PNG by a view, so nothing is precomputed and no image file is
 ever written to disk.
 

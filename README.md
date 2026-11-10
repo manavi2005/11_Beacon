@@ -76,7 +76,7 @@ preparation/     the original data model (profiles, skills, assessments, plans),
                  public API, charts and the coach/cohort views
 templates/studio, static/studio   the design system and pages
 research/        model-selection labs, multi-model cost analysis, small-LM study
-docs/            AI system design, public API, deployment, course history
+docs/            AI system design, public API, deployment, project history
 ```
 
 Every AI call has a fallback, and every model reply is validated before it is
@@ -98,4 +98,4 @@ CI runs the same on every push.
 - [Public API](docs/public-api/README.md)
 - [Deploying](docs/deployment/DEPLOY.md)
 - [Security and abuse protection](docs/security.md)
-- [Course history and assignment documentation](docs/course-history.md)
+- [Project history](docs/project-history.md)

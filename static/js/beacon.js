@@ -1,5 +1,5 @@
 /* ===========================================================================
-   Beacon front-end behaviour (Assignment 5 polish).
+   Beacon front-end behaviour.
 
    Plain JavaScript, no framework and no build step, loaded with `defer` from
    base.html. Every feature here is progressive: the page works without it.
@@ -547,7 +547,7 @@
   });
 
   /* -------------------------------------------------------------------------
-     8. "Show how pages are built": reveals the .devnote course notes.
+     8. "Show how pages are built": reveals the .devnote developer notes.
      ------------------------------------------------------------------------- */
   document.querySelectorAll("[data-dev-toggle]").forEach(function (btn) {
     var root = document.documentElement;

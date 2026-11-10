@@ -1,6 +1,6 @@
 """External job-market data, triangulated with Beacon's own skill gaps.
 
-Assignment 4, Part 2. The question this answers for a candidate:
+The question this answers for a candidate:
 
     "Of the skills I am weak in, which ones do employers hiring for my target
     role actually ask for?"
@@ -9,10 +9,10 @@ Beacon's database knows the first half (proficiency against required level,
 per skill). It cannot know the second half, so it asks a public job board.
 
 Sources: Jobicy's remote-jobs API (docs: https://jobi.cy/apidocs), with
-Remotive (https://remotive.com/api/remote-jobs) as the fallback - see Step 1
-for why. Both are keyless. Both ask to be credited with a link and for every
+Remotive (https://remotive.com/api/remote-jobs) as the fallback - see the fetch
+step below for why. Both are keyless. Both ask to be credited with a link and for every
 job to link to its original URL, which the API response and the page both
-do. Open-Meteo was excluded by the assignment.
+do.
 
 Nothing from Jobicy is stored in the database. Postings are fetched, measured
 and thrown away; the only thing kept is a short-lived cache entry so that a
@@ -147,7 +147,7 @@ def _get_json(name, url, params):
             url,
             params=params,
             timeout=TIMEOUT_SECONDS,
-            headers={"User-Agent": "Beacon career coach (INFO 490 class project)"},
+            headers={"User-Agent": "Beacon career coach"},
         )
         response.raise_for_status()
         return response.json()

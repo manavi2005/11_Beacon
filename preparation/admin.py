@@ -1,6 +1,6 @@
 """Django Admin configuration for the preparation app.
 
-Every model is registered so a grader (or a teammate) can create, view and edit
+Every model is registered so staff (or a teammate) can create, view and edit
 records, and see relationships as dropdowns, without writing any SQL.
 """
 

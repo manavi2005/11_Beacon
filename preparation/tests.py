@@ -1,8 +1,7 @@
 """Smoke tests for the preparation app.
 
-These are not an assignment requirement. They exist because the four graded
-views in Section 2 are the deliverable, and a test that loads each one is the
-cheapest way to notice if a later change breaks one of them.
+A test that loads each page is the cheapest way to notice if a later change
+breaks one of them.
 
 Run with:  python manage.py test preparation
 """
@@ -36,7 +35,7 @@ from django.contrib.auth.models import User
 
 
 class GradedViewsTests(TestCase):
-    """Each of the four Section 2 views answers, and uses the right template."""
+    """Each of the four core catalog and plan views answers, and uses the right template."""
 
     @classmethod
     def setUpTestData(cls):
@@ -105,7 +104,7 @@ class GradedViewsTests(TestCase):
 
 
 class TemplateBehaviourTests(TestCase):
-    """Section 3: inheritance, the {% empty %} branch, and no leaked comments."""
+    """Template inheritance, the {% empty %} branch, and no leaked comments."""
 
     def setUp(self):
         # Create and log in a test user for template tests
@@ -143,7 +142,7 @@ class TemplateBehaviourTests(TestCase):
 
 
 class UrlsAndNavigationTests(TestCase):
-    """Assignment 3, Section 1: home page, navigation, PK detail pages."""
+    """Home page, navigation, PK detail pages."""
 
     @classmethod
     def setUpTestData(cls):
@@ -214,7 +213,7 @@ class UrlsAndNavigationTests(TestCase):
 
 
 class OrmQueryTests(TestCase):
-    """Assignment 3, Section 2: search, relationship spanning, aggregation."""
+    """Search, relationship spanning, aggregation."""
 
     @classmethod
     def setUpTestData(cls):
@@ -348,7 +347,7 @@ class OrmQueryTests(TestCase):
 
 
 class StaticFilesTests(TestCase):
-    """Assignment 3, Section 3: static configuration and CSS delivery."""
+    """Static configuration and CSS delivery."""
 
     def setUp(self):
         # Create and log in a test user for static files tests
@@ -394,7 +393,7 @@ class StaticFilesTests(TestCase):
 
 
 class ChartTests(TestCase):
-    """Assignment 3, Section 4: ORM-backed Matplotlib charts served as PNG."""
+    """ORM-backed Matplotlib charts served as PNG."""
 
     PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
@@ -453,7 +452,7 @@ class ChartTests(TestCase):
         self.assertEqual(int(r["Content-Length"]), len(r.content))
 
     def test_chart_urls_end_in_png(self):
-        """The endpoint is addressable as an image, as the brief asks."""
+        """The endpoint is addressable as an image."""
         for name in self.CHART_ROUTES:
             with self.subTest(route=name):
                 self.assertTrue(reverse(name).endswith(".png"))
@@ -543,7 +542,7 @@ class ChartTests(TestCase):
 
 
 # ===========================================================================
-# ASSIGNMENT 4
+# Charts, reports and market data
 # ===========================================================================
 def _a4_fixture(cls):
     """Two skills, two candidates with different roles, three assessments."""
@@ -579,7 +578,7 @@ def _a4_fixture(cls):
 
 
 class InternalApiTests(TestCase):
-    """Part 1.1: GET-only, JSON-only, chart-ready rows from the models."""
+    """GET-only, JSON-only, chart-ready rows from the models."""
 
     @classmethod
     def setUpTestData(cls):
@@ -643,7 +642,7 @@ class InternalApiTests(TestCase):
 
 
 class VegaLiteTests(TestCase):
-    """Part 1.2: specs use data.url, the page embeds them, PNGs render."""
+    """Vega-Lite specs use data.url, the page embeds them, PNGs render."""
 
     @classmethod
     def setUpTestData(cls):
@@ -720,7 +719,7 @@ FAKE_JOBS = [
 
 
 class MarketDemandTests(TestCase):
-    """Part 2: requests.get to Jobicy, combined with internal gaps, as JSON.
+    """requests.get to Jobicy, combined with internal gaps, as JSON.
 
     requests.get is always mocked: a test suite must not depend on, or add
     load to, someone else's server.
@@ -732,7 +731,7 @@ class MarketDemandTests(TestCase):
 
     def setUp(self):
         cache.clear()
-        # /market/ became login-protected in A5. The JSON endpoint beneath it
+        # /market/ is login-protected. The JSON endpoint beneath it
         # stays open on purpose, but the page itself is part of the site, so
         # these tests sign in like any other visitor would.
         self.assertTrue(
@@ -856,7 +855,7 @@ class MarketDemandTests(TestCase):
 
 
 class ExportAndReportTests(TestCase):
-    """Assignment 4, Part 3: CSV export, JSON export, and the reports page."""
+    """CSV export, JSON export, and the reports page."""
 
     @classmethod
     def setUpTestData(cls):
@@ -965,7 +964,7 @@ class ExportAndReportTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context["totals"]["candidates"], CandidateProfile.objects.count())
         self.assertEqual(r.context["totals"]["tasks"], PlanTask.objects.count())
-        # at least two grouped summaries, as the brief requires
+        # at least two grouped summaries
         self.assertTrue(r.context["by_experience"])
         self.assertTrue(r.context["by_role"])
         self.assertTrue(r.context["by_plan"])
@@ -1012,10 +1011,9 @@ class ExportAndReportTests(TestCase):
 
 
 class AuthenticationTests(TestCase):
-    """Assignment 5, Part 1: login, signup, logout, and what they protect.
+    """Login, signup, logout, and what they protect.
 
-    Part 1 shipped without tests of its own. These cover the behaviour the
-    brief asks for, and the two things that are easy to get wrong and silent
+    These cover the core behaviour, and the two things that are easy to get wrong and silent
     when you do: the redirect settings, and an open redirect on ?next=.
     """
 
@@ -1200,7 +1198,7 @@ class AuthenticationTests(TestCase):
     }
 )
 class GoogleOAuthConfiguredTests(TestCase):
-    """Assignment 5, Part 2: Google OAuth, with credentials present.
+    """Google OAuth, with credentials present.
 
     Fake credentials via override_settings. The real ones live in .env and
     are absent in CI, so without this the button would never render here and
@@ -1263,7 +1261,7 @@ class GoogleOAuthConfiguredTests(TestCase):
 
     def test_username_password_login_still_works(self):
         """Adding allauth's backend must not displace ModelBackend, or every
-        account from Part 1, including the superuser, stops working."""
+        username/password account, including the superuser, stops working."""
         self.assertTrue(self.client.login(username="oauthy", password="Str0ngPass!2026"))
         self.assertEqual(self.client.get("/dashboard/").status_code, 200)
 
@@ -1367,7 +1365,7 @@ class OAuthDependencyTests(TestCase):
 
 
 # ===========================================================================
-# ASSIGNMENT 5, PART 3 - one public API, every other API protected
+# One public API, every other API protected
 # ===========================================================================
 class PublicVsProtectedApiTests(TestCase):
     """Exactly one JSON API answers without a login: /api/skills/summary/."""
@@ -1492,7 +1490,7 @@ class MarketSourceFallbackTests(TestCase):
 
 
 class PolishTests(TestCase):
-    """Assignment 5 polish: palette data, dashboard panels, auth pages."""
+    """Palette data, dashboard panels, auth pages."""
 
     @classmethod
     def setUpTestData(cls):
@@ -2347,7 +2345,7 @@ class GooglePlaceholderTests(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# ASSIGNMENT 6, PART 2.2 - THE LOCAL HUGGING FACE MODEL
+# The local Hugging Face model
 #
 # None of these load real weights. The transformers pipeline is replaced with
 # _FakePipeline, so the suite stays offline and fast, and the assertions are

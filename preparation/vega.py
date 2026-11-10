@@ -1,11 +1,11 @@
 """Internal chart API and Vega-Lite charts for Beacon.
 
-Assignment 4, Part 1. Three layers, each usable on its own:
+Three layers, each usable on its own:
 
 1. Row builders (skill_summary_rows, assessment_rows).
    Plain lists of flat dicts straight from the ORM. Flat on purpose: Vega-Lite
    reads an array of records with no unwrapping, and so does pandas, a
-   spreadsheet, or a classmate pasting the URL into the online editor.
+   spreadsheet, or someone pasting the URL into the online editor.
 
 2. Specs (preparation/vega_lite/*.vl.json).
    Hand-written Vega-Lite JSON, kept as data files rather than Python dicts so
@@ -102,7 +102,7 @@ def assessment_rows():
     """One row per skill assessment.
 
     Deliberately anonymous: no candidate name, username or email. This
-    endpoint is public and meant to be shared with classmates, and the chart
+    endpoint is meant to be shared, and the chart
     only needs the scores. Experience level is kept because it is a useful
     grouping and identifies nobody.
     """

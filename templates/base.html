@@ -5,7 +5,7 @@ below, so navigation, styling and branding live in exactly one place.
 {% load static %} sits on the very first line, before the doctype, so it does
 not emit a stray blank line above <!DOCTYPE html>.
 
-All styling moved out to static/css/beacon.css in Assignment 3. It used to be
+All styling lives in static/css/beacon.css. It used to be
 an inline <style> block here, which meant every page carried its own copy and
 the browser could never cache it.
 
@@ -112,7 +112,7 @@ Django prints it as page text.
               <li>
                 {% comment %}
                 Pages carry short notes on how they are built (which Django
-                view, which ORM query) for the course. They are hidden in the
+                view, which ORM query) for developers. They are hidden in the
                 product by default; this switch shows them. Remembered per
                 browser in localStorage.
                 {% endcomment %}
@@ -153,7 +153,7 @@ Django prints it as page text.
   </div>
   {% if user.is_authenticated %}
     {% comment %}
-    Command palette (Assignment 5 polish). Empty until first opened; the
+    Command palette. Empty until first opened; the
     entries come from /api/palette/, a protected endpoint, so nothing about
     candidates is in the page source for a signed-out visitor.
     {% endcomment %}

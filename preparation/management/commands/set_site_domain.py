@@ -1,7 +1,5 @@
 """Point django.contrib.sites at the domain this deployment actually serves.
 
-Assignment 5, Part 2.
-
 A fresh database gets a Site row of "example.com". allauth reads that row,
 so leaving it wrong makes the Google flow build callback URLs for a domain
 nobody owns. Doing it with a command rather than by hand in the admin means

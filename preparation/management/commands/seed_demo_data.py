@@ -74,7 +74,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        random.seed(11)  # Group 11 - keeps the demo data reproducible
+        random.seed(11)  # fixed seed keeps the demo data reproducible
         today = timezone.localdate()
 
         if options["flush"]:
