@@ -237,9 +237,19 @@ ADVICE_INSTRUCTIONS = (
 
 
 def _chat(messages, *, json_mode=False, max_tokens=600, patient=False, timeout=None,
-          temperature=0.4):
+          temperature=0.4, budget=None):
     """One chat completion. patient=True (used for grading, which the user is
-    actively waiting on) retries a busy free tier twice, after 6 and 10 s."""
+    actively waiting on) retries a busy free tier twice, after 6 and 10 s.
+
+    budget caps the whole call, retries included, in seconds. Someone is
+    watching a spinner, and on a single-worker host every other visitor is
+    waiting behind this request too, so no retry may start that could not
+    finish inside it."""
+    started = time.monotonic()
+
+    def remaining():
+        return budget - (time.monotonic() - started) if budget else None
+
     cfg = llm_config()
     body = {
         "model": cfg["model"],
@@ -259,15 +269,23 @@ def _chat(messages, *, json_mode=False, max_tokens=600, patient=False, timeout=N
     waits = ([6, 10] if patient else [RETRY_WAIT_SECONDS]) if cfg["keyless"] else []
     attempts = len(waits) + 1
     for attempt in range(attempts):
+        per_try = (timeout or TIMEOUT_SECONDS) + (15 if cfg["keyless"] else 0)
+        left = remaining()
+        if left is not None:
+            if left < 3:
+                raise CoachError("The AI coach took too long to answer.")
+            per_try = min(per_try, left)
         try:
             response = requests.post(
                 f"{cfg['base_url']}/chat/completions",
                 json=body,
                 headers=headers,
-                timeout=(timeout or TIMEOUT_SECONDS) + (15 if cfg["keyless"] else 0),
+                timeout=per_try,
             )
             if response.status_code in (402, 429):
-                if attempt + 1 < attempts:
+                left = remaining()
+                # Only wait and retry if a retry could still finish in time.
+                if attempt + 1 < attempts and (left is None or left > waits[attempt] + 5):
                     time.sleep(waits[attempt])
                     continue
                 raise CoachBusy("The free AI model is busy right now.")
