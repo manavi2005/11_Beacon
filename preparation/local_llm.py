@@ -1,6 +1,6 @@
 """The local Hugging Face model, loaded in-process with `transformers`.
 
-Assignment 6, Part 2.2. Beacon's other AI path (preparation/coach.py) calls a
+Beacon's other AI path (preparation/coach.py) calls a
 hosted chat API over HTTP. This one holds the weights itself: `transformers`
 downloads them on first use into the Hugging Face cache and every later call
 runs on this machine, with no network and no per-request cost.
@@ -8,7 +8,7 @@ runs on this machine, with no network and no per-request cost.
 Where it sits in the pipeline
 -----------------------------
 It screens a written practice answer before the hosted model is asked to
-write feedback on it, which is the hybrid shape the assignment describes: the
+write feedback on it, a hybrid design: the
 local model filters, the API generates. Screening decides three things.
 
   on_topic      does the answer actually discuss the skill being practised

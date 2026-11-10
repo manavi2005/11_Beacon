@@ -1,7 +1,5 @@
 # Branching Strategy
 
-**Team Career Coaches (Group 11) | Beacon**
-
 ![Branching diagram](diagram.png)
 
 *(Source: `branching_strategy.dot`. Regenerate with
@@ -14,11 +12,11 @@
 `main` is never worked on directly. Every piece of work happens on a branch cut
 from `main`, and comes back through a pull request. The reason is practical
 rather than ceremonial: three people are editing one Django project, and a broken
-`main` means nobody on the team can run the app or submit it.
+`main` means nobody on the team can run or ship the app.
 
-So `main` holds one guarantee - **it runs, and it is submittable as-is.** If a
-deadline arrives while a feature is half-finished, the unfinished work sits on
-its branch and `main` is still a valid submission.
+So `main` holds one guarantee: **it runs, and it is releasable as-is.** If a
+release is due while a feature is half-finished, the unfinished work sits on
+its branch and `main` is still a working release.
 
 ## Branch naming
 

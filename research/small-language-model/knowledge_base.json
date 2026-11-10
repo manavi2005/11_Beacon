@@ -1,5 +1,5 @@
 {
-  "company": "Lumen Prep, a fictional interview-preparation startup invented for this assignment. None of these facts appear in the SLM training corpus.",
+  "company": "Lumen Prep, a fictional interview-preparation startup invented for this study. None of these facts appear in the SLM training corpus.",
   "documents": [
     {"id": "LP-01", "title": "Pricing",            "text": "the lumen pro plan costs nine dollars a month."},
     {"id": "LP-02", "title": "Free trial",         "text": "new users get a seven day free trial."},

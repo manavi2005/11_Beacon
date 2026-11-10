@@ -1,10 +1,7 @@
 """CSV and JSON exports, and the aggregates behind the reports page.
 
-Assignment 4, Part 3.
-
 The exported model is CandidateProfile: it is the row a user of Beacon would
-actually want out of the system, and it is the closest thing this project has
-to the assignment's "Students" example.
+actually want out of the system.
 
 One rule shapes this module: the CSV and the JSON are built from the same
 function. candidate_rows() returns a list of flat dicts, EXPORT_COLUMNS fixes
@@ -228,8 +225,7 @@ def candidates_by_role():
 def tasks_by_plan(plans=None):
     """Grouped summary 3: tasks per plan, done against all.
 
-    This is the assignment's "enrollments per section, active vs all" shape:
-    a count and a filtered count of the same relation, side by side.
+    A count and a filtered count of the same relation, side by side.
     """
     rows = []
     base = PreparationPlan.objects.all() if plans is None else plans

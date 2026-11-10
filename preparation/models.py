@@ -1,5 +1,5 @@
 """
-Data model for Beacon - AI Personal Career Coach (Team: Career Coaches).
+Data model for Beacon, the AI career coach.
 
 The five models below mirror the four features in our Project Idea Description:
 

@@ -1,13 +1,14 @@
-"""Shared pieces for Parts 2-4 of slm_training_20261025.ipynb.
+"""Shared pieces for the RAG, fine-tuning and comparison sections of
+training/slm_training_20261025.ipynb.
 
-The Small Language Model is defined and trained in Part 1 of that notebook
-(the class notebook from Week 7). Step 1.2 saves the selected checkpoint to
-SELECTED_CHECKPOINT. The RAG (Part 2), fine-tuning (Part 3) and comparison
-(Part 4) sections all load that same file, which is what the brief means by
+The Small Language Model is defined and trained in the training section of
+that notebook (built on the base SLM notebook). The architecture experiments
+save the selected checkpoint to SELECTED_CHECKPOINT. The RAG, fine-tuning and
+comparison sections all load that same file, so every condition starts from
 "the same original trained checkpoint".
 
 TransformerBlock and TinyTransformerLM below are copied unchanged from the
-class notebook (cells 9A and 9B). They have to match exactly: load_state_dict
+base notebook (cells 9A and 9B). They have to match exactly: load_state_dict
 refuses weights saved from a different architecture.
 """
 
@@ -18,11 +19,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 HERE = Path(__file__).resolve().parent
-SELECTED_CHECKPOINT = HERE / "Part-1-Small Language Model" / "slm_selected.pt"
+SELECTED_CHECKPOINT = HERE / "training" / "slm_selected.pt"
 
 
 # ---------------------------------------------------------------------------
-# Architecture, unchanged from the class notebook
+# Architecture, unchanged from the base notebook
 # ---------------------------------------------------------------------------
 class TransformerBlock(nn.Module):
 
@@ -85,8 +86,9 @@ class SLM:
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(
-                f"{path} is missing. Run Part 1 of slm_training_20261025.ipynb "
-                "first: Step 1.2 trains the selected architecture and saves it."
+                f"{path} is missing. Run the training section of "
+                "slm_training_20261025.ipynb first: the architecture experiments "
+                "train the selected architecture and save it."
             )
         saved = torch.load(path, map_location=device, weights_only=True)
         self.path = path
@@ -155,7 +157,7 @@ class SLM:
 
 
 # ---------------------------------------------------------------------------
-# Scoring, shared so RAG, fine-tuning and Part 4 are judged the same way
+# Scoring, shared so RAG, fine-tuning and the comparison are judged the same way
 # ---------------------------------------------------------------------------
 def score_answer(answer, key_facts, topic_words, known_words):
     """Self-evaluation score from 1 to 10, computed so it can be audited.

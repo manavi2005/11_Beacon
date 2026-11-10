@@ -1,4 +1,4 @@
-/* Beacon branching strategy - Team Career Coaches (Group 11)
+/* Beacon branching strategy
  *
  * Regenerate with:
  *     dot -Tpng -Gdpi=140 branching_strategy.dot -o diagram.png
@@ -17,7 +17,7 @@ digraph beacon_branching {
 
     /* ------------------------- main ------------------------- */
     subgraph cluster_main {
-        label = "main  (always runnable, always submittable)";
+        label = "main  (always runnable, always releasable)";
         fontname = "Helvetica-Bold";
         fontsize = 12;
         fontcolor = "#13294B";
@@ -26,9 +26,9 @@ digraph beacon_branching {
         style = rounded;
         margin = 14;
 
-        m0 [label = "Part 4\nmodels + admin", fillcolor = "#13294B"];
+        m0 [label = "Data model\n+ admin", fillcolor = "#13294B"];
         m1 [label = "docs/ folders\n+ .gitignore", fillcolor = "#13294B"];
-        m2 [label = "Assignment 2\ncomplete", fillcolor = "#13294B"];
+        m2 [label = "Views and\ntemplates", fillcolor = "#13294B"];
 
         m0 -> m1 [color = "#13294B"];
         m1 -> m2 [color = "#13294B"];

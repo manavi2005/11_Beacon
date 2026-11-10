@@ -1,5 +1,5 @@
 digraph Beacon {
-  graph [rankdir=LR, splines=spline, overlap=false, nodesep=0.6, ranksep=1.1, fontname="Helvetica", label="Beacon - AI Personal Career Coach\nER diagram (app: preparation)  |  Team Career Coaches, Group 11", labelloc=t, fontsize=18];
+  graph [rankdir=LR, splines=spline, overlap=false, nodesep=0.6, ranksep=1.1, fontname="Helvetica", label="Beacon - AI Personal Career Coach\nER diagram (app: preparation)", labelloc=t, fontsize=18];
   node [shape=plaintext, fontname="Helvetica", fontsize=10];
   edge [fontname="Helvetica", fontsize=9];
   Skill [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"><TR><TD BGCOLOR="#13294B"><FONT COLOR="white"><B>Skill</B></FONT></TD></TR><TR><TD ALIGN="LEFT" PORT="0">PK id : BigAuto</TD></TR><TR><TD ALIGN="LEFT" PORT="1">name : Char</TD></TR><TR><TD ALIGN="LEFT" PORT="2">category : Char</TD></TR><TR><TD ALIGN="LEFT" PORT="3">description : Text</TD></TR><TR><TD ALIGN="LEFT" PORT="4">created_at : DateTime</TD></TR></TABLE>>];

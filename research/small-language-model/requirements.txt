@@ -7,7 +7,7 @@ openai==2.24.0
 sentence-transformers==5.2.3
 scikit-learn==1.7.2
 ollama
-# Used by slm_training_20261025.ipynb (Parts 1-4)
+# Used by training/slm_training_20261025.ipynb
 pandas
 matplotlib
 psutil

@@ -1,7 +1,10 @@
-# Beacon: An AI Personal Career Coach
+# Project history
 
-**INFO 490 MG | Team Career Coaches (Group 11)**
 Manavi Chaudhry | Chu-Yun Hwang | Meet Kailash Mali
+
+This was Beacon's README through its first releases. It is kept as a record of
+how each milestone was built; the current overview is the root
+[`README.md`](../README.md).
 
 Beacon turns a student's resume and target role into a diagnosed skill profile, a
 time-boxed preparation plan, and a progress tracker. Instead of showing users
@@ -21,10 +24,26 @@ everything they could do, it tells them what to do next.
 8. [Proving it works](#8-proving-it-works)
 9. [Git workflow](#9-git-workflow)
 10. [Documentation index](#10-documentation-index)
-11. [Forms & User Input](#11-forms--user-input)
+11. [Forms and user input](#11-forms-and-user-input)
 12. [Creating APIs](#12-creating-apis)
 13. [Vega-Lite charts and an external API](#13-vega-lite-charts-and-an-external-api)
-14. [Assignment 5: public API, alternative uses, UI polish](#14-assignment-5-public-api-alternative-uses-ui-polish)
+14. [Public API, alternative uses, UI polish](#14-public-api-alternative-uses-ui-polish)
+15. [Later milestones](#15-later-milestones)
+
+---
+
+## Milestones
+
+| Milestone | Where it is described |
+|---|---|
+| Data model and admin | [Section 7](#7-the-data-model), [`data_model/design_notes.md`](data_model/design_notes.md) |
+| Settings, security and Git workflow | [Section 4](#4-settings-and-security), [Section 9](#9-git-workflow) |
+| Views and templates | [Section 5](#5-views), [Section 6](#6-templates) |
+| Navigation, search and aggregations | [Section 2](#2-what-to-look-at), [Section 11](#11-forms-and-user-input) |
+| Charts and reports | [Section 2](#2-what-to-look-at) ("Charts", "Reports and exports") |
+| JSON API, Vega-Lite and an external API | [Section 12](#12-creating-apis), [Section 13](#13-vega-lite-charts-and-an-external-api) |
+| Authentication and public API | [Section 2](#2-what-to-look-at) ("Authentication", "Google sign-in"), [Section 14](#14-public-api-alternative-uses-ui-polish) |
+| Local model screening, multi-model system, small language model, retrieval (RAG) study | [Section 15](#15-later-milestones) |
 
 ---
 
@@ -64,8 +83,7 @@ Then open <http://127.0.0.1:8000/>.
 **Step 6 is not optional.** `db.sqlite3` is git-ignored, so a fresh clone builds
 its database from scratch, and `seed_demo_data` creates only the six candidate
 accounts - no superuser. Without step 6 there is no way to log in at `/admin/`.
-Any username and password will do; earlier submissions used `tester` /
-`uiuc12345`.
+Any username and password will do.
 
 The six seeded candidates are ordinary non-staff users and share the password
 `beacon12345`.
@@ -131,12 +149,12 @@ Every page is reachable from the navigation bar at the top of the site.
 | `/reports/candidates.json` | The same candidates as JSON, with metadata | FBV, `JsonResponse` |
 | `/admin/` | Django Admin for all five models | - |
 
-The four bolded rows are the four required kinds of view.
+The four bolded rows are the four kinds of view.
 
 **Seeing the empty state:** `/skills/?q=zzzz` filters the catalog down to nothing
 and fires the `{% empty %}` branch, without deleting anything from the database.
 
-**Assignment 3 additions.** Every model now implements `get_absolute_url()`,
+**Navigation and search.** Every model now implements `get_absolute_url()`,
 so list templates link to detail pages with `{{ object.get_absolute_url }}`
 rather than rebuilding paths by hand, and every navigation link is reversed
 with `{% url %}`. Two search forms demonstrate the GET/POST distinction:
@@ -156,8 +174,7 @@ white card: tables get zebra striping and uppercase headers so a 24-row task
 list stays readable, totals are shown as stat tiles rather than a two-column
 table, plan progress gets a bar beside the percentage, and statuses are
 colour-coded pills where the word still carries the meaning on its own. The
-two brand colours are the university's, navy for structure and orange for
-anything actionable. It reflows to one column on a phone, and the wider tables
+two brand colours are navy for structure and orange for anything actionable. It reflows to one column on a phone, and the wider tables
 scroll sideways inside their own box instead of crushing their columns.
 
 In production, `ManifestStaticFilesStorage` serves the stylesheet under a
@@ -266,7 +283,7 @@ what keeps a long-running server from accumulating figures it never closes.
 ├── preparation/                  # feature app: diagnose -> plan -> track
 │   ├── models.py                 # the five models
 │   ├── admin.py                  # all five registered, with inlines
-│   ├── views.py                  # the four graded views (+ dashboard)
+│   ├── views.py                  # the four kinds of view (+ dashboard)
 │   ├── urls.py                   # every route named
 │   ├── migrations/
 │   └── management/commands/
@@ -289,18 +306,18 @@ what keeps a long-running server from accumulating figures it never closes.
 │       └── task_detail.html
 │
 └── docs/
-    ├── README.md                 # documentation index, mapped to assignment sections
-    ├── wireframes/v1/            # Part 3 wireframes, PDF + per-screen PNGs
+    ├── README.md                 # documentation index
+    ├── wireframes/v1/            # v1 wireframes, PDF + per-screen PNGs
     ├── branching_strategy/       # diagram.png + written strategy
     ├── notes/notes.txt           # running progress log
     ├── data_model/               # ER diagram, design justification, constraint output
-    └── screenshots/              # browser output, named by assignment section
+    └── screenshots/              # browser output, named by feature
         ├── admin/                # Django Admin list views
         └── superseded/           # older captures, kept for the record
 ```
 
-**Start with [`docs/README.md`](README.md)** - it maps every assignment
-requirement to the file that answers it.
+**Start with [`docs/README.md`](README.md)**: it maps each feature to the
+files that implement it.
 
 **Why these names**
 
@@ -516,8 +533,8 @@ load every page and assert the right template and data came back, check that
 public and protected APIs, authentication and Google OAuth, onboarding,
 resume parsing, the AI coach, graded task attempts and who-sees-what privacy.
 They also guard against the multi-line `{# #}` comment bug that once printed
-template notes onto every page. Not an assignment requirement - they are
-there so a later change cannot quietly break an earlier deliverable.
+template notes onto every page. They are there so a later change cannot
+quietly break an earlier feature.
 
 ### Constraints
 
@@ -552,7 +569,7 @@ on the PR rather than after the merge.
 ## 9. Git workflow
 
 `main` is never worked on directly. Work happens on a branch cut from `main` and
-returns through a pull request, so `main` always runs and is always submittable.
+returns through a pull request, so `main` always runs and is always deployable.
 
 ```bash
 git checkout main && git pull origin main
@@ -575,11 +592,11 @@ ownership per teammate and conflict handling:
 
 | File | What it holds |
 |---|---|
-| [`docs/README.md`](README.md) | **Start here** - index mapping each assignment section to the files that answer it |
-| `docs/notes/notes.txt` | Running weekly log: decisions, open questions, reminders |
+| [`docs/README.md`](README.md) | **Start here**: index mapping each feature to the files that implement it |
+| `docs/notes/notes.txt` | Running development log: decisions, open questions, reminders |
 | `docs/branching_strategy/README.md` | Branch naming, workflow, file ownership, conflicts |
 | `docs/branching_strategy/diagram.png` | Visual of the branch-and-merge flow |
-| `docs/wireframes/v1/` | Part 3 wireframes - full PDF plus one PNG per screen |
+| `docs/wireframes/v1/` | v1 wireframes: full PDF plus one PNG per screen |
 | `docs/data_model/design_notes.md` | Why five models, why each `on_delete`, what each constraint protects |
 | `docs/data_model/er_diagram.pdf` | Entity-relationship diagram |
 | `docs/data_model/constraint_validation.txt` | Saved output of `verify_constraints` |
@@ -587,7 +604,7 @@ ownership per teammate and conflict handling:
 
 ---
 
-## 11. Forms & User Input
+## 11. Forms and user input
 
 ### 11.1 GET Search Form
 
@@ -721,10 +738,6 @@ PlanTaskCreateView(CreateView)
 form. GET displays the form, while POST validates and saves the submitted
 data.
 
-This satisfies the Section 5 requirement to adapt a class-based view to
-handle GET and POST input.
-
-
 ---
 
 ## 12. Creating APIs
@@ -792,9 +805,9 @@ A future version could expose additional read-only project data, such as prepara
 
 ## 13. Vega-Lite charts and an external API
 
-Assignment 4, Parts 1 and 2. Code: [`preparation/vega.py`](../preparation/vega.py),
-[`preparation/market.py`](../preparation/market.py), and the Assignment 4 block
-at the end of [`preparation/views.py`](../preparation/views.py).
+Code: [`preparation/vega.py`](../preparation/vega.py),
+[`preparation/market.py`](../preparation/market.py), and the Vega-Lite and
+market block at the end of [`preparation/views.py`](../preparation/views.py).
 
 ### 13.1 Internal API for charts
 
@@ -808,8 +821,8 @@ Both return a bare JSON array of flat records, which is what Vega-Lite's
 the database (`annotate()` with `Count` and `Avg`), not by Python loops.
 
 `/api/assessments/` is deliberately anonymous: it carries scores, never a
-candidate's name, username or email. These endpoints are public, and the
-assignment expects classmates to load them in the Vega-Lite editor.
+candidate's name, username or email. These endpoints are public, so anyone
+can load them in the Vega-Lite editor.
 
 **Cross-origin access.** Every response carries
 `Access-Control-Allow-Origin: *`, and an `OPTIONS` preflight is answered with
@@ -853,7 +866,7 @@ actually ask for?*
 
 1. **Fetch.** `requests.get("https://jobicy.com/api/v2/remote-jobs",
    params={"count": 50, "tag": q}, timeout=5)`, then `raise_for_status()`.
-   Jobicy is free and keyless. Open-Meteo was excluded by the assignment.
+   Jobicy is free and keyless.
 2. **Measure.** For each catalog skill, count how many postings mention it,
    using a keyword list per skill in `market.SKILL_KEYWORDS` (a "SQL"
    skill also matches "PostgreSQL"). Matches use word boundaries, so "git"
@@ -866,7 +879,7 @@ actually ask for?*
    only if employers want it *and* candidates are behind on it.
 
 Nothing from Jobicy is stored in the database. Each query's postings are
-cached in memory for an hour, so a classroom loading the same page does not
+cached in memory for an hour, so many users loading the same page do not
 send Jobicy one request each. Following Jobicy's terms, the page credits
 Jobicy and links every posting to its original URL.
 
@@ -885,7 +898,7 @@ every test, so the suite never calls Jobicy.
 
 ---
 
-## 14. Assignment 5: public API, alternative uses, UI polish
+## 14. Public API, alternative uses, UI polish
 
 **One public API.** `/api/skills/summary/` answers without a login. It holds
 only per-skill aggregates, so nobody can be identified, and `?format=csv`
@@ -951,13 +964,29 @@ back to Remotive, which is. The response says which source answered.
   `preparation/navigation.py`: grouped dropdowns (Coaching, Skills,
   Insights), the current page highlighted, and Admin shown to staff only.
   Every entry is a URL *name* reversed at request time, so no path is
-  hard-coded (the Assignment 3 rule still holds, enforced by a test). The
-  course explanations on each page ("View 4 - CBV, generic ListView", ORM
+  hard-coded (the `{% url %}` rule still holds, enforced by a test). The
+  developer notes on each page ("View 4 - CBV, generic ListView", ORM
   notes) are kept but hidden. *Account menu > Show how pages are built*
-  reveals them for grading.
+  reveals them.
 
 All of it is plain CSS and JavaScript (`static/js/beacon.js`) with no new
 dependencies, and it respects `prefers-reduced-motion`.
 
 **Deploying.** [`docs/deployment/DEPLOY.md`](deployment/DEPLOY.md). This release adds a
 static file, so `collectstatic` must run before the reload.
+
+---
+
+## 15. Later milestones
+
+After the web app was in place, the AI features were designed through a series
+of research studies. Each folder has its own notebook and write-up.
+
+| Milestone | Folder |
+|---|---|
+| Local model screening | [`research/model-selection-lab/`](../research/model-selection-lab/) |
+| Multi-model system | [`research/multi-model-system/`](../research/multi-model-system/) |
+| Small language model | [`research/small-language-model/`](../research/small-language-model/) |
+| Retrieval (RAG) study | [`research/rag-retrieval-study/`](../research/rag-retrieval-study/) |
+
+How the AI features work in the product today is in [`ai-system.md`](ai-system.md).

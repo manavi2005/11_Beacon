@@ -1,13 +1,11 @@
 # Beacon: Data Model Design Notes
 
-**Project 1, Part 4 | Team Career Coaches (Group 11)**
-
-> Written for the Part 4 data-modelling assignment and still accurate: the models,
+> Written when the data model was first built and still accurate: the models,
 > relationships and constraints described here are the ones the current code runs
 > on. The views and templates built on top of them are documented in
 > [`docs/README.md`](../README.md).
 
-This file answers the "documented and justified" requirements of Part 4: why the
+This file documents and justifies the data model: why the
 project and app are named what they are, why there are five models, why each
 relationship uses the `on_delete` behaviour it does, and what each constraint
 protects against.
@@ -18,12 +16,12 @@ protects against.
 
 | Name | Type | Why |
 |---|---|---|
-| `Beacon` | repo / project root | Product name from our Part-3 idea description. A beacon guides someone through fog, which is what the app does for a first job search. |
+| `Beacon` | repo / project root | Product name from our original idea description. A beacon guides someone through fog, which is what the app does for a first job search. |
 | `beacon_core` | `startproject` folder | This folder holds **no features** - only settings, routing and WSGI/ASGI entry points. Calling it `beacon` would shadow the repo folder name and make imports ambiguous; `_core` communicates "control centre". |
 | `preparation` | `startapp` folder | The app owns one bounded domain: everything about *preparing* for an interview - diagnosing skills, generating a plan, tracking progress. Django app names are lowercase and describe a domain, not a layer, so `preparation` rather than `main` or `app1`. |
 | `templates/preparation/` | template folder | Mirrors the app name so Django's template loader never confuses two apps' `dashboard.html`. |
 
-**How this scales to the team.** Part 4 asks for one working app. As we build
+**How this scales to the team.** The first release is one working app. As we build
 features, each teammate gets their own app folder next to `preparation`, each with
 its own `models.py`, `views.py`, `urls.py` and `templates/` sub-folder:
 
@@ -34,8 +32,7 @@ its own `models.py`, `views.py`, `urls.py` and `templates/` sub-folder:
 | Plan generator | `preparation` (this one) |
 | Progress tracker | `progress` |
 
-That way two people never edit the same file, which is the division of labour the
-assignment describes. There are four feature areas and three of us, so Progress
+That way two people never edit the same file. There are four feature areas and three of us, so Progress
 tracking is shared rather than owned by one person. See
 [`docs/branching_strategy/README.md`](../branching_strategy/README.md#who-owns-what).
 
@@ -43,7 +40,7 @@ tracking is shared rather than owned by one person. See
 
 ## 2. Why these five models
 
-We started from the four features in our Part-3 paper and asked: *what nouns does
+We started from the four features in our idea description and asked: *what nouns does
 this product actually store?*
 
 | Feature | Noun | Model |
@@ -54,7 +51,7 @@ this product actually store?*
 | "Builds a customized plan and practical roadmap" | the roadmap | `PreparationPlan` |
 | "Tracks the preparation plan and iteratively updates strategies" | the trackable unit | `PlanTask` |
 
-Two design decisions are worth defending in the demo:
+Two design decisions are worth defending:
 
 **Why `Skill` is its own table rather than a text field on the assessment.**
 If skills were free text, "Python", "python3" and "Py" would be three different
@@ -121,9 +118,9 @@ recently updated.
 `python manage.py verify_constraints` runs eight checks and prints PASS/FAIL for
 each; the saved output is in `docs/data_model/constraint_validation.txt`. Every check runs
 inside a transaction that is rolled back, so running it never mutates the
-submitted database. The checks cover both required demonstrations from the
-assignment - "attempting to insert a duplicate record should fail" and "deleting a
-parent record removes or blocks related records depending on your design".
+database. The checks cover both behaviours that matter: inserting a duplicate
+record fails, and deleting a parent record removes or blocks related records
+according to the design.
 
 ---
 
@@ -141,7 +138,7 @@ parent record removes or blocks related records depending on your design".
 
 ---
 
-## 7. Alignment with the Part-3 wireframes
+## 7. Alignment with the v1 wireframes
 
 The wireframe deck defines five screens. Here is exactly what the data model
 covers today and what it deliberately does not.
@@ -165,10 +162,10 @@ recommended-next card both read `PlanTask.rationale`.
 **Screen 2 - the deliberate gap.** The quiz *questions* have no tables yet:
 there is no `AssessmentQuestion`, `AnswerOption` or `QuestionResponse`. Today
 Beacon can record that a candidate scored 72 on SQL, but not the ten questions
-that produced that number. Part 4 recommends 3-5 models total and advises
-starting small, so we modelled the assessment **outcome** - which is what the
+that produced that number. We kept the first data model to 3-5 models and
+started small, so we modelled the assessment **outcome** - which is what the
 roadmap and progress screens actually read - and left the question bank for the
-part where the quiz is built. Adding it later is additive: `SkillAssessment`
+milestone where the quiz is built. Adding it later is additive: `SkillAssessment`
 gains a reverse relation and no existing field changes.
 
 **Screen 5 - the deliberate gap.** Mock interviews need their own app
@@ -176,11 +173,11 @@ gains a reverse relation and no existing field changes.
 candidate's responses, and a feedback record holding the overall score, category
 scores, strengths and areas to improve. Building it now would put the project at
 eleven models before a single view exists. It is scoped as one teammate's
-feature for a later part, and it attaches to the existing model cleanly through
+feature for a later milestone, and it attaches to the existing model cleanly through
 a foreign key to `CandidateProfile`.
 
-**A documentation inconsistency we are tracking.** The Part-3 paper lists four
+**A documentation inconsistency we are tracking.** The idea description lists four
 features; the wireframes show five, because mock interviews were added during
-design. Both documents should agree before the next submission - either the paper
+design. Both documents should agree before the next release - either the paper
 gains a fifth proposed feature, or the mock-interview screen is described as an
 extension of the practice feature.

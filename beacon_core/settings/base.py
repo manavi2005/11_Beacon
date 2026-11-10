@@ -1,7 +1,7 @@
 """
 Base (shared) settings for the Beacon project.
 
-Split-settings pattern (Week 2):
+Split-settings pattern:
     base.py         -> settings shared by every environment
     development.py  -> local machine, DEBUG = True
     production.py   -> deployed server, DEBUG = False
@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # ---------------------------------------------------------------------------
-# Environment variables (.env) - Week 2, "three pillars of security"
+# Environment variables (.env)
 # ---------------------------------------------------------------------------
 def load_env(env_path: Path) -> None:
     """Load KEY=VALUE pairs from a .env file into os.environ.
@@ -80,7 +80,7 @@ INSTALLED_APPS = [
     # callback has to know which domain it belongs to, and the Site row is
     # where that lives.
     "django.contrib.sites",
-    # Assignment 5, Part 2: Google OAuth through django-allauth.
+    # Google OAuth through django-allauth.
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -145,7 +145,7 @@ ASGI_APPLICATION = "beacon_core.asgi.application"
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-# Part 4 requires db.sqlite3 to sit at the project root (next to manage.py).
+# db.sqlite3 sits at the project root (next to manage.py).
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -155,7 +155,7 @@ DATABASES = {
 
 
 # ---------------------------------------------------------------------------
-# Authentication (Assignment 5, Part 1)
+# Authentication
 # ---------------------------------------------------------------------------
 # These live in base.py rather than production.py so development and
 # production behave the same way. Defined only in production, Django falls
@@ -172,10 +172,10 @@ LOGOUT_REDIRECT_URL = "preparation:login"
 
 
 # ---------------------------------------------------------------------------
-# Google OAuth via django-allauth (Assignment 5, Part 2)
+# Google OAuth via django-allauth
 # ---------------------------------------------------------------------------
 # Two backends, both needed. ModelBackend keeps username/password working for
-# the accounts created in Part 1; allauth's backend handles the social login.
+# the accounts created through Beacon's own signup; allauth's backend handles the social login.
 # Dropping ModelBackend would lock out every existing user, including the
 # superuser the admin needs.
 AUTHENTICATION_BACKENDS = [
@@ -223,7 +223,7 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # allauth's own account settings. Username and password stay the login
-# method, because Part 1's forms are built on them.
+# method, because Beacon's own login and signup forms are built on them.
 ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"

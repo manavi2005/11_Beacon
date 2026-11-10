@@ -20,7 +20,7 @@ urlpatterns = [
     path("", include("preparation.urls")),
     # allauth comes AFTER preparation.urls on purpose. allauth also defines
     # accounts/login/ and accounts/signup/, and Django matches in order, so
-    # listing it second leaves Part 1's custom pages in charge of those two
+    # listing it second leaves Beacon's own login and signup pages in charge of those two
     # URLs while allauth still owns the Google routes beneath
     # accounts/google/. Reversing it would silently replace our login page
     # with allauth's.
@@ -32,6 +32,6 @@ urlpatterns = [
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Branding for the admin site (visible on the login and index pages).
-admin.site.site_header = "Beacon Admin - Team Career Coaches"
+admin.site.site_header = "Beacon Admin"
 admin.site.site_title = "Beacon Admin"
 admin.site.index_title = "Data model control centre"

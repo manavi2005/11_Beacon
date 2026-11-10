@@ -1,7 +1,4 @@
-"""Template context shared by every page.
-
-Assignment 5, Part 2.
-"""
+"""Template context shared by every page."""
 
 from django.conf import settings
 

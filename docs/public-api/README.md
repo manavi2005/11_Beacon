@@ -1,9 +1,9 @@
-# Assignment 5: Authentication, a public API, and its uses
+# Authentication, a public API, and its uses
 
 Production site: <https://manavi2005.pythonanywhere.com/> (also deployed at <https://simonhwang1998.pythonanywhere.com/>)
 Public API: <https://manavi2005.pythonanywhere.com/api/skills/summary/>
 
-## Part 1: Internal authentication
+## Internal authentication
 
 Custom login, signup, and POST-only logout live in `preparation/views.py`, with
 templates in `templates/registration/`. `LOGIN_URL`, `LOGIN_REDIRECT_URL` and
@@ -11,7 +11,7 @@ templates in `templates/registration/`. `LOGIN_URL`, `LOGIN_REDIRECT_URL` and
 except login and signup requires a login, and `base.html` only shows the
 protected links once you are signed in. Tests: `AuthenticationTests`.
 
-## Part 2: Google OAuth
+## Google OAuth
 
 django-allauth with the Google provider. The credentials come from
 `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` in `.env`, never from
@@ -26,7 +26,7 @@ https://manavi2005.pythonanywhere.com/accounts/google/login/callback/
 "Continue with Google" appears on both the login and signup pages
 (`templates/registration/_google_button.html`).
 
-## Part 3: One public API, everything else protected
+## One public API, everything else protected
 
 | Endpoint | Access | Why |
 |---|---|---|
@@ -47,7 +47,7 @@ Tests: `PublicVsProtectedApiTests`.
 The public API also answers `?format=csv` with the same rows, for
 spreadsheets (see use 2 below).
 
-### 3.2 and 3.3: Vega-Lite
+### Vega-Lite
 
 [`vega-lite-api-demo.txt`](vega-lite-api-demo.txt) is the
 full spec. Its data is `{"url": "https://manavi2005.pythonanywhere.com/api/skills/summary/"}`
@@ -57,9 +57,9 @@ The spec's field names (`skill`, `category`, `learners`, `avg_proficiency`,
 `avg_required`, `avg_gap`) match the API exactly.
 
 Screenshot from the Vega-Lite editor:
-[`a5-part3-vega-lite-editor.png`](../screenshots/archive/vega-lite-editor.png).
+[`vega-lite-editor.png`](../screenshots/archive/vega-lite-editor.png).
 
-### 3.4: Three alternative uses
+### Three alternative uses
 
 All three read the same public URL, with no login and no copied data.
 
@@ -87,10 +87,10 @@ statistics and a correlation, then asks a question the site itself never
 answers: are the preparation tasks aimed at the widest gaps? It flags three
 skills with an above-median gap but below-median task coverage: Git, data
 structures, and failure questions.
-Chart: [`a5-part3-use3-notebook-chart.png`](../screenshots/archive/use3-notebook-chart.png).
+Chart: [`use3-notebook-chart.png`](../screenshots/archive/use3-notebook-chart.png).
 An HTML copy with all outputs is next to the notebook.
 
-## The start-from-scratch journey (for the demo)
+## The start-from-scratch journey
 
 A brand-new user (username signup, or a first Google sign-in) goes straight
 to **`/welcome/`**. They pick a target role and interview date, then rate
@@ -123,10 +123,9 @@ Tests: `FlexibleGoalsTests`, `ResumeImportTests`.
 
 On the login page the lighthouse beam follows the mouse.
 
-## Submission checklist
+## Quick reference
 
 1. Public API production URL: `https://manavi2005.pythonanywhere.com/api/skills/summary/`
 2. GitHub URL: `https://github.com/manavi2005/11_Beacon`
 3. Vega-Lite script: `docs/public-api/vega-lite-api-demo.txt`
 4. Vega-Lite editor screenshot: `docs/screenshots/archive/vega-lite-editor.png`
-5. Demo video: submitted separately (the recording materials are kept outside the repository).

@@ -7,7 +7,7 @@
   },
   "device": "mps",
   "llm_dtype": "torch.float16",
-  "generation_model_load_seconds": 12.137288582976907,
+  "generation_model_load_seconds": 16.542032124940306,
   "paragraph_count": 30,
   "corpus_word_count": 3021,
   "chunking_strategies": [
@@ -28,9 +28,9 @@
     "noise_rate"
   ],
   "automatic_answer_metric": "answer_keyword_coverage_proxy (lexical proxy only)",
-  "answer_quality_judge": "nemotron-3-super-120b-a12b via https://lumen.computes.illinois.edu/v1 (A7 rubric, temperature 0, cached)",
+  "answer_quality_judge": "nemotron-3-super-120b-a12b via https://lumen.computes.illinois.edu/v1 (team rubric, temperature 0, cached)",
   "fix_a_query_refinement": "split two-part questions at 'and'; RRF (k=60) over original + parts; top-3 kept",
   "fix_b_answer_budget": "150-word instruction, 400-token ceiling, same retrieved chunks",
-  "human_answer_quality_formula": "1 + 9 * (0.35*accuracy + 0.25*structure + 0.25*instruction_adherence + 0.15*clarity); human ratings 1-5 normalized to 0-1",
+  "answer_quality_formula": "1 + 9 * (0.35*accuracy + 0.25*structure + 0.25*instruction_adherence + 0.15*clarity); judge ratings 1-5 normalized to 0-1",
   "note": "Every number comes from executing this notebook end to end; answer-quality scores are LLM-judge scores, labelled as such."
 }

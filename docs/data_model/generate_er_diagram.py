@@ -65,7 +65,7 @@ def build_dot():
         "digraph Beacon {",
         '  graph [rankdir=LR, splines=spline, overlap=false, nodesep=0.6, ranksep=1.1, '
         'fontname="Helvetica", label="Beacon - AI Personal Career Coach\\n'
-        'ER diagram (app: preparation)  |  Team Career Coaches, Group 11", '
+        'ER diagram (app: preparation)", '
         "labelloc=t, fontsize=18];",
         '  node [shape=plaintext, fontname="Helvetica", fontsize=10];',
         '  edge [fontname="Helvetica", fontsize=9];',

@@ -1,8 +1,8 @@
 # Multi-Model System Design
 
-**P1-A7 (Part 1 assignment): Model Size Selection and Benchmarking, Cost
-Comparison and Infrastructure Planning, and Multi-Model Routing Strategy**
-Team 11, Beacon. An interview-preparation coach that scores a candidate's
+**Model size selection and benchmarking, cost comparison and infrastructure
+planning, and multi-model routing strategy**
+Beacon is an interview-preparation coach that scores a candidate's
 skills against a target role and grades their written practice answers.
 
 The experiments, benchmarking and scaling simulations live in
@@ -10,7 +10,7 @@ The experiments, benchmarking and scaling simulations live in
 document carries the reasoning: why the system is shaped the way it is, what
 it costs, and how a request is routed to a model.
 
-This part of the assignment is independent of the Django project. Where it
+This study is independent of the Django project. Where it
 refers to Beacon, that is to keep the task realistic, because a model is only
 fast enough or accurate enough relative to a job it has to do.
 
@@ -34,14 +34,14 @@ instruction adherence the first criterion, ahead of how good the content is.
 
 ### The 15 models
 
-The same 15 models benchmarked in Assignment 6, unchanged. They were selected
-there under four rules, all four of which still apply:
+The same 15 models benchmarked in the model-selection lab, unchanged. They
+were selected there under four rules, all four of which still apply:
 
 | Rule | Why it matters here |
 |---|---|
 | Loads with `transformers` (`AutoModelForCausalLM`) | The integration path is a local model held in the application process |
 | Instruction or chat tuned, with a chat template | Beacon sends instructions and needs structured replies, not text continuation |
-| Ungated, with no license click-through or token | Every teammate and the grader can reproduce the benchmark as-is |
+| Ungated, with no license click-through or token | Every teammate and any reviewer can reproduce the benchmark as-is |
 | Runs on the development machine | An Apple M4 Pro with 24 GB of unified memory, with normal applications open |
 
 ### The categories
@@ -58,13 +58,13 @@ Three models per category, fifteen in total, bands contiguous and
 non-overlapping. The notebook asserts all four of those rather than leaving
 them to be read off the table.
 
-### Why these boundaries and not the ones in the brief
+### Why these boundaries and not the ones in the study spec
 
-The brief gives an example structure of `< 1B`, `1B-3B`, `3B-7B`, `7B-30B`,
+The study spec gives an example structure of `< 1B`, `1B-3B`, `3B-7B`, `7B-30B`,
 `30B+`. Our models do not spread across those bands, and that is a result from
-A6 rather than an omission.
+the model-selection lab rather than an omission.
 
-A6 downloaded and tried a 7-8B tier: Qwen2.5-7B, Falcon3-7B and
+The model-selection lab downloaded and tried a 7-8B tier: Qwen2.5-7B, Falcon3-7B and
 Granite-3.1-8B. In bf16 each needs roughly 15-16 GB for weights alone. On a
 24 GB machine that is also running a browser and an IDE, the system swapped
 more than 20 GB to disk, generation slowed to a crawl, and the run hit its
@@ -78,13 +78,13 @@ in process therefore tops out near 4B.
 
 Three requirements are in tension, and only two of them can hold at once:
 
-1. the same 15 models from A6
+1. the same 15 models from the model-selection lab
 2. three models per category
-3. the brief's example parameter ranges
+3. the study spec's example parameter ranges
 
 Mapping our 15 onto the example ranges gives **4 / 6 / 5 / 0 / 0**, computed
 in the notebook rather than asserted here. That breaks requirement 2 and
-leaves two categories with nothing in them to benchmark. Since the brief
+leaves two categories with nothing in them to benchmark. Since the spec
 labels that structure an *Example structure* while stating the other two as
 requirements, the ranges are the part that bends. We keep the same 15 models
 and three per category, and divide the 0.1B to 4B range into five contiguous
@@ -92,7 +92,7 @@ bands.
 
 ### The bands are not arbitrary
 
-They were drawn where the A6 matrix showed behaviour actually changing, not at
+They were drawn where the model-selection lab's matrix showed behaviour actually changing, not at
 round numbers:
 
 | Boundary | What changes across it |
@@ -127,7 +127,7 @@ what should settle it.
 ## 2. Prompt types
 
 Five prompt types, one per job Beacon asks a model to do. They match the five
-categories in the brief, which is less of a coincidence than it looks: that
+categories in the study spec, which is less of a coincidence than it looks: that
 list is a fair decomposition of what any text-AI product asks for, and Beacon
 asks for all five.
 
@@ -151,7 +151,7 @@ unstated definition of readiness, commit to a number and name a bottleneck.
 If parameter count buys anything, it should buy more at the bottom of that
 list than the top, and the gap between tiers should widen as the task widens.
 A benchmark built on one prompt type could not see that effect at all. This is
-the main thing Step 1.2 exists to make measurable.
+the main thing the benchmark exists to make measurable.
 
 ### Ordered by cost of failure
 
@@ -173,7 +173,7 @@ prediction cannot, because nothing downstream checks them.
 
 ### One prompt contract, so the benchmark measures models
 
-Every prompt uses the same six-part layout carried over from A6: Role, Task,
+Every prompt uses the same six-part layout carried over from the model-selection lab: Role, Task,
 Constraints, Output format, Safety boundary, Length. Varying the prompt style
 between types would confound prompt design with model capability, and the
 comparison here is between models.
@@ -257,7 +257,7 @@ and enough length to look substantial. A model that scores on word count will
 call it strong. Only a model actually reading for a result will mark it down.
 
 **The barista resume.** The correct answer is an empty list. Models that want
-to be helpful invent something instead, and A6 found exactly that behaviour in
+to be helpful invent something instead, and the model-selection lab found exactly that behaviour in
 the smaller tiers. The F1 scorer treats both-empty as a perfect match so that
 returning nothing is properly rewarded here rather than scored as a miss.
 
@@ -299,7 +299,7 @@ which ones make a preferred model look good.
 | **Clarity** | Was the output understandable? | Free-text fields complete, not truncated, not repetitive, not echoing the prompt |
 
 Structure and adherence look like one metric and are not. Structure is the
-shape. Adherence is everything else the prompt asked for. A6 found models that
+shape. Adherence is everything else the prompt asked for. The model-selection lab found models that
 returned flawless JSON containing skill names that were never in the supplied
 list, and a single combined metric would have scored that as a near miss
 rather than as the specific failure it is.
@@ -337,7 +337,7 @@ quality = 0.35 * accuracy
 score   = 1 + 9 * quality
 ```
 
-`1 + 9 * quality` rather than `10 * quality`, because the brief asks for a
+`1 + 9 * quality` rather than `10 * quality`, because the study spec asks for a
 1 to 10 scale. A model that returns nothing usable scores 1, and the floor of
 the scale means what it says.
 
@@ -397,7 +397,7 @@ is the kind of thing a validation step exists to catch.
 375 generations: 15 models against all 25 prompts, greedy decoding, run locally
 through `transformers` on an M4 Pro with 24 GB. Every model loaded; nothing
 failed. Raw replies are kept in `benchmark_results.csv` so any score here can
-be audited, and the table in the shape the brief asks for is in
+be audited, and the table in the shape the study spec asks for is in
 `benchmark_table.csv`.
 
 ### By category
@@ -472,7 +472,7 @@ produce JSON at all.
 9 of 375 replies (2.4%) opened a JSON object and never closed it:
 
 - **5** are a model echoing the `<data>` block back instead of answering. No
-  token budget fixes that; A6 recorded the same behaviour in the same tier.
+  token budget fixes that; the model-selection lab recorded the same behaviour in the same tier.
 - **2** had already written about 50 words against a 25-word cap, so the
   truncation marks a model that had broken the stated constraint first.
 - **1** is a genuine harness artifact: SmolLM2-360M was writing correct
@@ -624,13 +624,13 @@ regardless of what the quality numbers say.
 
 ---
 
-## 7. Cost analysis (Part 2)
+## 7. Cost analysis
 
-All figures come from the Part 2 cells of the notebook. The two 90-row tables
+All figures come from the cost-analysis cells of the notebook. The two 90-row tables
 are saved as `local_hosting_costs.csv` and `hf_api_costs.csv`, and the
 side-by-side as `cost_comparison.csv`. Prices were retrieved on 2026-10-28.
 
-### 7.1 Token usage per user (Step 2.1)
+### 7.1 Token usage per user
 
 A daily Beacon user triggers each AI job once: the answer is screened, a
 resume or note is read, the answer is summarised, a weekly plan is written and
@@ -649,11 +649,11 @@ per day.
 Input tokens were counted by tokenizing the 25 rendered prompts. Output
 tokens are each model's own `tokens/sec x latency`. That puts the average at
 **1,587-1,884 tokens per user**, or **317-377 per request**, close to the
-brief's example of 500. Outputs differ by model because verbose models cost
+study spec's example of 500. Outputs differ by model because verbose models cost
 more. TinyLlama writes 431 output tokens a day per user against Qwen3-4B's
 138, so the weakest model is also the most expensive to serve per user.
 
-### 7.2 Total token load (Step 2.2)
+### 7.2 Total token load
 
 | Traffic category | DAU | Daily token load |
 |---|---|---|
@@ -664,9 +664,9 @@ more. TinyLlama writes 431 output tokens a day per user against Qwen3-4B's
 | Mass Consumer App | 10,000,000 | 16B - 19B |
 | Global Platform | 100,000,000 | 159B - 188B |
 
-### 7.3 Local hosting (Step 2.3)
+### 7.3 Local hosting
 
-**The machine.** The brief's 16-core / GPU / 64 GB configuration is exactly
+**The machine.** The study spec's 16-core / GPU / 64 GB configuration is exactly
 an AWS **g5.4xlarge**: 16 vCPU, 64 GiB RAM and one NVIDIA A10G with 24 GB. It
 costs **$1.624/hour** on demand, which is **$1,169.28/month**. Every one of
 the 15 models fits in 24 GB (the largest is 8 GB in bf16), so a machine's
@@ -695,7 +695,7 @@ Machines needed (excerpt; all 90 rows are in the notebook):
 At 100M DAU, the Large tier needs a fleet of 505-608 GPU servers, about
 $590K-$711K a month.
 
-### 7.4 Hugging Face Inference API (Step 2.4)
+### 7.4 Hugging Face Inference API
 
 Serverless **Hugging Face Inference Providers** bills per token at the
 provider's price, with no Hugging Face markup. It needs **no GPU machines of
@@ -720,7 +720,7 @@ API cost per month, for comparison with the machine table:
 | Qwen2.5-1.5B → granite-4.2-3b | $1.86 | $18.60 | $186 | $1,860 | $18,597 | $185,973 |
 | Qwen3-4B → Qwen3-4B | $0.56 | $5.60 | $56 | $560 | $5,601 | $56,008 |
 
-### 7.5 Analysis (Step 2.5)
+### 7.5 Analysis
 
 **1. At what scale is local hosting cheaper?**
 
@@ -771,11 +771,11 @@ conclusion for models of 2B and above does not depend on that estimate.
 
 ---
 
-## 8. Routing design (Part 3)
+## 8. Routing design
 
 ### 8.1 What routing has to respect
 
-Two rules come from Parts 1 and 2 before cost does:
+Two rules come from the benchmark and the cost analysis before cost does:
 
 1. **Personal data stays on Beacon's machines.** Structured extraction reads
    resumes, so it is always local. This is the only reason a local GPU exists
@@ -801,7 +801,7 @@ the local fleet small.
 | Local predictor | Qwen2.5-3B-Instruct | 9.38 on prediction, second only to Phi-3.5-mini (9.68) at 40% less latency |
 | Hugging Face API | Qwen/Qwen3-4B-Instruct-2507 (nscale) | 9.7-9.8 on classification, extraction and generation; the exact model benchmarked |
 
-### 8.2 Five scenarios (Step 3.1)
+### 8.2 Five scenarios
 
 | Scenario | Description in Beacon | Routing condition that detects it |
 |---|---|---|
@@ -811,7 +811,7 @@ the local fleet small.
 | **Cost optimization** | Shrink the GPU fleet once traffic is stable | Daily request volume and monthly GPU spend |
 | **System overload / API outage** | The provider returns errors or times out while the fleet is at its normal size | API error rate and timeouts |
 
-### 8.3 Routing strategies (Step 3.2)
+### 8.3 Routing strategies
 
 | Scenario | Routing strategy | Local models used | Hugging Face model used | Expected benefit |
 |---|---|---|---|---|
@@ -848,7 +848,7 @@ GPUs**. That design is not allowed under the two rules above. The
 $327/day difference from normal routing is what the privacy and safety
 rules cost at this scale.
 
-### 8.5 Evaluating the strategy (Step 3.3)
+### 8.5 Evaluating the strategy
 
 **How routing improves latency.** In normal operation the mean falls from
 2.02 s for the single-model design to **0.87 s**, a 57% cut, for three
@@ -880,7 +880,7 @@ reasons:
 **How routing maintains quality.**
 - **Normal routing scores 9.39 against 9.23 for the single-model fleet.** It
   is higher, not lower, because each job goes to the model that scored best
-  on that job in Part 1, and no single model wins every type.
+  on that job in the benchmark, and no single model wins every type.
 - **The injection gate is never traded away.** Summaries never reach the
   model that obeyed the injected instruction, and resumes never leave
   Beacon's machines. Both are enforced by `assert`, not by convention.

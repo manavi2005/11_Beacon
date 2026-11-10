@@ -1,8 +1,8 @@
 """The site navigation, defined once as data.
 
 base.html used to hand-write a dozen links named after how each page was
-built ("Skills (HttpResponse FBV)", "Plans (base CBV)"). That was useful for
-grading Assignment 2 and confusing for anyone using the product. Now the
+built ("Skills (HttpResponse FBV)", "Plans (base CBV)"). That was
+confusing for anyone using the product. Now the
 menu is this list, rendered by one loop in base.html:
 
   * every entry is a URL *name*, reversed at request time, so no path is

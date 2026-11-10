@@ -36,7 +36,7 @@ def message_for(profile, today=None):
     else:
         return None
     body = (f"Hi {name},\n\n{lead}\n\n{link}\n\nNot today? That's fine too: rest is part of it.\n\n"
-            "— Beacon\n\nYou're getting this because you turned on reminders. "
+            "Beacon\n\nYou're getting this because you turned on reminders. "
             "Turn them off any time under You in Beacon.")
     return subject, body
 

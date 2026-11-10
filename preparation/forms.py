@@ -31,7 +31,7 @@ class PlanTaskForm(forms.ModelForm):
         }
 
 # ---------------------------------------------------------------------------
-# Onboarding (Assignment 5 - the start-from-scratch user journey)
+# Onboarding (the start-from-scratch user journey)
 # ---------------------------------------------------------------------------
 from datetime import timedelta
 

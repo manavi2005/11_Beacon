@@ -1,8 +1,7 @@
 /* ===========================================================================
    Beacon site stylesheet
-   Team Career Coaches (Group 11)
 
-   Everything visual lives here. Before Assignment 3 this was a <style> block
+   Everything visual lives here. Originally this was a <style> block
    inside base.html, which meant the browser re-downloaded it with every page
    and none of it could be cached. As one file it is fetched once and reused,
    and in production it is served under a content-hashed name.
@@ -270,7 +269,7 @@ body {
   .menu__panel { position: fixed; left: var(--s3); right: var(--s3); top: auto; min-width: 0; }
 }
 
-/* Developer notes: course explanations of how each page is built. Hidden
+/* Developer notes: explanations of how each page is built. Hidden
    in the product; "Show how pages are built" in the account menu reveals
    them, tagged so they read as notes rather than content. */
 /* html:not(.show-dev) outranks .tag (which sets its own display and comes
@@ -580,7 +579,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 }
 
 /* ---------------------------------------------------------------------------
-   10. Charts (Section 4)
+   10. Charts
 
    The PNG is a fixed-width raster, so it has to be allowed to shrink on a
    narrow screen without distorting. width:100% with height:auto does that,
@@ -611,7 +610,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   color: var(--ink-muted);
 }
 
-/* Vega-Lite (Assignment 4). vega-embed always adds an empty <form> for
+/* Vega-Lite. vega-embed always adds an empty <form> for
    interactive widget bindings; without this the site-wide form styling above
    would draw it as an empty grey bar under every chart. */
 .vega-embed .vega-bindings:empty { display: none; }
@@ -621,7 +620,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .vega-chart { max-width: 100%; overflow-x: auto; }
 
 /* ---------------------------------------------------------------------------
-   11. Download buttons (A4 Part 3)
+   11. Download buttons
 
    These are links, not <button>s, because they are plain GETs with no side
    effects. They are styled as buttons so they read as the actions they are.
@@ -659,7 +658,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .btn--ghost:hover { background: var(--navy-100); color: var(--navy); }
 
 /* ---------------------------------------------------------------------------
-   12. Social login (A5 Part 2)
+   12. Social login
 
    The Google button follows Google's identity guidelines: white surface,
    grey border, their mark at the leading edge, and the wording left as
@@ -738,7 +737,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .oauth__icon { width: 20px; height: 20px; flex: 0 0 auto; }
 
 /* ===========================================================================
-   ASSIGNMENT 5 POLISH
+   AUTH PAGES, DASHBOARD AND COMMAND PALETTE
    Auth pages, dashboard, command palette. Behaviour is in static/js/beacon.js.
 
    Animation convention: the final state is the default. Only when the page

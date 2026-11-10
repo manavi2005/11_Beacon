@@ -6,7 +6,7 @@ python-dotenv==1.2.4
 requests==2.34.2
 vl-convert-python==1.9.0.post1
 
-# Assignment 6, Part 2.2: the local Hugging Face model in preparation/local_llm.py.
+# The local Hugging Face model in preparation/local_llm.py.
 # transformers fetches the weights on first use, so a fresh checkout needs no
 # extra setup. Left unpinned on purpose: torch publishes a different wheel per
 # platform and accelerator, and pinning one build here would make the project
