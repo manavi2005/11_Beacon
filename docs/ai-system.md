@@ -119,8 +119,8 @@ Face cache the first time an answer is screened, so a fresh checkout needs
 nothing beyond `pip install -r requirements.txt`.
 
 **What it does.** It screens a written practice answer before the hosted model
-is asked to write feedback on it: the hybrid shape the assignment describes,
-where the local model filters and the API generates. It returns three fields,
+is asked to write feedback on it: a hybrid shape where the local model filters
+and the API generates. It returns three fields,
 `on_topic`, `substantive` and a provisional `score`. An answer that is off
 topic or has no real content stops there and never costs an API call, which is
 exactly the input the hosted model would have had nothing to work with on. An
@@ -189,5 +189,5 @@ Two requirements files, because `torch` and `transformers` come to about
 
 | File | For | Contains |
 |---|---|---|
-| `requirements.txt` | Local development, and the grader's machine | Everything, including `torch`, `transformers` and `accelerate` |
+| `requirements.txt` | Local development, and any reviewer's machine | Everything, including `torch`, `transformers` and `accelerate` |
 | `requirements-production.txt` | A small host such as PythonAnywhere | The same list without those three |

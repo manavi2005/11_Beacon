@@ -1,32 +1,28 @@
 # Beacon: documentation index
 
-**Team Career Coaches (Group 11)** | Manavi Chaudhry | Chu-Yun Hwang | Meet Kailash Mali
+Manavi Chaudhry | Chu-Yun Hwang | Meet Kailash Mali
 
-Start here. This page maps each assignment section to the files that answer it,
-so nothing has to be hunted for.
+Start here. This page maps each feature to the files that implement it, so
+nothing has to be hunted for. The milestone-by-milestone account of how Beacon
+was built is in [`project-history.md`](project-history.md).
 
 ---
 
 ## How this folder is organized
 
-The assignment requires `docs/` to contain three specific folders -
-`wireframes/`, `branching_strategy/` and `notes/` - so those stay exactly where
-they are and keep their required names. Everything that was previously loose at
-the top level of `docs/` is now grouped by **topic**, and this index provides the
-**by-assignment-section** view on top of it.
-
-Topic grouping was chosen over renaming folders after assignment sections for two
-reasons: the three required folder names are fixed and cannot be renamed, and the
-same document often serves more than one section (the branching strategy is
-Section 1 evidence but also a standing team process). Grouping by topic keeps
-each file in one obvious place, and this index handles the section mapping.
+Files are grouped by **topic**, and this index provides the **by-feature** view
+on top of it. The same document often serves more than one feature (the
+branching strategy documents the repository workflow and is also a standing team
+process), so grouping by topic keeps each file in one obvious place and this
+index handles the mapping.
 
 ```
 docs/
-├── README.md               <- you are here: index + section mapping
-├── wireframes/v1/          <- REQUIRED folder: Part 3 wireframes
-├── branching_strategy/     <- REQUIRED folder: branch diagram + written strategy
-├── notes/notes.txt         <- REQUIRED folder: weekly running log
+├── README.md               <- you are here: index + feature mapping
+├── project-history.md      <- how each milestone was built
+├── wireframes/v1/          <- v1 wireframes
+├── branching_strategy/     <- branch diagram + written strategy
+├── notes/notes.txt         <- running development log
 ├── data_model/             <- the data layer (ER diagram, design justification)
 ├── ai-system.md            <- how the AI features work (data in, prompts, guardrails)
 ├── public-api/             <- public API docs, Vega-Lite demo, alternative uses
@@ -39,9 +35,9 @@ docs/
 
 ---
 
-## Section 1: Structure, Security & GitHub Workflow
+## Structure, security and GitHub workflow
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | Split settings pattern | [`beacon_core/settings/`](../beacon_core/settings/) - `base.py`, `development.py`, `production.py` |
 | `DEBUG` True in dev / False in prod | `development.py` line 11, `production.py` line 12 |
@@ -50,38 +46,36 @@ docs/
 | Secrets absent from code and commits | [`.gitignore`](../.gitignore) line 2 ignores `.env` |
 | Proper `.gitignore` | [`.gitignore`](../.gitignore) |
 | Non-main branch + merge back via PR | [`branching_strategy/README.md`](branching_strategy/README.md) |
-| `docs/` with the three required folders | `wireframes/`, `branching_strategy/`, `notes/` |
-| Weekly progress notes | [`notes/notes.txt`](notes/notes.txt) |
-| Runs in dev and prod mode | See [README section 1](../README.md#1-quick-start) |
+| Development log | [`notes/notes.txt`](notes/notes.txt) |
+| Runs in dev and prod mode | See [project history, section 1](project-history.md#1-quick-start) |
 
-## Section 2: Views (FBV + CBV)
+## Views (FBV + CBV)
 
 | View | Kind | URL | Code | Screenshot |
 |---|---|---|---|---|
-| `skill_catalog_manual` | FBV, `HttpResponse` | `/skills/manual/` | [views.py](../preparation/views.py) | [`section2-view1-fbv-httpresponse.png`](screenshots/archive/view1-fbv-httpresponse.png) |
-| `skill_catalog_render` | FBV, `render()` | `/skills/` | [views.py](../preparation/views.py) | [`section2-view2-fbv-render.png`](screenshots/archive/view2-fbv-render.png) |
-| `PlanBoardView` | CBV, base `View` | `/plans/cbv-base/` | [views.py](../preparation/views.py) | [`section2-view3-cbv-base-view.png`](screenshots/archive/view3-cbv-base-view.png) |
-| `PlanTaskListView` | CBV, generic `ListView` | `/tasks/` | [views.py](../preparation/views.py) | [`section2-view4-cbv-generic-listview.png`](screenshots/archive/template-normal-list-state.png) |
+| `skill_catalog_manual` | FBV, `HttpResponse` | `/skills/manual/` | [views.py](../preparation/views.py) | [`view1-fbv-httpresponse.png`](screenshots/archive/view1-fbv-httpresponse.png) |
+| `skill_catalog_render` | FBV, `render()` | `/skills/` | [views.py](../preparation/views.py) | [`view2-fbv-render.png`](screenshots/archive/view2-fbv-render.png) |
+| `PlanBoardView` | CBV, base `View` | `/plans/cbv-base/` | [views.py](../preparation/views.py) | [`view3-cbv-base-view.png`](screenshots/archive/view3-cbv-base-view.png) |
+| `PlanTaskListView` | CBV, generic `ListView` | `/tasks/` | [views.py](../preparation/views.py) | [`template-normal-list-state.png`](screenshots/archive/template-normal-list-state.png) |
 | `PlanTaskDetailView` | CBV, generic `DetailView` (extra) | `/tasks/<pk>/` | [views.py](../preparation/views.py) | - |
 
 Routing, with `name=` on every route: [`preparation/urls.py`](../preparation/urls.py).
 
-The written comparison the bonus asks for - *HttpResponse vs render* and
-*Base CBV vs Generic CBV* - is at the end of
-[`notes/notes.txt`](notes/notes.txt), under
-"SECTION 2 BONUS".
+A written comparison of *HttpResponse vs render* and *Base CBV vs Generic
+CBV* is in [`notes/notes.txt`](notes/notes.txt), under "WHEN EACH KIND OF
+VIEW WAS ACTUALLY USEFUL".
 
-## Section 3: Templates
+## Templates
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | `base.html` with `{% block title %}` and `{% block content %}` | [`templates/base.html`](../templates/base.html) |
 | Feature list template extending `base.html` | [`templates/preparation/skill_list.html`](../templates/preparation/skill_list.html) |
 | `{% for %}` + `{% empty %}` | every list template; `skill_list.html` lines 23-40 |
 | Meaningful empty-state message | `skill_list.html` - distinguishes "no match for filter" from "catalog empty" |
 | Template reuse across views | `skill_list.html` is rendered by **both** function-based views |
-| Normal list state screenshot | [`section3-template-normal-list-state.png`](screenshots/archive/view4-cbv-generic-listview.png) |
-| Empty state screenshot | [`section3-template-empty-state.png`](screenshots/archive/template-empty-state.png) |
+| Normal list state screenshot | [`view4-cbv-generic-listview.png`](screenshots/archive/view4-cbv-generic-listview.png) |
+| Empty state screenshot | [`template-empty-state.png`](screenshots/archive/template-empty-state.png) |
 
 To reproduce the empty state without touching the database, visit
 `/skills/?q=zzzz` - the filter matches nothing and the `{% empty %}` branch
@@ -89,9 +83,9 @@ fires.
 
 ---
 
-## Assignment 4: Internal API, Vega-Lite and an external API
+## Internal API, Vega-Lite and an external API
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | Internal JSON API, GET only, from the models, chart-ready | `/api/skills/summary/`, `/api/assessments/` - [`preparation/vega.py`](../preparation/vega.py) row builders |
 | Bar chart (aggregated summary) | [`vega_lite/chart1.vl.json`](vega_lite/chart1.vl.json), source [`preparation/vega_lite/skill_gap_bar.vl.json`](../preparation/vega_lite/skill_gap_bar.vl.json) |
@@ -105,11 +99,11 @@ fires.
 | Combined with internal data, processed, not stored | `market_report()`: demand per skill x the role cohort's average gap |
 | New internal endpoint for the processed result | `/api/market-demand/?q=data analyst`, page at `/market/?q=data analyst` |
 
-Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-external-api).
+Full explanation: [project history, section 13](project-history.md#13-vega-lite-charts-and-an-external-api).
 
 ---
 
-## The data layer (earlier assignment, still current)
+## The data layer
 
 | File | What it holds |
 |---|---|
@@ -130,15 +124,15 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 
 | File | What it holds |
 |---|---|
-| [`notes/notes.txt`](notes/notes.txt) | Weekly log: what we did, decisions, open questions, TODOs |
+| [`notes/notes.txt`](notes/notes.txt) | Development log: what we did, decisions, open questions, TODOs |
 | [`branching_strategy/README.md`](branching_strategy/README.md) | Branch naming, the cycle, commit-message style, file ownership, conflict handling |
 | [`branching_strategy/diagram.png`](branching_strategy/diagram.png) | Visual of the branch-and-merge flow |
 
 ---
 
-## Assignment 3, Section 1 - URL linking and navigation
+## URL linking and navigation
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | Home page at `/`, no 404 | `dashboard` in [views.py](../preparation/views.py), route in [urls.py](../preparation/urls.py) |
 | Navigation bar, 3+ items, `{% url %}` only | [`templates/base.html`](../templates/base.html), 10 links, every one reversed with `{% url %}` |
@@ -149,9 +143,9 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | End-to-end flow | models.py -> urls.py -> views.py -> templates, walked through in `notes.txt` |
 | Screenshots | [home](screenshots/archive/home-page.png), [navigation](screenshots/archive/navigation-and-list.png), [detail via link](screenshots/archive/detail-via-link.png) |
 
-## Assignment 3, Section 2 - ORM queries and data presentation
+## ORM queries and data presentation
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | List of objects from one model | `/candidates/`, `CandidateListView` |
 | Search form using `request.GET` | `/search/skills/`, `skill_search` |
@@ -164,9 +158,9 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | `{% for %}` with `{% empty %}` | every list template |
 | Screenshots | [GET search](screenshots/archive/search-get.png), [aggregations](screenshots/archive/aggregations.png) |
 
-## Assignment 3, Section 3 - Static files and UI styling
+## Static files and UI styling
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | `static/` directory configured | `STATICFILES_DIRS` in [base.py](../beacon_core/settings/base.py); project level, reasoning in `notes.txt` |
 | Static files load correctly | `STATIC_URL`, `STATIC_ROOT`, both finders left on |
@@ -177,13 +171,13 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Fonts | system font stack, no network request |
 | Logo / header | [`static/img/beacon-logo.svg`](../static/img/beacon-logo.svg), used in the masthead and as the favicon |
 | Screenshot with CSS applied | [dashboard](screenshots/archive/styled-dashboard.png), [insights](screenshots/archive/styled-insights.png), [search](screenshots/archive/styled-search.png), [mobile](screenshots/archive/styled-mobile.png) |
-| README UI note | [README, "Look and feel"](../README.md) |
+| UI write-up | [project history, "Look and feel"](project-history.md#2-what-to-look-at) |
 | Static organisation write-up | `notes.txt`, "STATIC FILE ORGANIZATION" |
-| Cache busting (bonus) | `ManifestStaticFilesStorage` in [production.py](../beacon_core/settings/production.py); write-up in `notes.txt` |
+| Cache busting | `ManifestStaticFilesStorage` in [production.py](../beacon_core/settings/production.py); write-up in `notes.txt` |
 
-## Assignment 3, Section 4 - Data visualization
+## Data visualization
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | ORM-based aggregation | [`charts.py`](../preparation/charts.py): `values()` + `Count`, filtered `Count` with `Q`, and two `Avg` aggregates |
 | Chart generated correctly | Four figures, each with a title, axis labels, and a legend where there is more than one series |
@@ -195,9 +189,9 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Heading, caption, alt text | one `<h2>`, one `<figcaption>` naming the query, and descriptive `alt` per figure |
 | Screenshot | [charts page](screenshots/archive/charts-page.png) |
 
-## Assignment 4, Part 3 - CSV and JSON exports, reports page
+## CSV and JSON exports, reports page
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | CSV export for one model | `/reports/candidates.csv`, `export_candidates_csv` in [views.py](../preparation/views.py) |
 | `Content-Type: text/csv` | set with `charset=utf-8`, so names with non-ASCII characters survive a spreadsheet |
@@ -213,31 +207,31 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 | Tables with headers and `{% empty %}` | all four tables in `reports.html` |
 | Screenshot | [reports page](screenshots/archive/reports-page.png) |
 
-## Assignment 5, Part 1 - Internal Django authentication
+## Internal Django authentication
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
-| 1.1 Custom login page | `/accounts/login/`, `login_view` in [views.py](../preparation/views.py), [`registration/login.html`](../templates/registration/login.html) |
-| 1.1 Custom signup page | `/accounts/signup/`, `signup_view`, [`registration/signup.html`](../templates/registration/signup.html) |
-| 1.2 Logout | `/accounts/logout/`, POST-only; the nav carries a form, not a link |
-| 1.3 `LOGIN_URL` | [`base.py`](../beacon_core/settings/base.py), so dev and prod agree |
-| 1.3 `LOGIN_REDIRECT_URL` | `base.py`, pointing at a route that exists |
-| 1.3 `LOGOUT_REDIRECT_URL` | `base.py` |
-| 1.4 Protected sections | every page except login and signup; anonymous users get 302 to the login form |
-| 1.4 Protected API | `/api/whoami/` answers 401 JSON; `/api/skills/` and `/reports/candidates.json` redirect |
-| 1.5 Nav hidden before login | `{% if user.is_authenticated %}` in [`base.html`](../templates/base.html) |
-| 1.5 Nav visible after login | same block, plus the logout form |
+| Custom login page | `/accounts/login/`, `login_view` in [views.py](../preparation/views.py), [`registration/login.html`](../templates/registration/login.html) |
+| Custom signup page | `/accounts/signup/`, `signup_view`, [`registration/signup.html`](../templates/registration/signup.html) |
+| Logout | `/accounts/logout/`, POST-only; the nav carries a form, not a link |
+| `LOGIN_URL` | [`base.py`](../beacon_core/settings/base.py), so dev and prod agree |
+| `LOGIN_REDIRECT_URL` | `base.py`, pointing at a route that exists |
+| `LOGOUT_REDIRECT_URL` | `base.py` |
+| Protected sections | every page except login and signup; anonymous users get 302 to the login form |
+| Protected API | `/api/whoami/` answers 401 JSON; `/api/skills/` and `/reports/candidates.json` redirect |
+| Nav hidden before login | `{% if user.is_authenticated %}` in [`base.html`](../templates/base.html) |
+| Nav visible after login | same block, plus the logout form |
 
-## Assignment 5, Part 2 - Google OAuth
+## Google OAuth
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
-| 2.1 Install and configure allauth | `django-allauth==65.19.7` in [requirements.txt](../requirements.txt); apps, `SITE_ID`, middleware and backends in [base.py](../beacon_core/settings/base.py) |
-| 2.2 Google Cloud credentials | read from `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`; names documented in [.env.example](../.env.example) |
-| 2.3 Localhost redirect URI | `http://127.0.0.1:8000/accounts/google/login/callback/` |
-| 2.3 Production redirect URI | `https://<domain>/accounts/google/login/callback/` |
-| 2.4 Button on login page | [`registration/login.html`](../templates/registration/login.html) includes `_google_button.html` |
-| 2.4 Button on signup page | [`registration/signup.html`](../templates/registration/signup.html), same include |
+| Install and configure allauth | `django-allauth==65.19.7` in [requirements.txt](../requirements.txt); apps, `SITE_ID`, middleware and backends in [base.py](../beacon_core/settings/base.py) |
+| Google Cloud credentials | read from `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`; names documented in [.env.example](../.env.example) |
+| Localhost redirect URI | `http://127.0.0.1:8000/accounts/google/login/callback/` |
+| Production redirect URI | `https://<domain>/accounts/google/login/callback/` |
+| Button on login page | [`registration/login.html`](../templates/registration/login.html) includes `_google_button.html` |
+| Button on signup page | [`registration/signup.html`](../templates/registration/signup.html), same include |
 | Both backends kept | `ModelBackend` + allauth's, so username/password still works |
 | Degrades without credentials | [`context_processors.py`](../preparation/context_processors.py) hides the button |
 | Deploy helper | `python manage.py set_site_domain <host>` |
@@ -245,24 +239,18 @@ Full explanation: [README section 13](../README.md#13-vega-lite-charts-and-an-ex
 
 ---
 
-## Assignment 5, Part 3 - One public API, Vega-Lite, three alternative uses
+## One public API, Vega-Lite, three alternative uses
 
 Full write-up: [`public-api/README.md`](public-api/README.md).
 
-| Requirement | Where to look |
+| Feature | Where to look |
 |---|---|
 | One public API; all others protected | `/api/skills/summary/` is public. Every other JSON API returns 401 when signed out (`api_login_required` in `preparation/views.py`, tests in `PublicVsProtectedApiTests`) |
 | Vega-Lite chart on the deployed public API | [`public-api/vega-lite-api-demo.txt`](public-api/vega-lite-api-demo.txt) |
 | Editor screenshot | [`screenshots/archive/vega-lite-editor.png`](screenshots/archive/vega-lite-editor.png) |
 | Three alternative uses, with code and output | [`public-api/alt_uses/`](public-api/alt_uses/): Python report, spreadsheet import, notebook |
 
-## Assignment 5, Part 4 - Demo video
-
-Submitted separately; the recording materials are kept outside the
-repository. Before recording, update production with
-[`deployment/DEPLOY.md`](deployment/DEPLOY.md).
-
-## Product features (final deployment stage)
+## Product features
 
 | Feature | Where to look |
 |---|---|
@@ -273,7 +261,7 @@ repository. Before recording, update production with
 | Students see only their own data; staff see the cohort | [`preparation/visibility.py`](../preparation/visibility.py) |
 | Menu defined as data | [`preparation/navigation.py`](../preparation/navigation.py) |
 
-## UI polish (final deployment stage)
+## UI polish
 
 Lighthouse login and signup pages, a dashboard with readiness rings and
 widest-gap bars, and a Ctrl/Cmd+K command palette. Screenshots:
