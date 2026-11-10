@@ -285,6 +285,10 @@ def ai_status():
         return {"state": "paused", "detail": str(reason)[:200]}
     if not coach.llm_enabled():
         return {"state": "off", "detail": "No AI provider configured."}
+    if ai.slow():
+        return {"state": "slow", "detail": f"{ai.label()}. Slow or rate-limited in the last "
+                f"{ai.SLOW_SECONDS // 60} minutes, so practice uses instant offline questions: "
+                f"{str(cache.get(ai.SLOW_KEY))[:120]}"}
     return {"state": "on", "detail": ai.label()}
 
 
@@ -292,4 +296,5 @@ def resume_ai(actor):
     """Clear the circuit breaker so the next request tries the provider."""
     from studio import ai
     cache.delete(ai.DOWN_KEY)
+    cache.delete(ai.SLOW_KEY)
     StaffAction.objects.create(actor=actor, action="resume_ai", detail={})

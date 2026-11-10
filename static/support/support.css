@@ -32,7 +32,7 @@ code { font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #
 .status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line-strong); }
 .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .status--on, .status--ok { color: #a9f0d0; border-color: rgba(111, 227, 176, .35); }
-.status--paused, .status--warn { color: #ffd9a8; border-color: rgba(255, 196, 107, .35); }
+.status--paused, .status--slow, .status--warn { color: #ffd9a8; border-color: rgba(255, 196, 107, .35); }
 .status--off, .status--error { color: #ffb3a0; border-color: rgba(255, 140, 110, .35); }
 
 .findings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
