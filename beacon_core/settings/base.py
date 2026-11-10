@@ -393,3 +393,10 @@ mimetypes.add_type("application/manifest+json", ".webmanifest")
 ADZUNA_APP_ID = os.environ.get("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.environ.get("ADZUNA_APP_KEY", "")
 ADZUNA_COUNTRY = os.environ.get("ADZUNA_COUNTRY", "us")
+
+# Ask Beacon (studio/knowledge): local embeddings for retrieval over Beacon's
+# guide. The model downloads from Hugging Face on first use (~130 MB) into the
+# local cache. Without sentence-transformers (or with this off) the feature
+# uses keyword search only.
+ASK_EMBEDDINGS_ENABLED = os.environ.get("ASK_EMBEDDINGS_ENABLED", "true").lower() not in ("0", "false", "no", "off")
+ASK_EMBEDDING_MODEL = os.environ.get("ASK_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")

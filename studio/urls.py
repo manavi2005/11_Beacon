@@ -22,6 +22,7 @@ urlpatterns = [
     path("interview/<int:pk>/reply/", views.interview_reply, name="interview_reply"),
     path("interview/<int:pk>/finish/", views.interview_finish, name="interview_finish"),
     path("coach/", views.coach_page, name="coach"),
+    path("ask/", views.ask_page, name="ask"),
     path("coach/send/", views.coach_send, name="coach_send"),
     path("coach/clear/", views.coach_clear, name="coach_clear"),
     path("progress/", views.progress, name="progress"),
