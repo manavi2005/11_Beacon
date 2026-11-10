@@ -22,10 +22,15 @@
     });
   }
 
-  // The next question is written in the background while you answer this
-  // one, so "Continue" is instant instead of an 8-second wait.
+  // The next question is written in the background while you read the
+  // feedback on this one, so "Continue" is usually instant. It starts only
+  // after the answer is graded: starting it earlier made the two AI calls
+  // collide (free providers allow one at a time, and a small host serves one
+  // request at a time), which made both slow.
   let prefetched = null;
+  let more = false;
   const fetchNext = () => B.post("/session/next/", {});
+  const prefetch = () => { if (more && !prefetched) prefetched = fetchNext().catch(() => null); };
 
   async function next() {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -39,7 +44,7 @@
       // ask again so the summary includes it.
       if (data.done && ready) data = await fetchNext();
       if (data.done) return summary(data.summary);
-      if (data.position < data.total) prefetched = fetchNext().catch(() => null);
+      more = data.position < data.total;
       progress(data.position);
       render(data.card);
     } catch (e) {
@@ -136,6 +141,7 @@
   }
 
   function showFeedback(result, body) {
+    prefetch();
     xp += result.xp;
     xpEl.textContent = xp;
     const f = result.feedback;
