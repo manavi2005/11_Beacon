@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     # v2 product experience: Today loop, sessions, voice interviews
     "studio",
     "support",
+    "dashboard",
 ]
 
 # Which Site row the social callbacks belong to. Changing the deployed
